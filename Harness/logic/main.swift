@@ -1713,6 +1713,41 @@ MainActor.assumeIsolated {
     check(model.unconfirmedLogin == "iPhone 17 · Moscow, Russia", "a new device on the account is noticed: \(model.unconfirmedLogin ?? "nil")")
     model.apply(json(#"{"@type":"updateUnconfirmedSession","unconfirmed_session_count":0}"#))
     check(model.unconfirmedLogin == nil, "and forgotten once Telegram says it was dealt with")
+
+    // --- video stickers: taking a WebM apart ------------------------------------------------------------------
+    // A file built here by hand, element by element, the way a muxer lays one out. The frames are not real
+    // VP9 — decoding is VideoToolbox's business — but where they are, what they carry and when they play is ours.
+    func element(_ id: [UInt8], _ body: [UInt8]) -> [UInt8] {
+        // Sizes as two-byte numbers: enough for a test file, and a length the parser has to read properly.
+        id + [0x40 | UInt8(body.count >> 8), UInt8(body.count & 0xFF)] + body
+    }
+    func blockBody(time: Int, flags: UInt8, _ payload: [UInt8]) -> [UInt8] { [0x81, UInt8(time >> 8), UInt8(time & 0xFF), flags] + payload }
+    let videoTrack = element([0xAE], element([0xD7], [1]) + element([0x83], [1]) + element([0x86], Array("V_VP9".utf8))
+        + element([0xE0], element([0xB0], [0x02, 0x00]) + element([0xBA], [0x02, 0x00])))
+    let audioTrack = element([0xAE], element([0xD7], [2]) + element([0x83], [2]) + element([0x86], Array("A_OPUS".utf8)))
+    let blockGroup = { (time: Int, picture: [UInt8], alpha: [UInt8], dependent: Bool) -> [UInt8] in
+        element([0xA0], element([0xA1], blockBody(time: time, flags: 0, picture))
+            + (dependent ? element([0xFB], [0xFF]) : [])
+            + element([0x75, 0xA1], element([0xA6], element([0xEE], [1]) + element([0xA5], alpha))))
+    }
+    let webmCluster = element([0x1F, 0x43, 0xB6, 0x75], element([0xE7], [0])
+        + blockGroup(0, [1, 2, 3], [9, 9], false) + blockGroup(33, [4, 5], [8], true)
+        + element([0xA3], [0x82, 0, 40, 0x80, 7, 7, 7])       // another track's block: not ours
+        + blockGroup(66, [6], [7, 7, 7], true))
+    let webm = Data(element([0x1A, 0x45, 0xDF, 0xA3], [0x42, 0x82, 0x84] + Array("webm".utf8))
+        + element([0x18, 0x53, 0x80, 0x67], element([0x16, 0x54, 0xAE, 0x6B], audioTrack + videoTrack) + webmCluster))
+    let videoSticker = WebMVideo.parse(webm)
+    check(videoSticker?.width == 512 && videoSticker?.height == 512 && videoSticker?.frames.count == 3, "a WebM's video track and its frames are found: \(String(describing: videoSticker?.frames.count))")
+    check(videoSticker?.frames.map({ $0.time }) == [0, 33, 66] && videoSticker?.duration == 99, "with the time each one plays at: \(String(describing: videoSticker?.frames.map { $0.time }))")
+    check(videoSticker?.frames.map { [UInt8]($0.picture) } == [[1, 2, 3], [4, 5], [6]] && videoSticker?.frames.map { [UInt8]($0.alpha ?? Data()) } == [[9, 9], [8], [7, 7, 7]],
+          "each picture with the transparency that travels beside it")
+    check(videoSticker?.frames.map({ $0.isKey }) == [true, false, false], "and which frame stands alone")
+    check(WebMVideo.parse(Data()) == nil && WebMVideo.parse(Data(repeating: 0xFF, count: 4096)) == nil && WebMVideo.parse(webm.prefix(40)) == nil,
+          "a file that is empty, garbage or cut short is refused, not crashed on")
+    var hostile = [UInt8](webm)
+    for index in stride(from: 0, to: hostile.count, by: 7) { hostile[index] = hostile[index] &+ 0x55 }
+    _ = WebMVideo.parse(Data(hostile))
+    check(true, "bytes changed all through the file are survived")
 }
 
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")

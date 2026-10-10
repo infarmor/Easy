@@ -24,14 +24,21 @@ struct ConversationView: View {
             VStack(spacing: 6) {
                 if model.isSearching {
                     SearchBar()
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 if model.openChatIsForum {
                     TopicBar(chat: chat)
+                        .transition(.opacity)
                 }
                 if let pinned = model.pinnedMessage {
                     PinnedBar(message: pinned)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
+            // The bars above the transcript slide in from under the toolbar instead of appearing in place.
+            .animation(.smooth(duration: 0.22), value: model.isSearching)
+            .animation(.smooth(duration: 0.22), value: model.pinnedMessage?.id)
+            .animation(.smooth(duration: 0.22), value: model.openChatIsForum)
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -129,10 +136,12 @@ struct ConversationView: View {
                         .buttonStyle(.plain)
                         .help("К последним сообщениям")
                         .accessibilityLabel("К последним сообщениям")
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
                     }
                     .glassGroup(spacing: 14)
                     .padding(14)
+                    .animation(.spring(duration: 0.28, bounce: 0.25), value: isNearBottom)
                 }
                 // The composer floats over the transcript, which scrolls on under its translucent bar.
                 .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -160,7 +169,7 @@ struct ConversationView: View {
             }
         }
         .animation(.smooth(duration: 0.2), value: model.toast)
-        .animation(.smooth(duration: 0.15), value: model.viewerMessage?.id)
+        .animation(.spring(duration: 0.3, bounce: 0.12), value: model.viewerMessage?.id)
         // Links in messages: t.me stays in the app, suspicious addresses are explained before they open.
         .environment(\.openURL, OpenURLAction { url in
             Task { await model.openMessageLink(url) }
@@ -1555,6 +1564,8 @@ struct Composer: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .glassSurface(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    // Rises out of the field it belongs to.
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             if !model.suggestions.isEmpty, !needsStart {
                 SuggestionList(suggestions: model.suggestions)
@@ -1581,6 +1592,7 @@ struct Composer: View {
         .animation(.smooth(duration: 0.18), value: model.isReplyKeyboardShown)
         .animation(.smooth(duration: 0.18), value: model.replyKeyboard)
         .animation(.smooth(duration: 0.15), value: model.suggestions)
+        .animation(.smooth(duration: 0.2), value: model.composerContext)
         .padding(.horizontal, 12)
         .padding(.top, 6)
         .padding(.bottom, 12)

@@ -189,7 +189,7 @@ struct PhotoViewer: View {
             }
             .padding(.horizontal, 12)
         }
-        .transition(.opacity)
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
         .task(id: message.id) {
             image = nil
             zoom = 1

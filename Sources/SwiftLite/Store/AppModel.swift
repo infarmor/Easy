@@ -206,6 +206,8 @@ final class AppModel {
     /// about when you are back.
     @ObservationIgnored var unconfirmedLogin: String?
     @ObservationIgnored var isAskingAboutLogin = false
+    /// The chat list has settled after launch, so a row changing place from now on is news worth animating.
+    var animatesChatList = false
     /// A chat was opened from the keyboard (Return in the sidebar search): its composer takes the focus, so
     /// the next thing typed is the message rather than more of the search.
     var wantsComposerFocus = false
@@ -862,6 +864,10 @@ final class AppModel {
         chatsChanged()
         updateOnlineStatus()
         reopenLastChat()
+        Task {
+            try? await Task.sleep(for: .seconds(6))
+            animatesChatList = isReady
+        }
         await applyEngineOptions()
         await loadTDLibVersion()
     }
@@ -974,6 +980,7 @@ final class AppModel {
         bots = []
         groupMemberCounts = [:]
         chatIdByGroupKey = [:]
+        animatesChatList = false
         secretStates = [:]
         chatIdBySecretId = [:]
         secretChatsOfUser = [:]

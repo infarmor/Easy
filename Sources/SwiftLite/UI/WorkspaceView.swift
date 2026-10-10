@@ -54,6 +54,10 @@ struct ChatListView: View {
         @Bindable var model = model
         // Computed once per redraw: while searching it filters and sorts every known chat.
         let visible = model.visibleChats
+        // The order of what is on screen, for the animation below: a chat with a new message rises to the top
+        // rather than the rows being swapped under the eye. Not while the list is still filling at launch,
+        // when hundreds of rows arrive at once and would all be sent sliding.
+        let order = model.animatesChatList ? visible.prefix(40).map(\.id) : []
         return List(selection: $model.selection) {
             if !model.filter.isEmpty {
                 if !visible.isEmpty {
@@ -95,6 +99,7 @@ struct ChatListView: View {
                 rows(visible)
             }
         }
+        .animation(.smooth(duration: 0.3), value: order)
         .overlay {
             if visible.isEmpty && model.foundMessages.isEmpty && model.foundPublicChats.isEmpty {
                 ContentUnavailableView(
