@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><h1>test</h1><script>
+window.received = [];
+window.Telegram = { WebView: { receiveEvent: function (type, data) { window.received.push([type, data]); } } };
+function post(t, d) { window.TelegramWebviewProxy.postEvent(t, JSON.stringify(d)); }
+post('web_app_setup_main_button', {is_visible: true, is_active: true, text: 'Купить', color: '#ff0000'});
+post('web_app_setup_back_button', {is_visible: true});
+post('web_app_request_theme', {});
+post('web_app_request_viewport', {});
+post('web_app_biometry_get_info', {});
+// DeviceStorage: save, read back, read a key that was never stored, remove, read again, and two refusals.
+post('web_app_device_storage_save_key', {req_id: 's1', key: 'theme', value: 'dark'});
+post('web_app_device_storage_get_key', {req_id: 's2', key: 'theme'});
+post('web_app_device_storage_get_key', {req_id: 's3', key: 'never-stored'});
+post('web_app_device_storage_save_key', {req_id: 's4', key: 'theme', value: null});
+post('web_app_device_storage_save_key', {req_id: 's5', key: 'kept', value: 'значение'});
+post('web_app_device_storage_save_key', {req_id: 's6', key: '', value: 'x'});
+post('web_app_device_storage_save_key', {req_id: 's7', value: 'no key at all'});
+post('web_app_ready', {});
+</script></body></html>

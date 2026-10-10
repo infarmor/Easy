@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The app runs in the macOS App Sandbox: its own container, nothing else on disk unless you pick it. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Telegram servers, link previews and mini apps. No listening sockets. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- Voice messages, only while you record one. -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<!-- Files you choose in open/save panels or drop onto a chat. -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<!-- Save panels open in Downloads. -->
+	<key>com.apple.security.files.downloads.read-write</key>
+	<true/>
+</dict>
+</plist>

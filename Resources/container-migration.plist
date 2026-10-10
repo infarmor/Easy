@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- On the first sandboxed launch macOS moves the data of the unsandboxed builds into the container,
+	     so the signed-in session, the keys and the AyuGram archive carry over. -->
+	<key>Move</key>
+	<array>
+		<string>${ApplicationSupport}/SwiftLite</string>
+		<string>${Library}/Logs/SwiftLite</string>
+	</array>
+</dict>
+</plist>

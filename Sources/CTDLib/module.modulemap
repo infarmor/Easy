@@ -1,0 +1,5 @@
+module CTDLib [system] {
+    header "include/CTDLib.h"
+    link "tdjson"
+    export *
+}
