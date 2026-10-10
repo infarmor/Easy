@@ -1748,6 +1748,35 @@ MainActor.assumeIsolated {
     for index in stride(from: 0, to: hostile.count, by: 7) { hostile[index] = hostile[index] &+ 0x55 }
     _ = WebMVideo.parse(Data(hostile))
     check(true, "bytes changed all through the file are survived")
+
+    // --- small comforts ------------------------------------------------------------------------------------------
+    if let quiet = model.chat(withId: 9402) {
+        model.recordedRequests = []
+        Task { await model.muteChat(quiet, forSeconds: 3600) }
+        pump(0.2)
+        let asked = model.recordedRequests.last { $0.tdType == "setChatNotificationSettings" }?.tdNode("notification_settings")
+        check(asked?.tdInt("mute_for") == 3600 && asked?.tdBool("use_default_mute_for") == false, "muting for an hour asks for an hour, not for ever: \(String(describing: asked?.tdInt("mute_for")))")
+    } else {
+        check(false, "the chat to mute exists")
+    }
+    model.recordedRequests = []
+    Task { await model.copyLink(to: TD.message(json(message(60, chat: emptied)))) }
+    pump(0.2)
+    check(model.recordedRequests.contains { $0.tdType == "getMessageLink" && $0.tdInt64("message_id") == 60 } && model.toast?.contains("нет ссылок") == true,
+          "a message without a link says so instead of copying nothing: \(model.toast ?? "nil")")
+    model.recordedRequests = []
+    Task { await model.contacts(matching: "  ив ").isEmpty ? () : () }
+    pump(0.2)
+    check(model.recordedRequests.first { $0.tdType == "searchContacts" }?.tdString("query") == "ив", "contacts are searched by what was typed, trimmed")
+    let sizeBefore = UserDefaults.standard.object(forKey: Preferences.messageFontSize)
+    UserDefaults.standard.set(19, forKey: Preferences.messageFontSize)
+    Preferences.stepFontSize(1)
+    Preferences.stepFontSize(1)
+    check(UserDefaults.standard.integer(forKey: Preferences.messageFontSize) == 20, "⌘+ stops at the largest size the settings offer")
+    UserDefaults.standard.set(11, forKey: Preferences.messageFontSize)
+    Preferences.stepFontSize(-1)
+    check(UserDefaults.standard.integer(forKey: Preferences.messageFontSize) == 11, "and ⌘− at the smallest")
+    if let sizeBefore { UserDefaults.standard.set(sizeBefore, forKey: Preferences.messageFontSize) } else { UserDefaults.standard.removeObject(forKey: Preferences.messageFontSize) }
 }
 
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")

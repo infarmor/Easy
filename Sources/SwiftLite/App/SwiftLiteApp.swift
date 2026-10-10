@@ -19,7 +19,16 @@ struct SwiftLiteApp: App {
         .commands {
             // Only one main window: a second would share this AppModel, and both composers would write the
             // same draft while each view re-runs `select` on the chat the other is looking at.
-            CommandGroup(replacing: .newItem) { }
+            // "New" here is a new chat. Not a new window: a second one would share this AppModel, and both
+            // composers would write the same draft while each view re-runs `select` on the other's chat.
+            CommandGroup(replacing: .newItem) {
+                Button("Новый чат…") { model.showsNewChat = true }
+                    .keyboardShortcut("n", modifiers: .command)
+                    .disabled(model.phase != .working || model.isLocked)
+                Button("Избранное") { Task { await model.openSavedMessages() } }
+                    .keyboardShortcut("0", modifiers: .command)
+                    .disabled(model.phase != .working || model.isLocked)
+            }
             CommandGroup(after: .newItem) {
                 Button("Отметить прочитанным") {
                     Task { await model.markSelectedRead() }
@@ -45,6 +54,13 @@ struct SwiftLiteApp: App {
                     .keyboardShortcut(.upArrow, modifiers: [.command, .option])
                 Button("Следующий чат") { model.selectAdjacentChat(1) }
                     .keyboardShortcut(.downArrow, modifiers: [.command, .option])
+                Button("К последним сообщениям") { Task { await model.showLatest() } }
+                    .keyboardShortcut(.downArrow, modifiers: .command)
+                Button("Увеличить текст сообщений") { Preferences.stepFontSize(1) }
+                    .keyboardShortcut("+", modifiers: .command)
+                Button("Уменьшить текст сообщений") { Preferences.stepFontSize(-1) }
+                    .keyboardShortcut("-", modifiers: .command)
+                Divider()
                 Button("Предыдущий непрочитанный") { model.selectUnreadChat(-1) }
                     .keyboardShortcut(.upArrow, modifiers: [.option, .shift])
                 Button("Следующий непрочитанный") { model.selectUnreadChat(1) }

@@ -39,6 +39,10 @@ struct WorkspaceView: View {
             ProfileSheet(info: info)
                 .environment(model)
         }
+        .sheet(isPresented: $model.showsNewChat) {
+            NewChatSheet()
+                .environment(model)
+        }
     }
 }
 
@@ -117,6 +121,15 @@ struct ChatListView: View {
             SidebarHeader(shownChats: visible.count)
         }
         .toolbar {
+            // Where Messages keeps "compose": a new chat with someone from your contacts.
+            ToolbarItem {
+                Button {
+                    model.showsNewChat = true
+                } label: {
+                    Label("Новый чат", systemImage: "square.and.pencil")
+                }
+                .help("Новый чат (⌘N)")
+            }
             ToolbarItem {
                 Button {
                     Task { await model.loadChats() }
@@ -260,8 +273,16 @@ struct ChatListView: View {
                     } else {
                         Button("Отметить непрочитанным", systemImage: "message.badge") { Task { await model.markChatUnread(chat) } }
                     }
-                    Button(chat.isMuted ? "Включить уведомления" : "Выключить уведомления", systemImage: chat.isMuted ? "bell" : "bell.slash") {
-                        Task { await model.toggleChatMuted(chat) }
+                    if chat.isMuted {
+                        Button("Включить уведомления", systemImage: "bell") { Task { await model.toggleChatMuted(chat) } }
+                    } else {
+                        Menu("Выключить уведомления", systemImage: "bell.slash") {
+                            Button("На час") { Task { await model.muteChat(chat, forSeconds: 3600) } }
+                            Button("На 8 часов") { Task { await model.muteChat(chat, forSeconds: 8 * 3600) } }
+                            Button("На 2 дня") { Task { await model.muteChat(chat, forSeconds: 2 * 86_400) } }
+                            Divider()
+                            Button("Навсегда") { Task { await model.toggleChatMuted(chat) } }
+                        }
                     }
                     Button(chat.isArchived ? "Вернуть из архива" : "Архивировать", systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
                         Task { await model.toggleChatArchived(chat) }
@@ -638,5 +659,85 @@ struct TypingDots: View {
             .animation(.smooth(duration: 0.25), value: phase)
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// "Новый чат": your contacts, narrowed as you type; Return opens the first, a click opens any.
+struct NewChatSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focused: Bool
+    @State private var query = ""
+    @State private var people: [AppModel.Contact] = []
+    @State private var isLoading = true
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TextField("Кому", text: $query, prompt: Text("Имя или @username"))
+                .textFieldStyle(.roundedBorder)
+                .focused($focused)
+                .onSubmit { if let first = people.first { open(first) } }
+                .padding(12)
+            List(people) { person in
+                Button {
+                    open(person)
+                } label: {
+                    HStack(spacing: 10) {
+                        Avatar(title: person.name, seed: person.id, photo: person.photo, diameter: 32)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(person.name.isEmpty ? "Без имени" : person.name)
+                                .font(.body)
+                                .lineLimit(1)
+                            Text([person.username.isEmpty ? "" : "@" + person.username, person.status]
+                                .filter { !$0.isEmpty }.joined(separator: " · "))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .overlay {
+                if people.isEmpty {
+                    if isLoading {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        ContentUnavailableView(query.isEmpty ? "Контактов нет" : "Никого не нашлось", systemImage: "person.crop.circle.badge.questionmark",
+                                               description: Text("Человека не из контактов можно найти через поиск в боковой панели"))
+                    }
+                }
+            }
+            Divider()
+            HStack {
+                Button("Избранное") {
+                    dismiss()
+                    Task { await model.openSavedMessages() }
+                }
+                Spacer()
+                Button("Отмена") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding(12)
+        }
+        .frame(width: 380, height: 480)
+        .onAppear { focused = true }
+        .task(id: query) {
+            // A name is typed in a burst; only the pause after it is worth a request.
+            if !query.isEmpty { try? await Task.sleep(for: .milliseconds(150)) }
+            guard !Task.isCancelled else { return }
+            let found = await model.contacts(matching: query)
+            guard !Task.isCancelled else { return }
+            people = found
+            isLoading = false
+        }
+    }
+
+    private func open(_ person: AppModel.Contact) {
+        dismiss()
+        model.wantsComposerFocus = true
+        Task { await model.openPrivateChat(with: person.id) }
     }
 }

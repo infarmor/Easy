@@ -1316,6 +1316,7 @@ struct MessageRow: View {
             Button(row.album.count > 1 ? "Переслать альбом…" : "Переслать…", systemImage: "arrowshape.turn.up.right") {
                 model.prepareForwarding([message])
             }
+            Button("В Избранное", systemImage: "bookmark") { Task { await model.saveToSavedMessages(message) } }
             Button("Выбрать", systemImage: "checkmark.circle") { model.beginSelection(with: message) }
             Divider()
         }
@@ -1338,8 +1339,14 @@ struct MessageRow: View {
         if message.isFailed {
             Button("Отправить ещё раз", systemImage: "arrow.clockwise") { Task { await model.resend(message) } }
         }
+        if message.isSent, !message.isDeleted, chat.kind == .group || chat.kind == .channel {
+            Button("Скопировать ссылку на сообщение", systemImage: "link") { Task { await model.copyLink(to: message) } }
+        }
         if message.attachment != nil, !message.isDeleted {
             Divider()
+            if message.media?.kind == .photo {
+                Button("Скопировать фото", systemImage: "photo.on.rectangle") { Task { await model.copyPhoto(of: message) } }
+            }
             Button("Открыть вложение", systemImage: "arrow.up.forward.app") { Task { await model.openAttachment(of: message) } }
             Button("Сохранить вложение…", systemImage: "square.and.arrow.down") { saveAttachment() }
         }
@@ -1555,6 +1562,7 @@ struct Composer: View {
     @State private var showsLocation = false
     /// The caret or the selected words of the field, which the formatting commands wrap.
     @State private var selection: TextSelection?
+    @AppStorage(Preferences.sendWithCommandReturn) private var sendsWithCommandReturn = false
 
     var body: some View {
         @Bindable var model = model
@@ -1733,6 +1741,21 @@ struct Composer: View {
                         .onSubmit {
                             Task { await model.send() }
                         }
+                        // The other way round for people who write at length: Return is a new line and
+                        // ⌘Return sends. ⌘Return sends in either mode.
+                        .onKeyPress(.return, phases: .down) { press in
+                            if press.modifiers.contains(.command) {
+                                Task { await model.send() }
+                                return .handled
+                            }
+                            guard sendsWithCommandReturn, press.modifiers.isDisjoint(with: [.option, .shift, .control]) else { return .ignored }
+                            let at = selectedRange ?? model.draft.endIndex..<model.draft.endIndex
+                            let caret = model.draft.distance(from: model.draft.startIndex, to: at.lowerBound) + 1
+                            model.draft.replaceSubrange(at, with: "\n")
+                            let place = model.draft.index(model.draft.startIndex, offsetBy: caret)
+                            DispatchQueue.main.async { selection = TextSelection(insertionPoint: place) }
+                            return .handled
+                        }
                         .onChange(of: model.draft) { _, _ in
                             model.noteTyping()
                         }
@@ -1748,7 +1771,8 @@ struct Composer: View {
                             Task { await model.editLastMessage() }
                             return .handled
                         }
-                        .help("Return — отправить, Option-Return — новая строка, ↑ — изменить последнее. "
+                        .help((sendsWithCommandReturn ? "⌘Return — отправить, Return — новая строка" : "Return — отправить, Option-Return — новая строка")
+                            + ", ↑ — изменить последнее. "
                             + "Выделите слова и нажмите ⌘B, ⌘I или ⌘K, либо пишите разметкой: **жирный**, __курсив__, `код`")
 
                     if !model.scheduledMessages.isEmpty {

@@ -208,6 +208,8 @@ final class AppModel {
     @ObservationIgnored var isAskingAboutLogin = false
     /// The chat list has settled after launch, so a row changing place from now on is news worth animating.
     var animatesChatList = false
+    /// The "Новый чат" sheet is on screen.
+    var showsNewChat = false
     /// A chat was opened from the keyboard (Return in the sidebar search): its composer takes the focus, so
     /// the next thing typed is the message rather than more of the search.
     var wantsComposerFocus = false

@@ -30,6 +30,7 @@ struct SettingsView: View {
 
 private struct GeneralSettings: View {
     @AppStorage(Preferences.messageFontSize) private var messageFontSize = 14
+    @AppStorage(Preferences.sendWithCommandReturn) private var sendsWithCommandReturn = false
     @AppStorage(Preferences.showAvatars) private var showsAvatars = true
     @AppStorage(Preferences.animateStickers) private var animatesStickers = true
     @AppStorage(Preferences.backgroundDim) private var backgroundDim = 0.26
@@ -41,6 +42,11 @@ private struct GeneralSettings: View {
             Section {
                 Stepper(value: $messageFontSize, in: 11...20) {
                     LabeledContent("Размер текста сообщений", value: "\(messageFontSize) pt")
+                }
+                .help("Также ⌘+ и ⌘− в окне переписки")
+                Picker("Отправка сообщения", selection: $sendsWithCommandReturn) {
+                    Text("Return").tag(false)
+                    Text("⌘Return (Return — новая строка)").tag(true)
                 }
                 Picker("Переводить в", selection: $translateTo) {
                     ForEach(AppModel.translationLanguages) { language in

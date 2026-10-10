@@ -157,6 +157,44 @@ extension AppModel {
     /// The reactions offered in the menu, like the official quick-reaction bar.
     static let quickReactions = ["👍", "❤️", "😂", "😮", "😢", "🔥"]
 
+    // MARK: - keeping and sharing one message
+
+    /// "В Избранное": a copy of the message, or of its whole album, in the chat with yourself.
+    func saveToSavedMessages(_ message: Message) async {
+        guard myUserId != 0,
+              let node = try? await request(["@type": "createPrivateChat", "user_id": myUserId, "force": false]) else { return }
+        // The chat object is only needed for its id and name; the forward itself reports what happened.
+        var saved = knownChats[node.tdInt64("id")] ?? TD.chat(node)
+        saved.title = "Избранное"
+        await forward([message], to: saved)
+    }
+
+    /// A t.me link to the message. Only messages of public or private supergroups and channels have one.
+    func copyLink(to message: Message) async {
+        guard let link = try? await request([
+            "@type": "getMessageLink", "chat_id": message.chatId, "message_id": message.id,
+            "media_timestamp": 0, "checklist_task_id": 0, "poll_option_id": "", "for_album": false, "in_message_thread": false,
+        ]), !link.tdString("link").isEmpty else {
+            showToast("У сообщений этого чата нет ссылок")
+            return
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(link.tdString("link"), forType: .string)
+        showToast(link.tdBool("is_public") ? "Ссылка скопирована" : "Ссылка скопирована — откроется только у участников")
+    }
+
+    /// The photo itself on the pasteboard, ready to paste into another app.
+    func copyPhoto(of message: Message) async {
+        guard let fileId = message.attachment?.fileId, let path = await localFile(id: fileId, priority: 32),
+              let image = NSImage(contentsOfFile: path) else {
+            fail("Не удалось скопировать фото")
+            return
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.writeObjects([image])
+        showToast("Фото скопировано")
+    }
+
     // MARK: - custom emoji
 
     /// Fetches the pictures of custom emoji that are not in hand yet. A still picture each: the sticker

@@ -15,6 +15,8 @@ enum Preferences {
     static let notificationPreview = "notificationPreview"
     static let dockBadge = "dockBadge"
 
+    /// Return adds a line and ⌘Return sends, for people who write long messages.
+    static let sendWithCommandReturn = "sendWithCommandReturn"
     static let showOnline = "showOnline"
     static let sendTyping = "sendTyping"
     static let markReadOnOpen = "markReadOnOpen"
@@ -79,6 +81,12 @@ enum Preferences {
     }
 
     static func isOn(_ key: String) -> Bool { UserDefaults.standard.bool(forKey: key) }
+
+    /// ⌘+ and ⌘−: the text of messages a point larger or smaller, within what the settings allow.
+    static func stepFontSize(_ step: Int) {
+        let current = UserDefaults.standard.integer(forKey: messageFontSize)
+        UserDefaults.standard.set(min(max(current + step, 11), 20), forKey: messageFontSize)
+    }
 
     /// Ghost mode overrides the individual privacy switches: nothing tells others you are here.
     static var readsAutomatically: Bool { isOn(markReadOnOpen) && !isOn(ghostMode) }

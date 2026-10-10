@@ -136,6 +136,60 @@ extension AppModel {
         await perform(["@type": "setChatNotificationSettings", "chat_id": chat.id, "notification_settings": settings])
     }
 
+    /// Silence for a while: an hour of a meeting, a night, a weekend. The chat rings again by itself.
+    func muteChat(_ chat: Chat, forSeconds seconds: Int) async {
+        var settings = chatNotificationSettings[chat.id] ?? [
+            "@type": "chatNotificationSettings",
+            "use_default_sound": true,
+            "use_default_show_preview": true,
+            "use_default_mute_stories": true,
+            "use_default_story_sound": true,
+            "use_default_show_story_poster": true,
+            "use_default_disable_pinned_message_notifications": true,
+            "use_default_disable_mention_notifications": true,
+        ]
+        settings["use_default_mute_for"] = false
+        settings["mute_for"] = max(0, seconds)
+        if await perform(["@type": "setChatNotificationSettings", "chat_id": chat.id, "notification_settings": settings]) {
+            showToast("Без звука до " + Date().addingTimeInterval(TimeInterval(seconds))
+                .formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(Locale(identifier: "ru_RU"))))
+        }
+    }
+
+    // MARK: - starting a chat
+
+    /// Someone from your contacts, for the "Новый чат" sheet.
+    struct Contact: Identifiable, Equatable {
+        var id: Int64
+        var name: String
+        var username: String
+        var photo: ProfilePhoto?
+        var status: String
+    }
+
+    /// Contacts whose name or username has `query` in it; all of them for an empty one, in Telegram's order.
+    func contacts(matching query: String) async -> [Contact] {
+        guard let found = try? await request(["@type": "searchContacts",
+                                              "query": query.trimmingCharacters(in: .whitespacesAndNewlines), "limit": 200]) else { return [] }
+        var people: [Contact] = []
+        for id in found.tdInt64s("user_ids") {
+            // TDLib has every contact in memory already; this does not go to the network.
+            guard let user = try? await request(["@type": "getUser", "user_id": id]) else { continue }
+            let username = (user.tdNode("usernames")?["active_usernames"] as? [String])?.first ?? ""
+            people.append(Contact(id: id, name: TD.displayName(ofUser: user), username: username,
+                                  photo: TD.photo(user.tdNode("profile_photo")),
+                                  status: user.tdNode("type")?.tdType == "userTypeBot" ? "бот"
+                                      : TD.presence(user.tdNode("status")).map { TD.describe($0) } ?? ""))
+        }
+        return people
+    }
+
+    /// ⌘0: the chat with yourself, where notes and forwards are kept.
+    func openSavedMessages() async {
+        guard myUserId != 0 else { return }
+        await openPrivateChat(with: myUserId)
+    }
+
     /// Chats a message can be forwarded to: the main list first, then the archive.
     func forwardTargets(matching query: String) -> [Chat] {
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
