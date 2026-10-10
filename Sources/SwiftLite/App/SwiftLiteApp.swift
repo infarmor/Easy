@@ -45,6 +45,10 @@ struct SwiftLiteApp: App {
                     .keyboardShortcut(.upArrow, modifiers: [.command, .option])
                 Button("Следующий чат") { model.selectAdjacentChat(1) }
                     .keyboardShortcut(.downArrow, modifiers: [.command, .option])
+                Button("Предыдущий непрочитанный") { model.selectUnreadChat(-1) }
+                    .keyboardShortcut(.upArrow, modifiers: [.option, .shift])
+                Button("Следующий непрочитанный") { model.selectUnreadChat(1) }
+                    .keyboardShortcut(.downArrow, modifiers: [.option, .shift])
                 ForEach(1...9, id: \.self) { number in
                     Button("Чат \(number)") { model.selectChat(number: number) }
                         .keyboardShortcut(KeyEquivalent(Character(String(number))), modifiers: .command)

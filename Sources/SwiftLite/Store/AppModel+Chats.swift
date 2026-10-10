@@ -37,6 +37,48 @@ extension AppModel {
         }
     }
 
+    /// The chat that was open when the app was last used opens again, once TDLib has told about it. Only for
+    /// the account it belonged to, and only while nothing else has been opened in the meantime.
+    func reopenLastChat() {
+        let parts = (UserDefaults.standard.string(forKey: Preferences.lastChat) ?? "").split(separator: ":")
+        guard parts.count == 2, Int64(parts[0]) == myUserId, let chatId = Int64(parts[1]) else { return }
+        Task {
+            // Chats arrive over the first seconds; a chat that never does (left, deleted) is simply not opened.
+            for _ in 0..<60 {
+                guard selection == nil, isReady else { return }
+                if knownChats[chatId] != nil {
+                    selection = chatId
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+        }
+    }
+
+    /// ⌥⇧↓ and ⌥⇧↑: the next chat of the list on screen that has something unread, wrapping around.
+    func selectUnreadChat(_ step: Int) {
+        let list = visibleChats
+        let waiting = list.indices.filter { list[$0].unread > 0 || list[$0].isMarkedUnread || list[$0].unreadMentions > 0 }
+        guard !waiting.isEmpty else {
+            showToast("Непрочитанных нет")
+            return
+        }
+        let current = list.firstIndex { $0.id == selection } ?? (step > 0 ? -1 : list.count)
+        let next = step > 0 ? (waiting.first { $0 > current } ?? waiting[0]) : (waiting.last { $0 < current } ?? waiting[waiting.count - 1])
+        selection = list[next].id
+    }
+
+    /// Chats of the place on screen that have something unread.
+    var unreadChatsOnScreen: [Chat] {
+        chats.filter { $0.unread > 0 || $0.isMarkedUnread }
+    }
+
+    /// "Прочитать всё" of the folder menu.
+    func markAllRead(_ list: [Chat]) async {
+        for chat in list { await markRead(chat.id) }
+        if !list.isEmpty { showToast("Прочитано: \(TD.count(list.count, "чат", "чата", "чатов"))") }
+    }
+
     func markSelectedRead() async {
         guard let chatId = openChatId ?? selection else { return }
         await markRead(chatId)

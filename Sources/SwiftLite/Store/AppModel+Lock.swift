@@ -19,6 +19,7 @@ extension AppModel {
         lockKeys = keys
         isLocked = false
         startAutoLock()
+        presentLoginAlert()
         // Does nothing once a session exists.
         boot()
         return true
@@ -46,6 +47,40 @@ extension AppModel {
         viewerMessage = nil
         closeWebApp()
         isLocked = true
+    }
+
+    // MARK: - a new device on the account
+
+    /// Asks about a login that has not been confirmed: yours, or to be thrown out. Only in front of someone
+    /// who can answer — the app active and unlocked — and one question at a time.
+    func presentLoginAlert() {
+        guard let summary = unconfirmedLogin, !isLocked, !isAskingAboutLogin, NSApp?.isActive == true else { return }
+        isAskingAboutLogin = true
+        Task {
+            defer { isAskingAboutLogin = false }
+            // The update names the device; the sessions list has the ids the answer needs.
+            let pending = await activeSessions().filter { $0.isUnconfirmed && !$0.isCurrent }
+            guard !pending.isEmpty, unconfirmedLogin == summary else {
+                unconfirmedLogin = nil
+                return
+            }
+            let details = pending.map { session in
+                [session.device, session.application, session.location, session.ipAddress].filter { !$0.isEmpty }.joined(separator: " · ")
+            }.joined(separator: "\n")
+            let verdict = BotDialogs.judgeLogin(details)
+            // Whatever the answer, this login has been shown; "later" leaves the session in the settings list.
+            unconfirmedLogin = nil
+            for session in pending {
+                switch verdict {
+                case .mine:
+                    _ = try? await request(["@type": "confirmSession", "session_id": session.id])
+                case .notMine:
+                    if await terminateSession(session.id) { showToast("Сеанс завершён") }
+                case .later:
+                    break
+                }
+            }
+        }
     }
 
     // MARK: - setting and removing

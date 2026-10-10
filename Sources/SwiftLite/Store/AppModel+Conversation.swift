@@ -972,6 +972,7 @@ extension AppModel {
 
     func applicationBecameActive() {
         updateOnlineStatus()
+        presentLoginAlert()
         guard let chatId = openChatId, let chat = knownChats[chatId] else { return }
         if chat.unread > 0 || chat.isMarkedUnread || chat.unreadMentions > 0 || chat.unreadReactions > 0 {
             scheduleMarkRead()

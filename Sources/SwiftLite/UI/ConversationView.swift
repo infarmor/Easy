@@ -757,6 +757,9 @@ struct MessageRow: View {
     /// Width of the bubble, which the keyboard under it follows.
     @State private var contentWidth: CGFloat = 0
     @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// A message that has just arrived grows out of the corner its tail points to; this says it has done so.
+    @State private var hasSettled = false
     /// Bumped when this row's custom emoji have been decoded, so the text and reactions are drawn again.
     @State private var emojiRound = 0
 
@@ -801,6 +804,16 @@ struct MessageRow: View {
                     Spacer(minLength: 60)
                 }
             }
+            .scaleEffect(arrives && !hasSettled ? 0.86 : 1, anchor: message.isOutgoing ? .bottomTrailing : .bottomLeading)
+            .opacity(arrives && !hasSettled ? 0 : 1)
+            .onAppear {
+                guard !hasSettled else { return }
+                if arrives {
+                    withAnimation(.spring(duration: 0.34, bounce: 0.3)) { hasSettled = true }
+                } else {
+                    hasSettled = true
+                }
+            }
             // The whole width of the row counts, empty side included: on the way from the bubble to its
             // buttons the pointer crosses the gap between them, and without this the buttons faded first.
             .contentShape(Rectangle())
@@ -832,6 +845,14 @@ struct MessageRow: View {
             }
             .animation(.smooth(duration: 0.3), value: model.highlightedMessageId == message.id)
         }
+    }
+
+    /// Whether this row is a message coming in right now, as opposed to history being laid out. Yours counts
+    /// while it is being sent; the copy that replaces it once the server has it is the same message to the
+    /// eye and must not jump a second time.
+    private var arrives: Bool {
+        guard !reduceMotion else { return false }
+        return message.isPending || (!message.isOutgoing && abs(message.date.timeIntervalSinceNow) < 2)
     }
 
     /// Three 26-point buttons, 2 points apart, 3 points of padding on each side.
@@ -1195,6 +1216,7 @@ struct MessageRow: View {
                         Text(reaction.count.formatted(.number.notation(.compactName)))
                             .font(.subheadline.weight(.medium))
                             .monospacedDigit()
+                            .contentTransition(.numericText(value: Double(reaction.count)))
                     }
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
@@ -1206,8 +1228,11 @@ struct MessageRow: View {
                 }
                 .buttonStyle(.plain)
                 .help(reaction.isChosen ? "Убрать реакцию" : reaction.emoji.isEmpty ? "Поставить такую же" : "Поставить \(reaction.emoji)")
+                .transition(.scale(scale: 0.4).combined(with: .opacity))
             }
         }
+        // A reaction lands with a little bounce, and the others make room for it.
+        .animation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.38), value: message.reactions)
     }
 
     /// The author's name in their own colour: inside the bubble where there is one, above the surface where
@@ -1578,11 +1603,23 @@ struct Composer: View {
         .onDisappear { if recorder.isRecording { recorder.cancel() } }
         // ⌘V with a picture or files copied opens the send sheet; text pastes into the field as usual.
         .background {
-            PasteInterceptor {
+            PasteInterceptor(handle: {
                 guard AppModel.pasteboardHoldsAttachment() else { return false }
                 Task { await model.sendPasteboard() }
                 return true
-            }
+            }, type: { characters in
+                // A letter typed while the keyboard is in the chat list or nowhere starts the message: the
+                // field takes the letter and the keyboard, with the caret after it.
+                guard !needsStart, !model.isSelectingMessages, !recorder.isRecording, model.viewerMessage == nil else { return false }
+                model.draft += characters
+                focused = true
+                let end = TextSelection(insertionPoint: model.draft.endIndex)
+                selection = end
+                // Again once the field has the keyboard: taking it selects the whole text, and the next
+                // letter would replace what was just typed.
+                DispatchQueue.main.async { selection = TextSelection(insertionPoint: model.draft.endIndex) }
+                return true
+            })
         }
     }
 
@@ -1928,17 +1965,21 @@ private struct ComposerContextBar: View {
 /// Russian layout too, where the key reads «м».
 private struct PasteInterceptor: NSViewRepresentable {
     let handle: () -> Bool
+    /// Text typed while no field has the keyboard; true when the composer took it.
+    let type: (String) -> Bool
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
+        context.coordinator.type = type
         context.coordinator.install(on: view, handle: handle)
         return view
     }
 
     func updateNSView(_ view: NSView, context: Context) {
         context.coordinator.handle = handle
+        context.coordinator.type = type
     }
 
     static func dismantleNSView(_ view: NSView, coordinator: Coordinator) {
@@ -1948,6 +1989,7 @@ private struct PasteInterceptor: NSViewRepresentable {
     @MainActor
     final class Coordinator {
         var handle: () -> Bool = { false }
+        var type: (String) -> Bool = { _ in false }
         private var monitor: Any?
         private weak var view: NSView?
         /// kVK_ANSI_V.
@@ -1961,6 +2003,21 @@ private struct PasteInterceptor: NSViewRepresentable {
                 let isCommandV = event.keyCode == Self.keyV
                     && event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
                 let windowNumber = event.windowNumber
+                // Plain typing: no ⌘, ⌃ or ⌥, and something that prints — not an arrow, Tab, Return or Esc.
+                let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                let typed = event.characters ?? ""
+                let prints = flags.isDisjoint(with: [.command, .control, .option, .function]) && !typed.isEmpty
+                    && typed.unicodeScalars.allSatisfy { $0.value > 0x20 && $0.value != 0x7F && !(0xF700...0xF8FF).contains($0.value) }
+                if prints {
+                    let taken = MainActor.assumeIsolated { () -> Bool in
+                        guard let self, let window = self.view?.window, window.windowNumber == windowNumber,
+                              window.attachedSheet == nil, window.isKeyWindow,
+                              // A field that already has the keyboard keeps it: the search, a selected text.
+                              !(window.firstResponder is NSText) else { return false }
+                        return self.type(typed)
+                    }
+                    return taken ? nil : event
+                }
                 guard isCommandV else { return event }
                 let handled = MainActor.assumeIsolated { () -> Bool in
                     guard let self, let window = self.view?.window, window.windowNumber == windowNumber,

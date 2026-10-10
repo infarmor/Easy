@@ -15,11 +15,15 @@ struct WorkspaceView: View {
                     if let chat = model.selectedChat {
                         ConversationView(chat: chat)
                             .id(chat.id)
+                            .transition(.opacity)
                     } else {
                         // The wallpaper belongs to a conversation; with none open the window shows its glass.
                         EmptyDetailView().background(WindowGlass())
+                            .transition(.opacity)
                     }
                 }
+                // One conversation gives way to the next instead of being cut to it.
+                .animation(.easeOut(duration: 0.16), value: model.selectedChat?.id)
                 if model.showsMembersColumn, let chat = model.selectedChat {
                     Divider()
                     MembersPanel(chat: chat)
@@ -433,6 +437,7 @@ private struct EmptyDetailView: View {
             Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 6) {
                 shortcut("⌘K", "найти чат, человека или канал")
                 shortcut("⌥⌘↑ ↓", "предыдущий и следующий чат")
+                shortcut("⌥⇧↑ ↓", "к чату с непрочитанным")
                 shortcut("⌘F", "поиск в чате")
                 shortcut("⌘I", "профиль собеседника")
                 shortcut("⌥⌘M", "список участников в группе")
@@ -505,6 +510,15 @@ private struct SidebarHeader: View {
                     Toggle(placeTitle("Архив", model.archiveUnread), isOn: Binding(
                         get: { model.showsArchive },
                         set: { model.showsArchive = $0 }))
+                    Divider()
+                    Button("Прочитать всё здесь…", systemImage: "checkmark.message") {
+                        let waiting = model.unreadChatsOnScreen
+                        guard Dialogs.confirm("Отметить прочитанными \(TD.count(waiting.count, "чат", "чата", "чатов"))?",
+                                              message: "Все сообщения в «\(place)» будут отмечены прочитанными.",
+                                              action: "Прочитать") else { return }
+                        Task { await model.markAllRead(waiting) }
+                    }
+                    .disabled(model.unreadChatsOnScreen.isEmpty)
                 } label: {
                     HStack(spacing: 4) {
                         Text(place)

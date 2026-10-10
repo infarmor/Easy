@@ -1684,6 +1684,35 @@ MainActor.assumeIsolated {
           "each kind of indicator has its places to be looked up: \(places)")
     check(SecurityTools.lookups(for: "a b&c", kind: .domain).allSatisfy { !$0.url.absoluteString.contains(" ") && !$0.url.absoluteString.contains("&c") },
           "what goes into a lookup address is encoded, not pasted")
+
+    // --- getting around: unread chats, reading a folder, a new device on the account -----------------------
+    func plain(_ id: Int64, _ title: String, order: Int, unread: Int) {
+        model.apply(json(#"{"@type":"updateNewChat","chat":{"@type":"chat","id":\#(id),"type":{"@type":"chatTypePrivate","user_id":\#(id)},"title":"\#(title)","positions":[\#(mainPosition(String(9221294784513000000 + order)))],"unread_count":\#(unread),"last_read_inbox_message_id":0,"draft_message":null}}"#))
+    }
+    plain(9401, "Первый", order: 40, unread: 0)
+    plain(9402, "Второй", order: 30, unread: 2)
+    plain(9403, "Третий", order: 20, unread: 0)
+    plain(9404, "Четвёртый", order: 10, unread: 5)
+    pump()
+    model.filter = ""
+    model.selection = 9401
+    model.selectUnreadChat(1)
+    check(model.selection == 9402, "⌥⇧↓ goes to the next chat with something unread: \(String(describing: model.selection))")
+    model.selectUnreadChat(1)
+    check(model.selection == 9404, "skipping the ones that have nothing: \(String(describing: model.selection))")
+    model.selectUnreadChat(-1)
+    check(model.selection == 9402, "⌥⇧↑ goes back: \(String(describing: model.selection))")
+    let waiting = model.unreadChatsOnScreen.filter { [9402, 9404].contains($0.id) }
+    check(waiting.count == 2, "the folder knows which of its chats are waiting")
+    model.recordedRequests = []
+    Task { await model.markAllRead(waiting) }
+    pump(0.2)
+    check(model.toast?.contains("2 чата") == true, "reading a folder says how much it read: \(model.toast ?? "nil")")
+
+    model.apply(json(#"{"@type":"updateUnconfirmedSession","session":{"@type":"unconfirmedSession","date":1790000000,"device_model":"iPhone 17","location":"Moscow, Russia"},"unconfirmed_session_count":1}"#))
+    check(model.unconfirmedLogin == "iPhone 17 · Moscow, Russia", "a new device on the account is noticed: \(model.unconfirmedLogin ?? "nil")")
+    model.apply(json(#"{"@type":"updateUnconfirmedSession","unconfirmed_session_count":0}"#))
+    check(model.unconfirmedLogin == nil, "and forgotten once Telegram says it was dealt with")
 }
 
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")

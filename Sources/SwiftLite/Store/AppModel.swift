@@ -201,6 +201,11 @@ final class AppModel {
     /// Keys of the passcode, in memory only while the app has been unlocked with it since launch.
     @ObservationIgnored var lockKeys: AppLock.Keys?
     @ObservationIgnored var lockTimer: Timer?
+    /// A device that signed in to the account and has not been confirmed as yours: "iPhone 17 · Moscow, Russia".
+    /// Kept until it is answered, so a login noticed while the app was locked or in the background is asked
+    /// about when you are back.
+    @ObservationIgnored var unconfirmedLogin: String?
+    @ObservationIgnored var isAskingAboutLogin = false
     /// A chat was opened from the keyboard (Return in the sidebar search): its composer takes the focus, so
     /// the next thing typed is the message rather than more of the search.
     var wantsComposerFocus = false
@@ -211,6 +216,9 @@ final class AppModel {
         didSet {
             if selection != openChatId { leaveOpenChat() }
             refreshSelectedChat()
+            if let selection, selection != oldValue, myUserId != 0 {
+                UserDefaults.standard.set("\(myUserId):\(selection)", forKey: Preferences.lastChat)
+            }
         }
     }
     var messages: [Message] = [] {
@@ -853,6 +861,7 @@ final class AppModel {
         }
         chatsChanged()
         updateOnlineStatus()
+        reopenLastChat()
         await applyEngineOptions()
         await loadTDLibVersion()
     }
@@ -1070,6 +1079,24 @@ final class AppModel {
             for chatId in [userId] + Array(secretChatsOfUser[userId] ?? []) {
                 updateChat(chatId) { $0.presence = presence }
             }
+
+        case "updateUnconfirmedSession":
+            // Telegram's own "someone just signed in to your account". Nothing in the app showed it: the
+            // session sat in the settings list, marked orange, until someone went looking.
+            guard let session = update.tdNode("session") else {
+                unconfirmedLogin = nil
+                return
+            }
+            let device = session.tdString("device_model")
+            let place = session.tdString("location")
+            let summary = [device, place].filter { !$0.isEmpty }.joined(separator: " · ")
+            let isNew = unconfirmedLogin != summary
+            unconfirmedLogin = summary
+            if isNew {
+                notifier.postAlert(id: "login:\(session.tdInt("date"))", title: "Новый вход в аккаунт",
+                                   body: summary.isEmpty ? "Откройте iGram, чтобы проверить" : summary)
+            }
+            presentLoginAlert()
 
         case "updateSecretChat":
             guard let secret = update.tdNode("secret_chat"), let state = SecretChatState(secret.tdNode("state")) else { return }

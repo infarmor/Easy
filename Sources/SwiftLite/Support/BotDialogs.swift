@@ -40,6 +40,25 @@ enum BotDialogs {
         }
     }
 
+    enum LoginVerdict { case mine, notMine, later }
+
+    /// A device signed in to the account. Three answers on purpose: closing the box with Esc must neither
+    /// vouch for a stranger's device nor throw out your own.
+    static func judgeLogin(_ details: String) -> LoginVerdict {
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = "В аккаунт вошли с нового устройства"
+        alert.informativeText = "\(details)\n\nЕсли это не вы, завершите сеанс: устройство потеряет доступ к аккаунту."
+        alert.addButton(withTitle: "Это я")
+        alert.addButton(withTitle: "Завершить сеанс").hasDestructiveAction = true
+        alert.addButton(withTitle: "Позже")
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: return .mine
+        case .alertSecondButtonReturn: return .notMine
+        default: return .later
+        }
+    }
+
     static func notice(_ text: String, from bot: String) {
         let alert = NSAlert()
         alert.messageText = bot

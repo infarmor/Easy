@@ -56,6 +56,17 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         UNUserNotificationCenter.current().add(request)
     }
 
+    /// Something about the account itself, not a message: no reply field, and a click only brings the app up.
+    func postAlert(id: String, title: String, body: String) {
+        guard isActive else { return }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.interruptionLevel = .timeSensitive
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
+    }
+
     /// Banners of messages read here or on another device are taken back.
     func withdraw(chatId: Int64, upTo messageId: Int64) {
         guard isActive else { return }
@@ -97,7 +108,11 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let action = response.actionIdentifier
         let text = (response as? UNTextInputNotificationResponse)?.userText ?? ""
         await MainActor.run {
-            guard let chatId else { return }
+            guard let chatId else {
+                // An alert about the account: the app comes forward and shows what it has to ask.
+                if action != UNNotificationDismissActionIdentifier { NSApp.activate() }
+                return
+            }
             switch action {
             case Self.replyAction:
                 onReply?(chatId, messageId, text)

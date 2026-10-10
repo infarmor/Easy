@@ -40,6 +40,9 @@ enum Preferences {
     /// Keep deleted messages and edit history of secret chats too. Off: what is meant to vanish, vanishes.
     static let archiveSecretChats = "archiveSecretChats"
 
+    /// "<account id>:<chat id>" of the chat that was open, so the next launch starts where this one ended.
+    static let lastChat = "lastChat"
+
     static let showMessageCode = "showMessageCode"
     static let showIdentifiers = "showIdentifiers"
     static let tdlibLogLevel = "tdlibLogLevel"

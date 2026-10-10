@@ -196,6 +196,9 @@ struct UnreadBadge: View {
     var body: some View {
         Text(count > 99 ? "99+" : "\(count)")
             .font(.subheadline.weight(.semibold))
+            // The digits roll to the new count, as the badges of Mail and Messages do.
+            .contentTransition(.numericText(value: Double(count)))
+            .animation(.snappy(duration: 0.25), value: count)
             .foregroundStyle(isOnAccent ? Color.accentColor : Color.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
