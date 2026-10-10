@@ -18,6 +18,8 @@ enum WebMVideo {
     }
 
     struct Clip: Sendable {
+        /// Tells one parsed file from another, so a view handed a different sticker knows to switch.
+        let id = UUID()
         var width: Int
         var height: Int
         var frames: [Frame]
@@ -232,7 +234,9 @@ enum WebMVideo {
         private var picture: Decoder?
         private var alpha: Decoder?
         private var next = 0
-        private let context = CIContext(options: [.cacheIntermediates: false])
+        /// One for every sticker: a context owns a Metal queue and caches, and a chat can show a dozen stickers.
+        /// Core Image contexts are safe to draw with from several threads.
+        private static let context = CIContext(options: [.cacheIntermediates: false])
         private let hasAlpha: Bool
 
         init?(clip: Clip) {
@@ -241,7 +245,8 @@ enum WebMVideo {
             guard restart() else { return nil }
         }
 
-        /// A loop starts over with fresh decoders: the first frame is the only one that stands alone.
+        /// Decoders are made once. A loop needs no new ones: the first frame is a key frame, which stands
+        /// alone and makes the decoder forget everything before it. Only a failure starts over.
         @discardableResult
         private func restart() -> Bool {
             next = 0
@@ -260,10 +265,15 @@ enum WebMVideo {
         }
 
         func nextImage() -> (image: CGImage, time: Int)? {
-            if next >= clip.frames.count, !restart() { return nil }
+            if next >= clip.frames.count { next = 0 }
             let frame = clip.frames[next]
             next += 1
-            guard let colour = picture?.decode(frame.picture) else { return nil }
+            guard let colour = picture?.decode(frame.picture) else {
+                // A decoder that lost its place gets one fresh start from the first frame, then gives up
+                // until the next call rather than spinning on a file it cannot read.
+                restart()
+                return nil
+            }
             var image = CIImage(cvPixelBuffer: colour)
             if let alpha, let mask = frame.alpha.flatMap({ alpha.decode($0) }) {
                 // The transparency stream is a grey picture: white where the sticker is, black where it is not.
@@ -273,7 +283,7 @@ enum WebMVideo {
                 ])
             }
             let bounds = CGRect(x: 0, y: 0, width: clip.width, height: clip.height)
-            guard let rendered = context.createCGImage(image, from: bounds) else { return nil }
+            guard let rendered = Self.context.createCGImage(image, from: bounds) else { return nil }
             return (rendered, frame.time)
         }
     }

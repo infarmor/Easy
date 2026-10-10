@@ -60,9 +60,8 @@ struct LockView: View {
         guard !passcode.isEmpty, !isChecking else { return }
         let typed = passcode
         isChecking = true
-        // The derivation is slow by design; a breath later, so the field greys out before the wait.
-        DispatchQueue.main.async {
-            let opened = model.unlock(with: typed)
+        Task {
+            let opened = await model.unlock(with: typed)
             isChecking = false
             passcode = ""
             isWrong = !opened

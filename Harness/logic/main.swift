@@ -1642,8 +1642,14 @@ MainActor.assumeIsolated {
         model.lock()
         check(model.isLocked && model.profile == nil, "locking shuts the window and what was open over it")
         check(!model.canUnlockWithoutPasscode, "Touch ID is not offered before the passcode has been typed once")
-        check(!model.unlock(with: "не тот") && model.isLocked, "a wrong passcode leaves it locked")
-        check(model.unlock(with: "тайна-1234") && !model.isLocked && model.lockKeys?.database == made.keys.database, "the right one opens it and brings the keys")
+        var wrongOpened: Bool?, rightOpened: Bool?
+        Task { wrongOpened = await model.unlock(with: "не тот") }
+        for _ in 0..<100 where wrongOpened == nil { pump(0.05) }
+        check(wrongOpened == false && model.isLocked, "a wrong passcode leaves it locked")
+        check(!model.takesCommands, "and a locked app takes no commands from the menus")
+        Task { rightOpened = await model.unlock(with: "тайна-1234") }
+        for _ in 0..<100 where rightOpened == nil { pump(0.05) }
+        check(rightOpened == true && !model.isLocked && model.lockKeys?.database == made.keys.database, "the right one opens it and brings the keys")
         model.lock()
         check(model.canUnlockWithoutPasscode, "after that Touch ID may lift the cover")
         model.unlockAfterSystemAuthentication()

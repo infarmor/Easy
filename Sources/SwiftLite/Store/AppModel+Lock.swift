@@ -7,7 +7,7 @@ extension AppModel {
 
     /// The passcode typed on the lock screen. At launch this is what lets the session start; later it only
     /// lifts the cover.
-    func unlock(with passcode: String) -> Bool {
+    func unlock(with passcode: String) async -> Bool {
         guard let record = AppLock.load() else {
             // The record is gone (removed by hand): there is nothing left to check against.
             hasPasscode = false
@@ -15,7 +15,9 @@ extension AppModel {
             boot()
             return true
         }
-        guard let keys = AppLock.unlock(passcode, record) else { return false }
+        // A third of a million rounds by design; on the main thread that was a visible stall on every unlock.
+        let keys = await Task.detached(priority: .userInitiated) { AppLock.unlock(passcode, record) }.value
+        guard let keys else { return false }
         lockKeys = keys
         isLocked = false
         startAutoLock()
@@ -33,6 +35,10 @@ extension AppModel {
         guard canUnlockWithoutPasscode else { return }
         isLocked = false
     }
+
+    /// Whether the menus may act on the account: signed in, and not behind the passcode. A locked window with
+    /// live shortcuts would still open chats (and mark them read), paste files into one, or change its drafts.
+    var takesCommands: Bool { phase == .working && !isLocked }
 
     /// Covers the window until the passcode is typed again. The session keeps running underneath: messages
     /// still arrive, their banners just stop quoting them.
@@ -90,7 +96,8 @@ extension AppModel {
         guard passcode.count >= AppLock.minimumLength else { return "Код-пароль — не меньше \(AppLock.minimumLength) символов" }
         guard isReady else { return "Сначала войдите в аккаунт" }
         guard !hasPasscode else { return "Код-пароль уже задан" }
-        guard let made = AppLock.make(passcode: passcode) else { return "Не удалось создать ключ" }
+        let made = await Task.detached(priority: .userInitiated) { AppLock.make(passcode: passcode) }.value
+        guard let made else { return "Не удалось создать ключ" }
         do {
             // The record goes to disk first, marked as not yet encrypting: if the app dies in the middle, the
             // next launch has the salt to rebuild the key and tries the database both ways.
@@ -117,7 +124,8 @@ extension AppModel {
             hasPasscode = false
             return nil
         }
-        guard AppLock.unlock(passcode, record) != nil else { return "Неверный код-пароль" }
+        let matches = await Task.detached(priority: .userInitiated) { AppLock.unlock(passcode, record) != nil }.value
+        guard matches else { return "Неверный код-пароль" }
         guard isReady else { return "Сначала войдите в аккаунт" }
         do {
             if record.encryptsDatabase {

@@ -24,24 +24,27 @@ struct SwiftLiteApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("Новый чат…") { model.showsNewChat = true }
                     .keyboardShortcut("n", modifiers: .command)
-                    .disabled(model.phase != .working || model.isLocked)
+                    .disabled(!model.takesCommands)
                 Button("Избранное") { Task { await model.openSavedMessages() } }
                     .keyboardShortcut("0", modifiers: .command)
-                    .disabled(model.phase != .working || model.isLocked)
+                    .disabled(!model.takesCommands)
             }
             CommandGroup(after: .newItem) {
                 Button("Отметить прочитанным") {
                     Task { await model.markSelectedRead() }
                 }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
+                .disabled(!model.takesCommands)
             }
             CommandGroup(after: .pasteboard) {
                 Button("Отправить из буфера обмена") {
                     Task { await model.sendPasteboard() }
                 }
                 .keyboardShortcut("v", modifiers: [.command, .shift])
+                .disabled(!model.takesCommands)
             }
             CommandGroup(after: .sidebar) {
+                Group {
                 Button("Синхронизировать чаты") {
                     Task { await model.loadChats() }
                 }
@@ -69,6 +72,8 @@ struct SwiftLiteApp: App {
                     Button("Чат \(number)") { model.selectChat(number: number) }
                         .keyboardShortcut(KeyEquivalent(Character(String(number))), modifiers: .command)
                 }
+                }
+                .disabled(!model.takesCommands)
                 Button("Заблокировать iGram") { model.lock() }
                     .keyboardShortcut("l", modifiers: [.command, .option])
                     .disabled(!model.hasPasscode || model.isLocked)
@@ -76,11 +81,13 @@ struct SwiftLiteApp: App {
                     UserDefaults.standard.set(!Preferences.isOn(Preferences.ghostMode), forKey: Preferences.ghostMode)
                 }
                 .keyboardShortcut("g", modifiers: [.command, .shift])
+                .disabled(!model.takesCommands)
             }
         }
 
         .commands {
             CommandMenu("Формат") {
+                Group {
                 Button("Жирный") { model.format(.bold) }
                     .keyboardShortcut("b", modifiers: .command)
                 Button(model.composerHasSelection ? "Курсив" : "Профиль собеседника") { model.italicOrProfile() }
@@ -91,6 +98,8 @@ struct SwiftLiteApp: App {
                     .keyboardShortcut("k", modifiers: [.command, .shift])
                 Button("Спойлер") { model.format(.spoiler) }
                     .keyboardShortcut("p", modifiers: [.command, .shift])
+                }
+                .disabled(!model.takesCommands)
             }
         }
 

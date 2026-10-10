@@ -103,6 +103,8 @@ struct VideoStickerPlayer: NSViewRepresentable {
     }
 
     func updateNSView(_ view: VideoStickerView, context: Context) {
+        // SwiftUI may hand an existing view another sticker; it must not go on playing the one before.
+        if view.clipID != clip.id { view.show(clip) }
         view.isPlaying = isPlaying
     }
 
@@ -117,6 +119,8 @@ final class VideoStickerView: NSView {
     private nonisolated(unsafe) var renderer: WebMVideo.Renderer?
     /// Bumped to end the loop that is running: a loop keeps going only while it is still the newest.
     private nonisolated(unsafe) var round = 0
+    /// Frames in a row that could not be decoded; touched on `queue` only.
+    private nonisolated(unsafe) var failures = 0
     private let lock = NSLock()
 
     var isPlaying = true {
@@ -134,9 +138,12 @@ final class VideoStickerView: NSView {
 
     required init?(coder: NSCoder) { nil }
 
+    private(set) var clipID: UUID?
+
     func show(_ clip: WebMVideo.Clip) {
+        clipID = clip.id
         queue.async { [weak self] in self?.renderer = WebMVideo.Renderer(clip: clip) }
-        run()
+        if isPlaying { run() }
     }
 
     /// Off screen nothing plays: a recycled row must not keep decoding into a view nobody sees.
@@ -170,7 +177,16 @@ final class VideoStickerView: NSView {
             self.lock.lock()
             let current = self.round
             self.lock.unlock()
-            guard current == mine, let frame = self.renderer?.nextFrame() else { return }
+            guard current == mine, let renderer = self.renderer else { return }
+            guard let frame = renderer.nextFrame() else {
+                // One bad frame is not the end of the sticker: try the next a moment later.
+                self.failures += 1
+                if self.failures < 5 {
+                    self.queue.asyncAfter(deadline: .now() + .milliseconds(100)) { [weak self] in self?.step(mine) }
+                }
+                return
+            }
+            self.failures = 0
             let image = frame.image
             DispatchQueue.main.async { [weak self] in
                 // Without an implicit animation: CALayer would cross-fade every frame into the next.
