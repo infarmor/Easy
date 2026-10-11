@@ -90,6 +90,19 @@ struct Chat: Identifiable, Equatable {
     /// Only a supergroup or a channel has a member list TDLib can page through; a basic group and a private
     /// chat do not, so nothing that offers "its people" should pretend otherwise.
     var hasRoster: Bool { groupKey.hasPrefix("s") }
+    /// Whose badge follows this chat's name: the other person's in a private chat, the chat's own otherwise.
+    var badgeKey: String { userId != 0 ? "u\(userId)" : "c\(id)" }
+}
+
+/// What Telegram draws after a name: the emoji status a Premium user chose, a collectible gift worn as one,
+/// or the plain Premium star when they chose nothing.
+struct NameBadge: Equatable {
+    /// The custom emoji to draw; 0 for the plain star.
+    var customEmojiId: Int64 = 0
+    /// "Plush Pepe #1234" when the status is a collectible gift, empty otherwise.
+    var giftTitle = ""
+
+    var isGift: Bool { !giftTitle.isEmpty }
 }
 
 /// A chat or profile photo: the small 160×160 JPEG plus the blurred inline preview shown while it downloads.
@@ -1181,6 +1194,28 @@ enum TD {
         case 5: "Сингапур"
         default: ""
         }
+    }
+
+    /// The badge after a user's or a chat's name, from its `emoji_status` and, for a user, the Premium flag.
+    /// A status that has run out counts as none: the server clears it a little later than its date.
+    static func nameBadge(status: TDNode?, isPremium: Bool, now: Date = Date()) -> NameBadge? {
+        if let status, let type = status.tdNode("type") {
+            let expires = status.tdInt("expiration_date")
+            if expires == 0 || Date(timeIntervalSince1970: TimeInterval(expires)) > now {
+                switch type.tdType {
+                case "emojiStatusTypeCustomEmoji":
+                    let id = type.tdInt64("custom_emoji_id")
+                    if id != 0 { return NameBadge(customEmojiId: id) }
+                case "emojiStatusTypeUpgradedGift":
+                    let id = type.tdInt64("model_custom_emoji_id")
+                    let title = type.tdString("gift_title")
+                    if id != 0 { return NameBadge(customEmojiId: id, giftTitle: title.isEmpty ? "Коллекционный подарок" : title) }
+                default:
+                    break
+                }
+            }
+        }
+        return isPremium ? NameBadge() : nil
     }
 
     static func displayName(ofUser user: TDNode) -> String {

@@ -90,10 +90,13 @@ struct ProfileSheet: View {
         VStack(spacing: 8) {
             Avatar(title: info.title, seed: info.seed, photo: info.photo, diameter: 88)
                 .shadow(color: .black.opacity(0.2), radius: 8, y: 3)
-            Text(info.title.isEmpty ? "Без имени" : info.title)
-                .font(.system(size: 18, weight: .semibold))
-                .multilineTextAlignment(.center)
-                .textSelection(.enabled)
+            HStack(spacing: 5) {
+                Text(info.title.isEmpty ? "Без имени" : info.title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .multilineTextAlignment(.center)
+                    .textSelection(.enabled)
+                NameBadgeView(key: info.userId != 0 ? "u\(info.userId)" : "c\(info.telegramId)", size: 20)
+            }
             if !info.subtitle.isEmpty {
                 Text(info.subtitle)
                     .font(.callout)

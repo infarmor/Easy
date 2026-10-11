@@ -215,6 +215,7 @@ struct ConversationView: View {
                                 Text(chat.title.isEmpty ? "Без названия" : chat.title)
                                     .font(.callout.weight(.semibold))
                                     .lineLimit(1)
+                                NameBadgeView(key: chat.badgeKey, size: 14)
                             }
                             let subtitle = model.subtitle(for: chat)
                             if !subtitle.isEmpty {
@@ -911,17 +912,7 @@ struct MessageRow: View {
     }
 
     private func loadCustomEmoji() async {
-        let ids = customEmojiIds
-        guard !ids.isEmpty else { return }
-        await model.loadCustomEmoji(ids)
-        var decoded = false
-        for id in ids where !CustomEmoji.has(id) {
-            guard let path = model.customEmoji[id], !path.isEmpty,
-                  let image = await MediaCache.image(atPath: path, pixels: 64) else { continue }
-            CustomEmoji.store(image, for: id)
-            decoded = true
-        }
-        if decoded { emojiRound += 1 }
+        if await CustomEmoji.load(customEmojiIds, with: model) { emojiRound += 1 }
     }
 
     private var isSelected: Bool {
@@ -1249,10 +1240,13 @@ struct MessageRow: View {
     @ViewBuilder
     private var senderLine: some View {
         if !message.isOutgoing, showsSenders {
-            Text(senderName)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .onTapGesture { Task { await model.showProfile(ofSender: message) } }
+            HStack(spacing: 3) {
+                Text(senderName)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                NameBadgeView(key: message.senderKey, size: 13)
+            }
+            .onTapGesture { Task { await model.showProfile(ofSender: message) } }
         }
     }
 

@@ -210,6 +210,7 @@ extension AppModel {
         for node in found.tdNodes("stickers") {
             let id = node.tdNode("full_type")?.tdInt64("custom_emoji_id") ?? 0
             guard id != 0, let sticker = TD.sticker(node, isEmoji: true) else { continue }
+            if node.tdNode("full_type")?.tdBool("needs_repainting") == true { templateEmoji.insert(id) }
             let fileId = sticker.format == .webp ? sticker.fileId : sticker.thumbnailFileId
             guard let fileId, let path = await localFile(id: fileId, priority: 4) else { continue }
             customEmoji[id] = path

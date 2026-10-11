@@ -36,7 +36,7 @@ MainActor.assumeIsolated {
     }
     model.apply(json(#"{"@type":"updateChatFolders","chat_folders":[\#(folder(1, "Личные", "Private", 0)),\#(folder(2, "Каналы", "Channels", 3)),\#(folder(3, "Боты", "Bots", 5)),\#(folder(4, "Разное", "", -1))]}"#))
     model.apply(json(#"{"@type":"updateUser","user":{"@type":"user","id":702,"first_name":"Помощник","type":{"@type":"userTypeBot"},"status":{"@type":"userStatusOnline","was_online":0}}}"#))
-    model.apply(json(#"{"@type":"updateUser","user":{"@type":"user","id":700,"first_name":"Мария","type":{"@type":"userTypeRegular"},"status":{"@type":"userStatusOnline","was_online":0}}}"#))
+    model.apply(json(#"{"@type":"updateUser","user":{"@type":"user","id":700,"first_name":"Мария","is_premium":true,"type":{"@type":"userTypeRegular"},"status":{"@type":"userStatusOnline","was_online":0}}}"#))
     let mainList = #"{"@type":"chatListMain"}"#
     addChat(700, "Мария", #"{"@type":"chatTypePrivate","user_id":700}"#,
             "\(pos(mainList, 30, pinned: true)),\(pos(folderList(1), 30))", unread: 2)

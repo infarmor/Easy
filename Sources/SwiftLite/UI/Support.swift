@@ -173,6 +173,45 @@ struct Avatar: View {
     }
 }
 
+/// What follows a name: an emoji status, a collectible gift worn as one, or the Premium star. Nothing at all
+/// for a name that has none, so it can sit after every name without a check at the call site.
+struct NameBadgeView: View {
+    @Environment(AppModel.self) private var model
+    /// "u<id>" or "c<id>", as `AppModel.nameBadges` is keyed.
+    let key: String
+    var size: CGFloat = 15
+    /// On the selected row of the sidebar the star is drawn in white, like the rest of that row.
+    var isOnAccent = false
+
+    @State private var round = 0
+
+    var body: some View {
+        if let badge = model.nameBadges[key] {
+            Group {
+                if badge.customEmojiId == 0 {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: size * 0.72, weight: .semibold))
+                        .foregroundStyle(isOnAccent ? AnyShapeStyle(.white) : AnyShapeStyle(Color.accentColor))
+                        .frame(width: size, height: size)
+                } else if round >= 0, let picture = CustomEmoji.image(badge.customEmojiId, side: size) {
+                    Image(nsImage: picture)
+                        // A template emoji takes the accent colour, as the official clients tint it.
+                        .foregroundStyle(isOnAccent ? AnyShapeStyle(.white) : AnyShapeStyle(Color.accentColor))
+                } else {
+                    // Its place is kept while the picture loads, so the name does not jump when it arrives.
+                    Color.clear.frame(width: size, height: size)
+                }
+            }
+            .help(badge.isGift ? "Коллекционный подарок: \(badge.giftTitle)" : badge.customEmojiId == 0 ? "Telegram Premium" : "Эмодзи-статус")
+            .accessibilityLabel(badge.isGift ? "коллекционный подарок" : "Premium")
+            .task(id: badge.customEmojiId) {
+                guard badge.customEmojiId != 0 else { return }
+                if await CustomEmoji.load([badge.customEmojiId], with: model) { round += 1 }
+            }
+        }
+    }
+}
+
 /// Green dot on the avatar of someone who is online right now.
 struct OnlineDot: View {
     var diameter: CGFloat = 11
@@ -339,6 +378,24 @@ enum CustomEmoji {
 
     static func store(_ image: NSImage, for id: Int64) { pictures.setObject(image, forKey: NSNumber(value: id)) }
 
+    /// Emoji that are shapes to be coloured: drawn in the colour of the text around them.
+    private static var templates: Set<Int64> = []
+
+    /// Fetches and decodes the pictures that are not in hand yet. True when something new can now be drawn.
+    static func load(_ ids: [Int64], with model: AppModel) async -> Bool {
+        guard !ids.isEmpty else { return false }
+        await model.loadCustomEmoji(ids)
+        templates.formUnion(model.templateEmoji)
+        var decoded = false
+        for id in ids where !has(id) {
+            guard let path = model.customEmoji[id], !path.isEmpty,
+                  let image = await MediaCache.image(atPath: path, pixels: 64) else { continue }
+            store(image, for: id)
+            decoded = true
+        }
+        return decoded
+    }
+
     static func ids(in entities: [TextEntity]) -> [Int64] {
         entities.compactMap { entity -> Int64? in
             if case .customEmoji(let id) = entity.style { return id }
@@ -352,6 +409,7 @@ enum CustomEmoji {
         guard let picture = pictures.object(forKey: NSNumber(value: id)),
               let bitmap = picture.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
         let image = NSImage(cgImage: bitmap, size: NSSize(width: side, height: side))
+        image.isTemplate = templates.contains(id)
         sized.setObject(image, forKey: key)
         return image
     }

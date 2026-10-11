@@ -190,6 +190,11 @@ final class AppModel {
     var composerHasSelection = false
     /// A formatting command from the menu or its shortcut; the composer, which knows the selection, applies it.
     var formatRequest: FormatRequest?
+    /// The badge drawn after each name that has one, keyed like `senderNames`: "u<id>" for people, "c<id>"
+    /// for chats.
+    var nameBadges: [String: NameBadge] = [:]
+    /// Custom emoji that are a shape to be coloured by whoever draws them, not a picture with colours of its own.
+    var templateEmoji: Set<Int64> = []
     /// Where the picture of each custom emoji seen so far lies on disk, by its id.
     var customEmoji: [Int64: String] = [:]
     @ObservationIgnored var loadingCustomEmoji: Set<Int64> = []
@@ -980,6 +985,8 @@ final class AppModel {
         notifier.reset()
         senderNames = [:]
         senderPhotos = [:]
+        nameBadges = [:]
+        templateEmoji = []
         resolvingSenders = []
         userPresence = [:]
         bots = []
@@ -1072,6 +1079,7 @@ final class AppModel {
             remember(name, for: "u\(userId)")
             remember(TD.photo(user.tdNode("profile_photo")), for: "u\(userId)")
             if userId == myUserId, !name.isEmpty, accountName != name { accountName = name }
+            remember(TD.nameBadge(status: user.tdNode("emoji_status"), isPremium: user.tdBool("is_premium")), for: "u\(userId)")
             let presence = TD.presence(user.tdNode("status"))
             let isBot = user.tdNode("type")?.tdType == "userTypeBot"
             userPresence[userId] = presence
@@ -1110,6 +1118,9 @@ final class AppModel {
             }
             presentLoginAlert()
 
+        case "updateChatEmojiStatus":
+            remember(TD.nameBadge(status: update.tdNode("emoji_status"), isPremium: false), for: "c\(update.tdInt64("chat_id"))")
+
         case "updateSecretChat":
             guard let secret = update.tdNode("secret_chat"), let state = SecretChatState(secret.tdNode("state")) else { return }
             let id = secret.tdInt("id")
@@ -1140,6 +1151,9 @@ final class AppModel {
             chatNotificationSettings[chat.id] = node.tdNode("notification_settings")
             remember(chat.title, for: "c\(chat.id)")
             remember(chat.photo, for: "c\(chat.id)")
+            if chat.userId == 0 {
+                remember(TD.nameBadge(status: node.tdNode("emoji_status"), isPremium: false), for: "c\(chat.id)")
+            }
             chatsChanged(chat.id)
 
         case "updateChatPhoto":
@@ -1545,6 +1559,10 @@ final class AppModel {
 
     func remember(_ name: String, for key: String) {
         if senderNames[key] != name { senderNames[key] = name }
+    }
+
+    func remember(_ badge: NameBadge?, for key: String) {
+        if nameBadges[key] != badge { nameBadges[key] = badge }
     }
 
     func remember(_ photo: ProfilePhoto?, for key: String) {

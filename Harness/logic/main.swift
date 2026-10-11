@@ -1796,6 +1796,23 @@ MainActor.assumeIsolated {
     model.draft = ""
     model.noteTyping()
     check(!model.hasDraftText, "and the last one erased tells them there is none")
+
+    // --- what follows a name: emoji status, collectible giftBadge, Premium star -----------------------------------
+    let statusNode = json(#"{"@type":"statusNode","type":{"@type":"emojiStatusTypeCustomEmoji","custom_emoji_id":"5368324170671202286"},"expiration_date":0}"#)
+    check(TD.nameBadge(status: statusNode, isPremium: true) == NameBadge(customEmojiId: 5368324170671202286), "an emoji status is the badge")
+    let giftStatus = json(#"{"@type":"statusNode","type":{"@type":"emojiStatusTypeUpgradedGift","upgraded_gift_id":"1","gift_title":"Plush Pepe","gift_name":"PlushPepe-12","model_custom_emoji_id":"42","symbol_custom_emoji_id":"43"},"expiration_date":0}"#)
+    let giftBadge = TD.nameBadge(status: giftStatus, isPremium: true)
+    check(giftBadge?.customEmojiId == 42 && giftBadge?.isGift == true && giftBadge?.giftTitle == "Plush Pepe", "a collectible giftBadge worn as a status is drawn by its model, and named")
+    let expiredStatus = json(#"{"@type":"statusNode","type":{"@type":"emojiStatusTypeCustomEmoji","custom_emoji_id":"7"},"expiration_date":1000}"#)
+    check(TD.nameBadge(status: expiredStatus, isPremium: true) == NameBadge(), "a status that has run out leaves the Premium star")
+    check(TD.nameBadge(status: nil, isPremium: true) == NameBadge() && TD.nameBadge(status: nil, isPremium: false) == nil,
+          "Premium without a status gets the star; no Premium, no badge")
+    model.apply(json(#"{"@type":"updateUser","user":{"@type":"user","id":9402,"first_name":"Второй","is_premium":true,"emoji_status":\#(String(decoding: try! JSONSerialization.data(withJSONObject: giftStatus), as: UTF8.self)),"type":{"@type":"userTypeRegular"}}}"#))
+    check(model.nameBadges["u9402"]?.giftTitle == "Plush Pepe" && model.chat(withId: 9402)?.badgeKey == "u9402", "a user's badge is kept under their key, which their private chat points to")
+    model.apply(json(#"{"@type":"updateUser","user":{"@type":"user","id":9402,"first_name":"Второй","is_premium":false,"type":{"@type":"userTypeRegular"}}}"#))
+    check(model.nameBadges["u9402"] == nil, "and goes when Premium does")
+    model.apply(json(#"{"@type":"updateChatEmojiStatus","chat_id":-1003001,"emoji_status":\#(String(decoding: try! JSONSerialization.data(withJSONObject: statusNode), as: UTF8.self))}"#))
+    check(model.nameBadges["c-1003001"]?.customEmojiId == 5368324170671202286, "a channel's own status is kept under the chat's key")
 }
 
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")

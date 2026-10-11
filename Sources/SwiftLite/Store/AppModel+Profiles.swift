@@ -133,6 +133,7 @@ extension AppModel {
                 if full.tdBool("has_private_forwards") { info.facts.append(("Пересылки", "скрывает профиль")) }
                 if full.tdBool("uses_unofficial_app") { info.facts.append(("Клиент", "неофициальное приложение")) }
             }
+            if let badge = nameBadges["u\(userId)"], badge.isGift { info.facts.append(("Эмодзи-статус", badge.giftTitle)) }
             let language = user.tdString("language_code")
             if !language.isEmpty { info.facts.append(("Язык", language)) }
             info.raw = user

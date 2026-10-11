@@ -160,9 +160,12 @@ struct ChatListView: View {
                         HStack(spacing: 9) {
                             Avatar(title: model.accountName, seed: model.myId, photo: model.myPhoto, diameter: 28)
                             VStack(alignment: .leading, spacing: 0) {
-                                Text(model.accountName.isEmpty ? "—" : model.accountName)
-                                    .font(.callout.weight(.semibold))
-                                    .lineLimit(1)
+                                HStack(spacing: 4) {
+                                    Text(model.accountName.isEmpty ? "—" : model.accountName)
+                                        .font(.callout.weight(.semibold))
+                                        .lineLimit(1)
+                                    NameBadgeView(key: "u\(model.myId)", size: 14)
+                                }
                                 Text(isGhost ? "призрак · не в сети" : TD.count(model.chats.count, "чат", "чата", "чатов"))
                                     .font(.subheadline)
                                     .foregroundStyle(isGhost ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
@@ -342,6 +345,7 @@ private struct ChatRow: View {
                     Text(chat.title.isEmpty ? "Без названия" : chat.title)
                         .font(hasNews ? .body.weight(.semibold) : .body)
                         .lineLimit(1)
+                    NameBadgeView(key: chat.badgeKey, isOnAccent: isOnAccent)
                     if chat.isMuted {
                         Image(systemName: "speaker.slash.fill")
                             .font(.system(size: 10))
