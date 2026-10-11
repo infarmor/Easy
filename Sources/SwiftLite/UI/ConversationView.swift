@@ -7,6 +7,14 @@ struct ConversationView: View {
 
     @State private var isNearBottom = true
     @State private var isDropTargeted = false
+    /// Where the transcript is scrolled to. Going to the newest message is done through this, by asking for
+    /// the end of the content, not for the last row: a row that has only just been added is not laid out
+    /// yet, so a scroll aimed at it stopped where it guessed the row would be — short of the end, with the
+    /// new message left under the composer.
+    @State private var position = ScrollPosition(edge: .bottom)
+    /// Until this moment the transcript keeps itself at its end while its content settles: the new row gets
+    /// its real height, a picture gets its size, the message being sent gets its delivery line.
+    @State private var followsEndUntil = Date.distantPast
     /// The transcript has been seen away from its top, so arriving there is the user's doing.
     @State private var hasLeftTop = false
 
@@ -62,6 +70,7 @@ struct ConversationView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 10)
                 }
+                .scrollPosition($position)
                 .defaultScrollAnchor(.bottom)
                 .softScrollEdges()
                 .overlay {
@@ -94,9 +103,16 @@ struct ConversationView: View {
                 // server is not a new message, and must not set the transcript scrolling again.
                 .onChange(of: model.messages.last?.viewId) { _, newest in
                     // A jump into older history places the view itself.
-                    guard let newest, model.scrollTarget == nil, !model.isViewingHistory,
+                    guard newest != nil, model.scrollTarget == nil, !model.isViewingHistory,
                           isNearBottom || model.messages.last?.isOutgoing == true else { return }
-                    withAnimation(.smooth(duration: 0.2)) { proxy.scrollTo(newest, anchor: .bottom) }
+                    followsEndUntil = Date().addingTimeInterval(0.8)
+                    withAnimation(.smooth(duration: 0.2)) { position.scrollTo(edge: .bottom) }
+                }
+                // The content grew or shrank while the end is being followed: stay at the end.
+                .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                    geometry.contentSize.height
+                } action: { _, _ in
+                    if Date() < followsEndUntil { position.scrollTo(edge: .bottom) }
                 }
                 .onChange(of: model.scrollTarget) { _, target in
                     guard let target else { return }
@@ -116,12 +132,13 @@ struct ConversationView: View {
                     if chat.unreadMentions > 0 {
                         MentionButton(count: chat.unreadMentions)
                     }
-                    if !isNearBottom || model.isViewingHistory, let newest = model.messages.last {
+                    if !isNearBottom || model.isViewingHistory, !model.messages.isEmpty {
                         Button {
                             if model.isViewingHistory {
                                 Task { await model.showLatest() }
                             } else {
-                                withAnimation(.smooth(duration: 0.2)) { proxy.scrollTo(newest.viewId, anchor: .bottom) }
+                                followsEndUntil = Date().addingTimeInterval(0.5)
+                                withAnimation(.smooth(duration: 0.2)) { position.scrollTo(edge: .bottom) }
                             }
                         } label: {
                             GlassCircleLabel {

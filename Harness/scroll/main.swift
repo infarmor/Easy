@@ -66,6 +66,26 @@ MainActor.assumeIsolated {
         let atEnd = document.isFlipped ? visible.maxY >= document.frame.height - 140 : visible.minY <= 140
         check(atEnd, "a chat opens at its newest message (\(Int(visible.minY))…\(Int(visible.maxY)) of \(Int(document.frame.height)))")
 
+        // A message arriving while the end is on screen must end up fully above the composer, not under it.
+        // At the true bottom the visible rect reaches past the document by the composer's height; that
+        // overhang is measured as the chat opens and has to be the same after each new message.
+        func overhang() -> CGFloat { view.contentView.documentVisibleRect.maxY - (view.documentView?.frame.height ?? 0) }
+        let resting = overhang()
+        check(resting > 20, "at rest the transcript ends above the composer (overhang \(Int(resting)))")
+        model.apply(msg(300))
+        pump(1.0)
+        check(abs(overhang() - resting) < 6, "someone's new message is brought fully into view (overhang \(Int(overhang())) of \(Int(resting)))")
+        model.apply(json(#"{"@type":"updateNewMessage","message":{"@type":"message","id":9000001,"chat_id":-1003,"sender_id":{"@type":"messageSenderUser","user_id":1},"is_outgoing":true,"sending_state":{"@type":"messageSendingStatePending","sending_id":0},"date":\#(Int(Date().timeIntervalSince1970)),"content":{"@type":"messageText","text":{"@type":"formattedText","text":"моё сообщение","entities":[]}}}}"#))
+        pump(1.0)
+        check(abs(overhang() - resting) < 6, "your own message is brought fully into view (overhang \(Int(overhang())) of \(Int(resting)))")
+        model.apply(json(#"{"@type":"updateMessageSendSucceeded","message":{"@type":"message","id":301,"chat_id":-1003,"sender_id":{"@type":"messageSenderUser","user_id":1},"is_outgoing":true,"date":\#(Int(Date().timeIntervalSince1970)),"content":{"@type":"messageText","text":{"@type":"formattedText","text":"моё сообщение","entities":[]}}},"old_message_id":9000001}"#))
+        pump(1.0)
+        check(abs(overhang() - resting) < 6, "and stays there when the server confirms it (overhang \(Int(overhang())) of \(Int(resting)))")
+        // Three in a row, as in a quick exchange.
+        for id in 302...304 { model.apply(msg(id)); pump(0.15) }
+        pump(1.0)
+        check(abs(overhang() - resting) < 6, "a quick run of messages ends at the last of them (overhang \(Int(overhang())) of \(Int(resting)))")
+
         scroll(view, toTop: true)
         pump(0.6)
         check(olderRequests() == [100], "reaching the top asks for the page before the oldest message \(olderRequests())")
