@@ -699,6 +699,15 @@ struct Message: Identifiable, Equatable {
     /// one stream.
     var topicId: Int32 = 0
 
+    /// The id this message was first shown under, when that was another one. A message being sent has a
+    /// temporary id and gets its real one when the server takes it; to the eye it is the same bubble, so the
+    /// view goes on knowing it by the first.
+    var firstShownId: Int64 = 0
+    /// What the transcript's views are told apart by. Not `id`: that changes once in a sent message's life,
+    /// and a view whose identity changes is torn down and built again — the bubble blinked and the transcript
+    /// scrolled a second time, as though another message had arrived.
+    var viewId: Int64 { firstShownId != 0 ? firstShownId : id }
+
     var isForwarded: Bool { !forwardSenderKey.isEmpty || !forwardSenderName.isEmpty }
 
     /// Only messages that reached the server can be replied to, pinned or edited.

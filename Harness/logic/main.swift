@@ -1813,6 +1813,21 @@ MainActor.assumeIsolated {
     check(model.nameBadges["u9402"] == nil, "and goes when Premium does")
     model.apply(json(#"{"@type":"updateChatEmojiStatus","chat_id":-1003001,"emoji_status":\#(String(decoding: try! JSONSerialization.data(withJSONObject: statusNode), as: UTF8.self))}"#))
     check(model.nameBadges["c-1003001"]?.customEmojiId == 5368324170671202286, "a channel's own status is kept under the chat's key")
+
+    // --- a message of yours is one bubble from the moment it is sent ---------------------------------------------
+    let pendingState = #"{"@type":"messageSendingStatePending","sending_id":0}"#
+    model.apply(json(#"{"@type":"updateNewMessage","message":\#(message(9_000_001, chat: emptied, text: "моё", outgoing: true, state: pendingState))}"#))
+    let shownAs = model.messages.last?.viewId
+    check(model.messages.last?.id == 9_000_001 && shownAs == 9_000_001, "a message being sent is shown under its temporary id")
+    model.apply(json(#"{"@type":"updateMessageSendSucceeded","message":\#(message(700_000, chat: emptied, text: "моё", outgoing: true)),"old_message_id":9000001}"#))
+    let delivered = model.messages.first { $0.id == 700_000 }
+    check(delivered != nil && !model.messages.contains { $0.id == 9_000_001 }, "the server's copy replaces it")
+    check(delivered?.viewId == shownAs, "and the view goes on knowing it as the same bubble: \(String(describing: delivered?.viewId))")
+    check(model.viewId(ofMessage: 700_000) == shownAs, "scrolling to it by its real id finds that bubble")
+    model.apply(json(#"{"@type":"updateMessageInteractionInfo","chat_id":\#(emptied),"message_id":700000,"interaction_info":{"@type":"messageInteractionInfo","view_count":3,"reactions":{"@type":"messageReactions","reactions":[]}}}"#))
+    check(model.messages.first { $0.id == 700_000 }?.viewId == shownAs, "a later change to the message does not make it a new one")
+    model.apply(json(#"{"@type":"updateNewMessage","message":\#(message(700_001, chat: emptied, text: "ответ"))}"#))
+    check(model.messages.last?.viewId == 700_001, "someone else's message is a new bubble, as it should be")
 }
 
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")

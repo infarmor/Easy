@@ -47,12 +47,12 @@ struct ConversationView: View {
                         }
                         ForEach(model.transcript) { day in
                             Section {
-                                ForEach(day.rows, id: \.message.id) { row in
+                                ForEach(day.rows, id: \.message.viewId) { row in
                                     if row.message.id == model.unreadMarkerId {
                                         UnreadSeparator()
                                     }
                                     MessageRow(row: row, chat: RowChat(chat))
-                                        .id(row.message.id)
+                                        .id(row.message.viewId)
                                 }
                             } header: {
                                 DayHeader(date: day.date)
@@ -90,7 +90,9 @@ struct ConversationView: View {
                 }
                 // New messages pull the view down only while the end is on screen, or when they are your own:
                 // reading older messages is not interrupted.
-                .onChange(of: model.messages.last?.id) { _, newest in
+                // By the id the view knows the message under: a message of yours getting its real id from the
+                // server is not a new message, and must not set the transcript scrolling again.
+                .onChange(of: model.messages.last?.viewId) { _, newest in
                     // A jump into older history places the view itself.
                     guard let newest, model.scrollTarget == nil, !model.isViewingHistory,
                           isNearBottom || model.messages.last?.isOutgoing == true else { return }
@@ -98,7 +100,7 @@ struct ConversationView: View {
                 }
                 .onChange(of: model.scrollTarget) { _, target in
                     guard let target else { return }
-                    withAnimation(.smooth(duration: 0.25)) { proxy.scrollTo(target, anchor: .center) }
+                    withAnimation(.smooth(duration: 0.25)) { proxy.scrollTo(model.viewId(ofMessage: target), anchor: .center) }
                     model.scrollTarget = nil
                 }
                 .overlay(alignment: .top) {
@@ -119,7 +121,7 @@ struct ConversationView: View {
                             if model.isViewingHistory {
                                 Task { await model.showLatest() }
                             } else {
-                                withAnimation(.smooth(duration: 0.2)) { proxy.scrollTo(newest.id, anchor: .bottom) }
+                                withAnimation(.smooth(duration: 0.2)) { proxy.scrollTo(newest.viewId, anchor: .bottom) }
                             }
                         } label: {
                             GlassCircleLabel {
@@ -338,7 +340,7 @@ struct ConversationView: View {
         Task {
             await model.loadOlder()
             if let anchor, model.transcript.first?.rows.first?.message.id != anchor {
-                proxy.scrollTo(anchor, anchor: .top)
+                proxy.scrollTo(model.viewId(ofMessage: anchor), anchor: .top)
             }
         }
     }

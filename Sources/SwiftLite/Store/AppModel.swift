@@ -1290,10 +1290,13 @@ final class AppModel {
         case "updateMessageSendSucceeded", "updateMessageSendFailed":
             // The local copy is replaced by the server one (or a failed one) under a new id.
             guard let node = update.tdNode("message") else { return }
-            let message = TD.message(node)
+            var message = TD.message(node)
             cache(message)
             guard message.chatId == openChatId, !isViewingHistory else { return }
-            merge([message], removing: [update.tdInt64("old_message_id")])
+            let oldId = update.tdInt64("old_message_id")
+            // The bubble on screen stays the bubble it was: see `Message.viewId`.
+            if let index = messageIndex[oldId] { message.firstShownId = messages[index].viewId }
+            merge([message], removing: [oldId])
 
         case "updateMessageContent":
             let chatId = update.tdInt64("chat_id")
@@ -1501,6 +1504,8 @@ final class AppModel {
             message.localText = archive.localText(chatId: message.chatId, messageId: message.id)
             // A fresh copy from TDLib never replaces what the archive already marked as deleted.
             if byId[message.id]?.isDeleted == true { continue }
+            // Nor does it make the view forget which bubble this is.
+            if message.firstShownId == 0, let shown = byId[message.id]?.firstShownId { message.firstShownId = shown }
             byId[message.id] = message
         }
         // Messages someone deleted stay where they were, within the part of the history on screen.
@@ -1559,6 +1564,12 @@ final class AppModel {
 
     func remember(_ name: String, for key: String) {
         if senderNames[key] != name { senderNames[key] = name }
+    }
+
+    /// The view identity of the row that shows a message, for scrolling to it.
+    func viewId(ofMessage id: Int64) -> Int64 {
+        let row = transcriptBuilder.rowIds[id] ?? id
+        return transcriptBuilder.index[row].map { messages[$0].viewId } ?? row
     }
 
     func remember(_ badge: NameBadge?, for key: String) {
