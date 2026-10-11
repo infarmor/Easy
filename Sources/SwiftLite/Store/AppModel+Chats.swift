@@ -55,7 +55,7 @@ extension AppModel {
         }
     }
 
-    /// ⌥⇧↓ and ⌥⇧↑: the next chat of the list on screen that has something unread, wrapping around.
+    /// ⌃⇧↓ and ⌃⇧↑: the next chat of the list on screen that has something unread, wrapping around.
     func selectUnreadChat(_ step: Int) {
         let list = visibleChats
         let waiting = list.indices.filter { list[$0].unread > 0 || list[$0].isMarkedUnread || list[$0].unreadMentions > 0 }

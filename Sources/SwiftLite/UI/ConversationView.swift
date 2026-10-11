@@ -994,7 +994,7 @@ struct MessageRow: View {
     private var bubble: some View {
         VStack(alignment: message.isOutgoing ? .trailing : .leading, spacing: 3) {
             // Above the bubble, as Messages names the author in a group.
-            if row.showsSender {
+            if row.showsSender, !message.isOutgoing, showsSenders {
                 senderLine.padding(.leading, 12)
             }
             if let rows = inlineRows {
@@ -1607,6 +1607,10 @@ struct Composer: View {
         .onChange(of: model.composerContext) { _, context in
             if context != nil { focused = true }
         }
+        // A sent or cleared message leaves no text for the old selection to point into.
+        .onChange(of: model.draft.isEmpty) { _, isEmpty in
+            if isEmpty { selection = nil }
+        }
         .onChange(of: selection) { _, _ in
             let has = selectedRange.map { !$0.isEmpty } ?? false
             if model.composerHasSelection != has { model.composerHasSelection = has }
@@ -1662,7 +1666,10 @@ struct Composer: View {
         model.draft = wrapped.text
         focused = true
         // After the text has reached the field: a selection set first is measured against the old text.
-        DispatchQueue.main.async { selection = TextSelection(range: wrapped.selection) }
+        // And only if it is still that text — positions in a string mean nothing in another one.
+        DispatchQueue.main.async {
+            if model.draft == wrapped.text { selection = TextSelection(range: wrapped.selection) }
+        }
     }
 
     /// The system's own picker (⌃⌘Space), which types into whatever field has the keyboard.
@@ -1752,8 +1759,11 @@ struct Composer: View {
                             let at = selectedRange ?? model.draft.endIndex..<model.draft.endIndex
                             let caret = model.draft.distance(from: model.draft.startIndex, to: at.lowerBound) + 1
                             model.draft.replaceSubrange(at, with: "\n")
-                            let place = model.draft.index(model.draft.startIndex, offsetBy: caret)
-                            DispatchQueue.main.async { selection = TextSelection(insertionPoint: place) }
+                            let written = model.draft
+                            DispatchQueue.main.async {
+                                guard model.draft == written else { return }
+                                selection = TextSelection(insertionPoint: written.index(written.startIndex, offsetBy: caret))
+                            }
                             return .handled
                         }
                         .onChange(of: model.draft) { _, _ in

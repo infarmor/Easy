@@ -57,17 +57,22 @@ struct SwiftLiteApp: App {
                     .keyboardShortcut(.upArrow, modifiers: [.command, .option])
                 Button("Следующий чат") { model.selectAdjacentChat(1) }
                     .keyboardShortcut(.downArrow, modifiers: [.command, .option])
+                // ⌘↓ is also "caret to the end of the text". A menu takes a key before the field sees it, so
+                // while something is being written the key is left to the field.
                 Button("К последним сообщениям") { Task { await model.showLatest() } }
                     .keyboardShortcut(.downArrow, modifiers: .command)
+                    .disabled(model.hasDraftText)
                 Button("Увеличить текст сообщений") { Preferences.stepFontSize(1) }
                     .keyboardShortcut("+", modifiers: .command)
                 Button("Уменьшить текст сообщений") { Preferences.stepFontSize(-1) }
                     .keyboardShortcut("-", modifiers: .command)
                 Divider()
+                // Not ⌥⇧↑/↓, which they first were: in a text field those extend the selection by a paragraph,
+                // and the menu was taking them away from the composer.
                 Button("Предыдущий непрочитанный") { model.selectUnreadChat(-1) }
-                    .keyboardShortcut(.upArrow, modifiers: [.option, .shift])
+                    .keyboardShortcut(.upArrow, modifiers: [.control, .shift])
                 Button("Следующий непрочитанный") { model.selectUnreadChat(1) }
-                    .keyboardShortcut(.downArrow, modifiers: [.option, .shift])
+                    .keyboardShortcut(.downArrow, modifiers: [.control, .shift])
                 ForEach(1...9, id: \.self) { number in
                     Button("Чат \(number)") { model.selectChat(number: number) }
                         .keyboardShortcut(KeyEquivalent(Character(String(number))), modifiers: .command)

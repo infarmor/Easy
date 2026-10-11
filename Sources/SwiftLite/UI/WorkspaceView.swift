@@ -463,7 +463,7 @@ private struct EmptyDetailView: View {
             Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 6) {
                 shortcut("⌘K", "найти чат, человека или канал")
                 shortcut("⌥⌘↑ ↓", "предыдущий и следующий чат")
-                shortcut("⌥⇧↑ ↓", "к чату с непрочитанным")
+                shortcut("⌃⇧↑ ↓", "к чату с непрочитанным")
                 shortcut("⌘F", "поиск в чате")
                 shortcut("⌘I", "профиль собеседника")
                 shortcut("⌥⌘M", "список участников в группе")

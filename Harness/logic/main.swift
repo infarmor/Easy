@@ -1783,6 +1783,19 @@ MainActor.assumeIsolated {
     Preferences.stepFontSize(-1)
     check(UserDefaults.standard.integer(forKey: Preferences.messageFontSize) == 11, "and ⌘− at the smallest")
     if let sizeBefore { UserDefaults.standard.set(sizeBefore, forKey: Preferences.messageFontSize) } else { UserDefaults.standard.removeObject(forKey: Preferences.messageFontSize) }
+
+    // --- what the menus read about the composer -------------------------------------------------------------------
+    model.selection = emptied
+    Task { await model.select(chatId: emptied) }
+    pump(0.3)
+    model.draft = "п"
+    model.noteTyping()
+    check(model.hasDraftText, "the first letter typed tells the menus there is a draft")
+    model.draft = "привет"
+    model.noteTyping()
+    model.draft = ""
+    model.noteTyping()
+    check(!model.hasDraftText, "and the last one erased tells them there is none")
 }
 
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")

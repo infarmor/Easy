@@ -296,6 +296,7 @@ extension AppModel {
 
     /// Called by the composer on every change of `draft`.
     func noteTyping() {
+        if hasDraftText == draft.isEmpty { hasDraftText = !draft.isEmpty }
         guard let chatId = openChatId else { return }
         scheduleDraftSave(for: chatId)
         refreshSuggestions(in: chatId)
@@ -878,6 +879,7 @@ extension AppModel {
         loadingHistory = false
         composerContext = nil
         composerHasSelection = false
+        hasDraftText = false
         formatRequest = nil
         stashedDraft = ""
         editBaseline = nil

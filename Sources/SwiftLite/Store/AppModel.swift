@@ -208,6 +208,9 @@ final class AppModel {
     @ObservationIgnored var isAskingAboutLogin = false
     /// The chat list has settled after launch, so a row changing place from now on is news worth animating.
     var animatesChatList = false
+    /// Something is written in the composer. Kept apart from `draft` for the menus: read there, `draft` itself
+    /// would have every menu rebuilt on each key typed, while this changes only at the first and last letter.
+    var hasDraftText = false
     /// The "Новый чат" sheet is on screen.
     var showsNewChat = false
     /// A chat was opened from the keyboard (Return in the sidebar search): its composer takes the focus, so
