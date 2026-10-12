@@ -7,11 +7,11 @@ enum ChatKind: Equatable {
 
     var label: String {
         switch self {
-        case .personal: "личный чат"
-        case .group: "группа"
-        case .channel: "канал"
-        case .secret: "секретный чат"
-        case .other: "чат"
+        case .personal: L("личный чат")
+        case .group: L("группа")
+        case .channel: L("канал")
+        case .secret: L("секретный чат")
+        case .other: L("чат")
         }
     }
 }
@@ -151,11 +151,11 @@ struct ChatMemberInfo: Identifiable, Equatable {
 
         var label: String {
             switch self {
-            case .owner: return "владелец"
-            case .admin: return "администратор"
-            case .member: return "участник"
-            case .restricted: return "ограничен"
-            case .banned: return "забанен"
+            case .owner: return L("владелец")
+            case .admin: return L("администратор")
+            case .member: return L("участник")
+            case .restricted: return L("ограничен")
+            case .banned: return L("забанен")
             }
         }
     }
@@ -213,43 +213,43 @@ struct RightsFlag: Identifiable {
 /// these as check boxes, so they are listed here rather than guessed at by whoever builds a request.
 enum Rights {
     static let admin: [RightsFlag] = [
-        .init(key: "can_manage_chat", label: "Управлять чатом"),
-        .init(key: "can_change_info", label: "Менять название и фото"),
-        .init(key: "can_post_messages", label: "Публиковать в канале"),
-        .init(key: "can_edit_messages", label: "Редактировать чужие сообщения"),
-        .init(key: "can_delete_messages", label: "Удалять сообщения"),
-        .init(key: "can_invite_users", label: "Приглашать участников"),
-        .init(key: "can_restrict_members", label: "Ограничивать участников"),
-        .init(key: "can_pin_messages", label: "Закреплять сообщения"),
-        .init(key: "can_manage_topics", label: "Управлять темами"),
-        .init(key: "can_promote_members", label: "Назначать администраторов"),
-        .init(key: "can_manage_video_chats", label: "Управлять видеочатами"),
-        .init(key: "can_post_stories", label: "Публиковать истории"),
-        .init(key: "can_edit_stories", label: "Редактировать истории"),
-        .init(key: "can_delete_stories", label: "Удалять истории"),
-        .init(key: "can_manage_direct_messages", label: "Писать лично от имени чата"),
-        .init(key: "can_manage_tags", label: "Выдавать участникам метки"),
-        .init(key: "can_send_welcome_messages", label: "Приветственные сообщения"),
-        .init(key: "is_anonymous", label: "Действовать анонимно"),
+        .init(key: "can_manage_chat", label: L("Управлять чатом")),
+        .init(key: "can_change_info", label: L("Менять название и фото")),
+        .init(key: "can_post_messages", label: L("Публиковать в канале")),
+        .init(key: "can_edit_messages", label: L("Редактировать чужие сообщения")),
+        .init(key: "can_delete_messages", label: L("Удалять сообщения")),
+        .init(key: "can_invite_users", label: L("Приглашать участников")),
+        .init(key: "can_restrict_members", label: L("Ограничивать участников")),
+        .init(key: "can_pin_messages", label: L("Закреплять сообщения")),
+        .init(key: "can_manage_topics", label: L("Управлять темами")),
+        .init(key: "can_promote_members", label: L("Назначать администраторов")),
+        .init(key: "can_manage_video_chats", label: L("Управлять видеочатами")),
+        .init(key: "can_post_stories", label: L("Публиковать истории")),
+        .init(key: "can_edit_stories", label: L("Редактировать истории")),
+        .init(key: "can_delete_stories", label: L("Удалять истории")),
+        .init(key: "can_manage_direct_messages", label: L("Писать лично от имени чата")),
+        .init(key: "can_manage_tags", label: L("Выдавать участникам метки")),
+        .init(key: "can_send_welcome_messages", label: L("Приветственные сообщения")),
+        .init(key: "is_anonymous", label: L("Действовать анонимно")),
     ]
 
     static let permissions: [RightsFlag] = [
-        .init(key: "can_send_basic_messages", label: "Писать сообщения"),
-        .init(key: "can_send_audios", label: "Аудио"),
-        .init(key: "can_send_documents", label: "Файлы"),
-        .init(key: "can_send_photos", label: "Фото"),
-        .init(key: "can_send_videos", label: "Видео"),
-        .init(key: "can_send_video_notes", label: "Видеосообщения"),
-        .init(key: "can_send_voice_notes", label: "Голосовые"),
-        .init(key: "can_send_polls", label: "Опросы"),
-        .init(key: "can_send_other_messages", label: "Стикер, GIF и прочее"),
-        .init(key: "can_add_link_previews", label: "Превью ссылок"),
-        .init(key: "can_react_to_messages", label: "Ставить реакции"),
-        .init(key: "can_edit_tag", label: "Менять свою метку"),
-        .init(key: "can_change_info", label: "Менять информацию чата"),
-        .init(key: "can_invite_users", label: "Приглашать участников"),
-        .init(key: "can_pin_messages", label: "Закреплять сообщения"),
-        .init(key: "can_create_topics", label: "Создавать темы"),
+        .init(key: "can_send_basic_messages", label: L("Писать сообщения")),
+        .init(key: "can_send_audios", label: L("Аудио")),
+        .init(key: "can_send_documents", label: L("Файлы")),
+        .init(key: "can_send_photos", label: L("Фото")),
+        .init(key: "can_send_videos", label: L("Видео")),
+        .init(key: "can_send_video_notes", label: L("Видеосообщения")),
+        .init(key: "can_send_voice_notes", label: L("Голосовые")),
+        .init(key: "can_send_polls", label: L("Опросы")),
+        .init(key: "can_send_other_messages", label: L("Стикер, GIF и прочее")),
+        .init(key: "can_add_link_previews", label: L("Превью ссылок")),
+        .init(key: "can_react_to_messages", label: L("Ставить реакции")),
+        .init(key: "can_edit_tag", label: L("Менять свою метку")),
+        .init(key: "can_change_info", label: L("Менять информацию чата")),
+        .init(key: "can_invite_users", label: L("Приглашать участников")),
+        .init(key: "can_pin_messages", label: L("Закреплять сообщения")),
+        .init(key: "can_create_topics", label: L("Создавать темы")),
     ]
 
     /// The rights an editor of a group gets by default: everything but the ones that hand the chat away.
@@ -280,7 +280,7 @@ enum Rights {
     static func summary(_ values: [String: Bool], _ flags: [RightsFlag]) -> String {
         let on = flags.filter { values[$0.key] == true }.map(\.label)
         if on.isEmpty { return "" }
-        if on.count > 3 { return "\(on.prefix(3).joined(separator: ", ")) и ещё \(on.count - 3)" }
+        if on.count > 3 { return L("\(on.prefix(3).joined(separator: ", ")) и ещё \(on.count - 3)") }
         return on.joined(separator: ", ")
     }
 }
@@ -935,7 +935,7 @@ enum TD {
         if text.isEmpty, let content = reply.tdNode("content") {
             switch body(of: content) {
             case .text(let value), .attachment(let value), .service(let value): text = value
-            case .unsupported: text = "Сообщение"
+            case .unsupported: text = L("Сообщение")
             }
         }
         var senderKey = ""
@@ -958,12 +958,12 @@ enum TD {
         switch content.tdType {
         case "messageDocument":
             guard let document = content.tdNode("document"), let file = document.tdNode("document"), file.tdInt("id") != 0 else { return nil }
-            return DocumentInfo(fileId: file.tdInt("id"), name: document.tdString("file_name").isEmpty ? "Файл" : document.tdString("file_name"),
+            return DocumentInfo(fileId: file.tdInt("id"), name: document.tdString("file_name").isEmpty ? L("Файл") : document.tdString("file_name"),
                                 size: fileSize(file), mimeType: document.tdString("mime_type"))
         case "messageAudio":
             guard let audio = content.tdNode("audio"), let file = audio.tdNode("audio"), file.tdInt("id") != 0 else { return nil }
             let title = [audio.tdString("performer"), audio.tdString("title")].filter { !$0.isEmpty }.joined(separator: " — ")
-            return DocumentInfo(fileId: file.tdInt("id"), name: audio.tdString("file_name").isEmpty ? "Аудио" : audio.tdString("file_name"),
+            return DocumentInfo(fileId: file.tdInt("id"), name: audio.tdString("file_name").isEmpty ? L("Аудио") : audio.tdString("file_name"),
                                 size: fileSize(file), mimeType: audio.tdString("mime_type"), trackTitle: title, duration: audio.tdInt("duration"))
         default:
             return nil
@@ -1003,7 +1003,7 @@ enum TD {
         let name = [node.tdString("first_name"), node.tdString("last_name")].filter { !$0.isEmpty }.joined(separator: " ")
         let phone = node.tdString("phone_number")
         guard !name.isEmpty || !phone.isEmpty else { return nil }
-        return ContactInfo(name: name.isEmpty ? "Контакт" : name, phone: phone, userId: node.tdInt64("user_id"))
+        return ContactInfo(name: name.isEmpty ? L("Контакт") : name, phone: phone, userId: node.tdInt64("user_id"))
     }
 
     static func dice(of content: TDNode) -> Dice? {
@@ -1151,7 +1151,7 @@ enum TD {
 
     static func snippet(of message: Message) -> String {
         var text = preview(of: message)
-        if message.isOutgoing { text = "Вы: " + text }
+        if message.isOutgoing { text = L("Вы: ") + text }
         return String(text.prefix(120))
     }
 
@@ -1198,9 +1198,9 @@ enum TD {
     /// Where Telegram's data centers stand.
     static func dataCenterLocation(_ dc: Int) -> String {
         switch dc {
-        case 1, 3: "Майами, США"
-        case 2, 4: "Амстердам, Нидерланды"
-        case 5: "Сингапур"
+        case 1, 3: L("Майами, США")
+        case 2, 4: L("Амстердам, Нидерланды")
+        case 5: L("Сингапур")
         default: ""
         }
     }
@@ -1218,7 +1218,7 @@ enum TD {
                 case "emojiStatusTypeUpgradedGift":
                     let id = type.tdInt64("model_custom_emoji_id")
                     let title = type.tdString("gift_title")
-                    if id != 0 { return NameBadge(customEmojiId: id, giftTitle: title.isEmpty ? "Коллекционный подарок" : title) }
+                    if id != 0 { return NameBadge(customEmojiId: id, giftTitle: title.isEmpty ? L("Коллекционный подарок") : title) }
                 default:
                     break
                 }
@@ -1228,7 +1228,7 @@ enum TD {
     }
 
     static func displayName(ofUser user: TDNode) -> String {
-        if user.tdNode("type")?.tdType == "userTypeDeleted" { return "Удалённый аккаунт" }
+        if user.tdNode("type")?.tdType == "userTypeDeleted" { return L("Удалённый аккаунт") }
         let parts = [user.tdString("first_name"), user.tdString("last_name")].filter { !$0.isEmpty }
         if !parts.isEmpty { return parts.joined(separator: " ") }
         let username = (user.tdNode("usernames")?["active_usernames"] as? [String])?.first ?? ""
@@ -1237,7 +1237,7 @@ enum TD {
 
     // MARK: - presence
 
-    private static let russian = Locale(identifier: "ru_RU")
+    private static let russian = Loc.locale
 
     static func presence(_ status: TDNode?) -> UserPresence? {
         guard let status else { return nil }
@@ -1259,49 +1259,51 @@ enum TD {
     static func describe(_ presence: UserPresence, now: Date = Date()) -> String {
         switch presence {
         case .online:
-            return "в сети"
+            return L("в сети")
         case .offline(let since):
             let calendar = Calendar.current
             let time = since.formatted(.dateTime.hour().minute().locale(russian))
-            if calendar.isDateInToday(since) { return "был(а) в \(time)" }
-            if calendar.isDateInYesterday(since) { return "был(а) вчера в \(time)" }
+            if calendar.isDateInToday(since) { return L("был(а) в \(time)") }
+            if calendar.isDateInYesterday(since) { return L("был(а) вчера в \(time)") }
             if calendar.isDate(since, equalTo: now, toGranularity: .year) {
-                return "был(а) \(since.formatted(.dateTime.day().month(.wide).locale(russian))) в \(time)"
+                return L("был(а) \(since.formatted(.dateTime.day().month(.wide).locale(russian))) в \(time)")
             }
-            return "был(а) \(since.formatted(.dateTime.day().month(.wide).year().locale(russian)))"
+            return L("был(а) \(since.formatted(.dateTime.day().month(.wide).year().locale(russian)))")
         case .recently:
-            return "был(а) недавно"
+            return L("был(а) недавно")
         case .lastWeek:
-            return "был(а) на этой неделе"
+            return L("был(а) на этой неделе")
         case .lastMonth:
-            return "был(а) в этом месяце"
+            return L("был(а) в этом месяце")
         case .longAgo:
-            return "был(а) давно"
+            return L("был(а) давно")
         }
     }
 
     /// What someone in a chat is doing, for one person and for several; nil ends the activity.
     static func activityVerb(_ action: TDNode?) -> (single: String, plural: String)? {
         switch action?.tdType {
-        case "chatActionTyping": ("печатает", "печатают")
-        case "chatActionRecordingVideo": ("записывает видео", "записывают видео")
-        case "chatActionUploadingVideo": ("отправляет видео", "отправляют видео")
-        case "chatActionRecordingVoiceNote": ("записывает голосовое", "записывают голосовые")
-        case "chatActionUploadingVoiceNote": ("отправляет голосовое", "отправляют голосовые")
-        case "chatActionUploadingPhoto": ("отправляет фото", "отправляют фото")
-        case "chatActionUploadingDocument": ("отправляет файл", "отправляют файлы")
-        case "chatActionChoosingSticker": ("выбирает стикер", "выбирают стикеры")
-        case "chatActionChoosingLocation": ("выбирает место", "выбирают место")
-        case "chatActionChoosingContact": ("выбирает контакт", "выбирают контакты")
-        case "chatActionStartPlayingGame": ("играет", "играют")
-        case "chatActionRecordingVideoNote": ("записывает видеосообщение", "записывают видеосообщения")
-        case "chatActionUploadingVideoNote": ("отправляет видеосообщение", "отправляют видеосообщения")
+        case "chatActionTyping": (L("печатает"), L("печатают"))
+        case "chatActionRecordingVideo": (L("записывает видео"), L("записывают видео"))
+        case "chatActionUploadingVideo": (L("отправляет видео"), L("отправляют видео"))
+        case "chatActionRecordingVoiceNote": (L("записывает голосовое"), L("записывают голосовые"))
+        case "chatActionUploadingVoiceNote": (L("отправляет голосовое"), L("отправляют голосовые"))
+        case "chatActionUploadingPhoto": (L("отправляет фото"), L("отправляют фото"))
+        case "chatActionUploadingDocument": (L("отправляет файл"), L("отправляют файлы"))
+        case "chatActionChoosingSticker": (L("выбирает стикер"), L("выбирают стикеры"))
+        case "chatActionChoosingLocation": (L("выбирает место"), L("выбирают место"))
+        case "chatActionChoosingContact": (L("выбирает контакт"), L("выбирают контакты"))
+        case "chatActionStartPlayingGame": (L("играет"), L("играют"))
+        case "chatActionRecordingVideoNote": (L("записывает видеосообщение"), L("записывают видеосообщения"))
+        case "chatActionUploadingVideoNote": (L("отправляет видеосообщение"), L("отправляют видеосообщения"))
         default: nil
         }
     }
 
     /// Russian plural form: 1 участник, 2 участника, 5 участников.
     static func plural(_ count: Int, _ one: String, _ few: String, _ many: String) -> String {
+        // English has two forms where Russian has three: "1 chat", and "chats" for everything else.
+        if Loc.isEnglish { return count == 1 ? one : many }
         let tens = count % 100
         let units = count % 10
         if units == 1 && tens != 11 { return one }
@@ -1558,7 +1560,7 @@ enum TD {
             let caption = content.tdText("caption")
             return .attachment(caption.isEmpty ? attachment : "\(attachment) — \(caption)")
         }
-        return .unsupported("Сообщение этого типа не поддерживается: \(content.tdType)")
+        return .unsupported(L("Сообщение этого типа не поддерживается: \(content.tdType)"))
     }
 
     static func entities(of content: TDNode) -> [TextEntity] {
@@ -1810,40 +1812,40 @@ enum TD {
 
     private static func attachmentName(of content: TDNode) -> String? {
         switch content.tdType {
-        case "messagePhoto": return "Фото"
-        case "messageVideo": return "Видео"
+        case "messagePhoto": return L("Фото")
+        case "messageVideo": return L("Видео")
         case "messageAnimation": return "GIF"
         case "messageAudio":
             let audio = content.tdNode("audio") ?? [:]
             let title = [audio.tdString("performer"), audio.tdString("title")].filter { !$0.isEmpty }
-            return title.isEmpty ? "Аудио" : "Аудио: " + title.joined(separator: " — ")
+            return title.isEmpty ? L("Аудио") : L("Аудио: ") + title.joined(separator: " — ")
         case "messageDocument":
             let name = content.tdNode("document")?.tdString("file_name") ?? ""
-            return name.isEmpty ? "Файл" : name
-        case "messageVoiceNote": return "Голосовое сообщение" + duration(of: content.tdNode("voice_note"))
-        case "messageVideoNote": return "Видеосообщение" + duration(of: content.tdNode("video_note"))
+            return name.isEmpty ? L("Файл") : name
+        case "messageVoiceNote": return L("Голосовое сообщение") + duration(of: content.tdNode("voice_note"))
+        case "messageVideoNote": return L("Видеосообщение") + duration(of: content.tdNode("video_note"))
         case "messageSticker":
             let emoji = content.tdNode("sticker")?.tdString("emoji") ?? ""
-            return emoji.isEmpty ? "Стикер" : "Стикер \(emoji)"
-        case "messageLocation": return "Геолокация"
-        case "messageLiveLocation": return "Трансляция геолокации"
+            return emoji.isEmpty ? L("Стикер") : L("Стикер \(emoji)")
+        case "messageLocation": return L("Геолокация")
+        case "messageLiveLocation": return L("Трансляция геолокации")
         case "messageVenue":
             let title = content.tdNode("venue")?.tdString("title") ?? ""
-            return title.isEmpty ? "Место" : "Место: \(title)"
+            return title.isEmpty ? L("Место") : L("Место: \(title)")
         case "messageContact":
             let contact = content.tdNode("contact") ?? [:]
             let name = [contact.tdString("first_name"), contact.tdString("last_name")].filter { !$0.isEmpty }
             let details = [name.joined(separator: " "), contact.tdString("phone_number")].filter { !$0.isEmpty }
-            return details.isEmpty ? "Контакт" : "Контакт: " + details.joined(separator: ", ")
-        case "messagePoll": return "Опрос: \(content.tdNode("poll")?.tdText("question") ?? "")"
-        case "messageChecklist": return "Список задач: \(content.tdNode("list")?.tdText("title") ?? "")"
-        case "messageInvoice": return "Счёт"
+            return details.isEmpty ? L("Контакт") : L("Контакт: ") + details.joined(separator: ", ")
+        case "messagePoll": return L("Опрос: \(content.tdNode("poll")?.tdText("question") ?? "")")
+        case "messageChecklist": return L("Список задач: \(content.tdNode("list")?.tdText("title") ?? "")")
+        case "messageInvoice": return L("Счёт")
         case "messageDice":
             let value = content.tdInt("value")
-            return value > 0 ? "Кости: \(value)" : "Кости"
-        case "messageGame": return "Игра: \(content.tdNode("game")?.tdString("title") ?? "")"
-        case "messageStory": return "История"
-        case "messagePaidMedia": return "Платный контент"
+            return value > 0 ? L("Кости: \(value)") : L("Кости")
+        case "messageGame": return L("Игра: \(content.tdNode("game")?.tdString("title") ?? "")")
+        case "messageStory": return L("История")
+        case "messagePaidMedia": return L("Платный контент")
         default: return nil
         }
     }
@@ -1856,89 +1858,89 @@ enum TD {
 
     private static func serviceName(of content: TDNode) -> String? {
         switch content.tdType {
-        case "messageChatAddMembers": return "Добавил участников: \(content.tdInt64s("member_user_ids").count)"
-        case "messageChatDeleteMember": return "Участник удалён"
-        case "messageChatChangeTitle": return "Новое название: \(content.tdString("title"))"
-        case "messageChatChangePhoto": return "Обновлено фото группы"
-        case "messageChatDeletePhoto": return "Фото группы удалено"
-        case "messageChatJoinByLink": return "вошёл по ссылке"
-        case "messageChatJoinByRequest": return "вошёл по заявке"
-        case "messageChatSetMessageAutoDeleteTime": return "Изменён срок хранения сообщений"
-        case "messageBasicGroupChatCreate", "messageSupergroupChatCreate": return "Группа создана"
-        case "messageChatUpgradeTo", "messageChatUpgradeFrom": return "Группа улучшена до супергруппы"
-        case "messagePinMessage": return "Сообщение закреплено"
-        case "messageScreenshotTaken": return "Сделан скриншот"
+        case "messageChatAddMembers": return L("Добавил участников: \(content.tdInt64s("member_user_ids").count)")
+        case "messageChatDeleteMember": return L("Участник удалён")
+        case "messageChatChangeTitle": return L("Новое название: \(content.tdString("title"))")
+        case "messageChatChangePhoto": return L("Обновлено фото группы")
+        case "messageChatDeletePhoto": return L("Фото группы удалено")
+        case "messageChatJoinByLink": return L("вошёл по ссылке")
+        case "messageChatJoinByRequest": return L("вошёл по заявке")
+        case "messageChatSetMessageAutoDeleteTime": return L("Изменён срок хранения сообщений")
+        case "messageBasicGroupChatCreate", "messageSupergroupChatCreate": return L("Группа создана")
+        case "messageChatUpgradeTo", "messageChatUpgradeFrom": return L("Группа улучшена до супергруппы")
+        case "messagePinMessage": return L("Сообщение закреплено")
+        case "messageScreenshotTaken": return L("Сделан скриншот")
         case "messageCall": return callName(of: content)
-        case "messageGroupCall": return "Групповой звонок"
-        case "messageVideoChatScheduled": return "Видеочат запланирован"
-        case "messageVideoChatStarted": return "Видеочат начат"
-        case "messageVideoChatEnded": return "Видеочат завершён"
-        case "messageInviteVideoChatParticipants": return "Приглашение в видеочат"
-        case "messageChatSetTheme": return "Тема чата изменена"
-        case "messageChatSetBackground": return "Фон чата изменён"
-        case "messageChatBoost": return "Чат получил бусты"
-        case "messageContactRegistered": return "Присоединился к Telegram"
+        case "messageGroupCall": return L("Групповой звонок")
+        case "messageVideoChatScheduled": return L("Видеочат запланирован")
+        case "messageVideoChatStarted": return L("Видеочат начат")
+        case "messageVideoChatEnded": return L("Видеочат завершён")
+        case "messageInviteVideoChatParticipants": return L("Приглашение в видеочат")
+        case "messageChatSetTheme": return L("Тема чата изменена")
+        case "messageChatSetBackground": return L("Фон чата изменён")
+        case "messageChatBoost": return L("Чат получил бусты")
+        case "messageContactRegistered": return L("Присоединился к Telegram")
         case "messageCustomServiceAction": return content.tdString("text")
-        case "messageForumTopicCreated": return "Создана тема «\(content.tdString("name"))»"
-        case "messageForumTopicEdited": return "Тема изменена"
-        case "messageForumTopicIsClosedToggled": return content.tdBool("is_closed") ? "Тема закрыта" : "Тема открыта"
-        case "messageExpiredPhoto": return "Фото с таймером истекло"
-        case "messageExpiredVideo": return "Видео с таймером истекло"
-        case "messageExpiredVideoNote": return "Видеосообщение истекло"
-        case "messageExpiredVoiceNote": return "Голосовое сообщение истекло"
-        case "messageGameScore": return "Новый рекорд в игре: \(content.tdInt("score"))"
-        case "messagePaymentSuccessful", "messagePaymentSuccessfulBot": return "Платёж выполнен"
+        case "messageForumTopicCreated": return L("Создана тема «\(content.tdString("name"))»")
+        case "messageForumTopicEdited": return L("Тема изменена")
+        case "messageForumTopicIsClosedToggled": return content.tdBool("is_closed") ? L("Тема закрыта") : L("Тема открыта")
+        case "messageExpiredPhoto": return L("Фото с таймером истекло")
+        case "messageExpiredVideo": return L("Видео с таймером истекло")
+        case "messageExpiredVideoNote": return L("Видеосообщение истекло")
+        case "messageExpiredVoiceNote": return L("Голосовое сообщение истекло")
+        case "messageGameScore": return L("Новый рекорд в игре: \(content.tdInt("score"))")
+        case "messagePaymentSuccessful", "messagePaymentSuccessfulBot": return L("Платёж выполнен")
         case "messageGift", "messageUpgradedGift", "messageRefundedUpgradedGift", "messageGiftedPremium",
              "messagePremiumGiftCode", "messageGiftedStars", "messageGiftedGrams":
-            return "Подарок"
+            return L("Подарок")
         case "messageGiveaway", "messageGiveawayCreated", "messageGiveawayCompleted", "messageGiveawayWinners",
              "messageGiveawayPrizeStars":
-            return "Розыгрыш"
+            return L("Розыгрыш")
 
         // Layer 229 additions; without a label each of these showed its raw TDLib type name.
-        case "messageUnsupported": return "Сообщение этого типа пока не читается"
-        case "messageChatOwnerChanged": return "Назначен новый владелец"
-        case "messageChatOwnerLeft": return "Владелец вышел из чата"
-        case "messageChatAddedToCommunity": return "Чат добавлен в сообщество"
-        case "messageChatJoinFromCommunity": return "вошёл через сообщество"
-        case "messageChatRemovedFromCommunity": return "Чат убран из сообщества"
-        case "messageBotWriteAccessAllowed": return "Боту разрешено писать"
-        case "messagePollOptionAdded": return "В опросе — новый вариант: \(content.tdText("text"))"
-        case "messagePollOptionDeleted": return "Вариант убран из опроса: \(content.tdText("text"))"
-        case "messageForumTopicIsHiddenToggled": return content.tdBool("is_hidden") ? "Тема скрыта" : "Тема снова видна"
+        case "messageUnsupported": return L("Сообщение этого типа пока не читается")
+        case "messageChatOwnerChanged": return L("Назначен новый владелец")
+        case "messageChatOwnerLeft": return L("Владелец вышел из чата")
+        case "messageChatAddedToCommunity": return L("Чат добавлен в сообщество")
+        case "messageChatJoinFromCommunity": return L("вошёл через сообщество")
+        case "messageChatRemovedFromCommunity": return L("Чат убран из сообщества")
+        case "messageBotWriteAccessAllowed": return L("Боту разрешено писать")
+        case "messagePollOptionAdded": return L("В опросе — новый вариант: \(content.tdText("text"))")
+        case "messagePollOptionDeleted": return L("Вариант убран из опроса: \(content.tdText("text"))")
+        case "messageForumTopicIsHiddenToggled": return content.tdBool("is_hidden") ? L("Тема скрыта") : L("Тема снова видна")
         case "messageChatHasProtectedContentToggled":
-            return content.tdBool("new_has_protected_content") ? "Копирование запрещено" : "Копирование разрешено"
-        case "messageChatHasProtectedContentDisableRequested": return "Запрос на снятие запрета копирования"
-        case "messageChatShared": return "Чат выбран для переписки"
-        case "messageUsersShared": return "Профили переданы: \(content.tdNodes("users").count)"
-        case "messageProximityAlertTriggered": return "Кто-то прошёл совсем рядом"
-        case "messagePaymentRefunded": return "Платёж возвращён"
-        case "messagePaidMessagesRefunded": return "Возврат за \(content.tdInt("message_count")) платных сообщений"
-        case "messagePaidMessagePriceChanged": return "Цена платного сообщения изменена"
+            return content.tdBool("new_has_protected_content") ? L("Копирование запрещено") : L("Копирование разрешено")
+        case "messageChatHasProtectedContentDisableRequested": return L("Запрос на снятие запрета копирования")
+        case "messageChatShared": return L("Чат выбран для переписки")
+        case "messageUsersShared": return L("Профили переданы: \(content.tdNodes("users").count)")
+        case "messageProximityAlertTriggered": return L("Кто-то прошёл совсем рядом")
+        case "messagePaymentRefunded": return L("Платёж возвращён")
+        case "messagePaidMessagesRefunded": return L("Возврат за \(content.tdInt("message_count")) платных сообщений")
+        case "messagePaidMessagePriceChanged": return L("Цена платного сообщения изменена")
         case "messageDirectMessagePriceChanged":
-            return content.tdBool("is_enabled") ? "Платные сообщения включены" : "Платные сообщения выключены"
-        case "messageSuggestBirthdate": return "Предложен день рождения"
-        case "messageSuggestProfilePhoto": return "Предложено фото профиля"
-        case "messageChecklistTasksAdded": return "Пункты добавлены в список"
-        case "messageChecklistTasksDone": return "Отметки в списке изменены"
-        case "messageWebAppDataSent": return "Нажата кнопка: \(content.tdString("button_text"))"
-        case "messageWebAppDataReceived": return "Ответ мини-приложения: \(content.tdString("button_text"))"
-        case "messagePassportDataSent": return "Отправлены паспортные данные"
-        case "messageRichMessage": return "Богатое сообщение"
-        case "messageStakeDice": return "Ставка на кубик"
-        case "messageManagedBotCreated": return "Создан управляемый бот"
-        case "messageUpgradedGiftPurchaseOffer", "messageUpgradedGiftPurchaseOfferRejected": return "Предложение о покупке подарка"
-        case "messageSuggestedPostApproved": return "Заказной пост одобрен"
-        case "messageSuggestedPostApprovalFailed": return "Заказной пост не одобрен"
-        case "messageSuggestedPostDeclined": return "Заказной пост отклонён"
-        case "messageSuggestedPostPaid": return "Заказной пост оплачен"
-        case "messageSuggestedPostRefunded": return "Оплата заказного поста возвращена"
+            return content.tdBool("is_enabled") ? L("Платные сообщения включены") : L("Платные сообщения выключены")
+        case "messageSuggestBirthdate": return L("Предложен день рождения")
+        case "messageSuggestProfilePhoto": return L("Предложено фото профиля")
+        case "messageChecklistTasksAdded": return L("Пункты добавлены в список")
+        case "messageChecklistTasksDone": return L("Отметки в списке изменены")
+        case "messageWebAppDataSent": return L("Нажата кнопка: \(content.tdString("button_text"))")
+        case "messageWebAppDataReceived": return L("Ответ мини-приложения: \(content.tdString("button_text"))")
+        case "messagePassportDataSent": return L("Отправлены паспортные данные")
+        case "messageRichMessage": return L("Богатое сообщение")
+        case "messageStakeDice": return L("Ставка на кубик")
+        case "messageManagedBotCreated": return L("Создан управляемый бот")
+        case "messageUpgradedGiftPurchaseOffer", "messageUpgradedGiftPurchaseOfferRejected": return L("Предложение о покупке подарка")
+        case "messageSuggestedPostApproved": return L("Заказной пост одобрен")
+        case "messageSuggestedPostApprovalFailed": return L("Заказной пост не одобрен")
+        case "messageSuggestedPostDeclined": return L("Заказной пост отклонён")
+        case "messageSuggestedPostPaid": return L("Заказной пост оплачен")
+        case "messageSuggestedPostRefunded": return L("Оплата заказного поста возвращена")
         default: return nil
         }
     }
 
     private static func callName(of content: TDNode) -> String {
-        if content.tdNode("discard_reason")?.tdType == "callDiscardReasonMissed" { return "Пропущенный звонок" }
-        return content.tdBool("is_video") ? "Видеозвонок" : "Звонок"
+        if content.tdNode("discard_reason")?.tdType == "callDiscardReasonMissed" { return L("Пропущенный звонок") }
+        return content.tdBool("is_video") ? L("Видеозвонок") : L("Звонок")
     }
 }

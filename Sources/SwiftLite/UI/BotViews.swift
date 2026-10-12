@@ -77,9 +77,9 @@ struct BotButtonView: View {
     private var help: String {
         switch button.action {
         case .url(let url), .loginUrl(let url, _): url
-        case .webApp, .keyboardWebApp: "Открыть мини-приложение"
-        case .copy: "Скопировать"
-        case .unsupported: "Работает только в официальном приложении"
+        case .webApp, .keyboardWebApp: L("Открыть мини-приложение")
+        case .copy: L("Скопировать")
+        case .unsupported: L("Работает только в официальном приложении")
         default: ""
         }
     }
@@ -138,7 +138,7 @@ struct BotMenuButton: View {
             HStack(spacing: 4) {
                 Image(systemName: menu.appURL.isEmpty ? "line.3.horizontal" : "square.grid.2x2.fill")
                     .font(.subheadline.weight(.semibold))
-                Text(menu.appURL.isEmpty ? "Меню" : (menu.appTitle.isEmpty ? "Открыть" : menu.appTitle))
+                Text(menu.appURL.isEmpty ? L("Меню") : (menu.appTitle.isEmpty ? L("Открыть") : menu.appTitle))
                     .font(.callout.weight(.semibold))
                     .lineLimit(1)
             }
@@ -148,10 +148,10 @@ struct BotMenuButton: View {
             .background(Color.brand, in: Capsule())
         }
         .buttonStyle(PressableStyle())
-        .help(menu.appURL.isEmpty ? "Команды бота" : "Открыть мини-приложение")
+        .help(menu.appURL.isEmpty ? L("Команды бота") : L("Открыть мини-приложение"))
         .contextMenu {
             if !menu.commands.isEmpty, !menu.appURL.isEmpty {
-                Button("Команды бота…") { showsCommands = true }
+                Button(L("Команды бота…")) { showsCommands = true }
             }
         }
         .popover(isPresented: $showsCommands, arrowEdge: .top) {
@@ -170,7 +170,7 @@ private struct BotCommandList: View {
 
     var body: some View {
         if commands.isEmpty {
-            Text("У бота нет команд")
+            Text(L("У бота нет команд"))
                 .foregroundStyle(.secondary)
                 .padding(20)
         } else {

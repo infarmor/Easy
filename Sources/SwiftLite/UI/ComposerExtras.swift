@@ -21,7 +21,7 @@ struct StickerPanel: View {
         VStack(spacing: 0) {
             ScrollView {
                 if shown.isEmpty {
-                    Text(selectedSet == nil ? "Здесь появятся стикеры, которые вы отправляли" : "Загрузка…")
+                    Text(selectedSet == nil ? L("Здесь появятся стикеры, которые вы отправляли") : L("Загрузка…"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, minHeight: 200)
@@ -45,7 +45,7 @@ struct StickerPanel: View {
             Divider()
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) {
-                    tab(isSelected: selectedSet == nil, help: "Недавние") {
+                    tab(isSelected: selectedSet == nil, help: L("Недавние")) {
                         Image(systemName: "clock").font(.title3).foregroundStyle(.secondary)
                     } action: { selectedSet = nil }
                     ForEach(sets) { set in
@@ -128,18 +128,18 @@ struct ScheduleSendPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Отправить позже")
+            Text(L("Отправить позже"))
                 .font(.body.weight(.semibold))
             DatePicker("", selection: $date, in: Date().addingTimeInterval(60)..., displayedComponents: [.date, .hourAndMinute])
                 .datePickerStyle(.graphical)
                 .labelsHidden()
-                .environment(\.locale, Locale(identifier: "ru_RU"))
+                .environment(\.locale, Loc.locale)
             HStack {
-                ForEach([("Через час", 3600.0), ("Завтра в 9:00", -1)], id: \.0) { title, offset in
+                ForEach([(L("Через час"), 3600.0), (L("Завтра в 9:00"), -1)], id: \.0) { title, offset in
                     Button(title) { send(offset > 0 ? Date().addingTimeInterval(offset) : Self.tomorrowMorning) }
                 }
                 Spacer()
-                Button("Запланировать") { send(date) }
+                Button(L("Запланировать")) { send(date) }
                     .keyboardShortcut(.defaultAction)
             }
         }
@@ -160,7 +160,7 @@ struct ScheduledList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Отложенные")
+            Text(L("Отложенные"))
                 .font(.body.weight(.semibold))
                 .padding(12)
             Divider()
@@ -169,7 +169,7 @@ struct ScheduledList: View {
                     ForEach(model.scheduledMessages) { message in
                         HStack(alignment: .top, spacing: 10) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(message.date.formatted(.dateTime.day().month(.wide).hour().minute().locale(Locale(identifier: "ru_RU"))))
+                                Text(message.date.formatted(.dateTime.day().month(.wide).hour().minute().locale(Loc.locale)))
                                     .font(.subheadline.weight(.medium))
                                     .foregroundStyle(Color.brandInk)
                                 Text(TD.preview(of: message))
@@ -178,9 +178,9 @@ struct ScheduledList: View {
                             }
                             Spacer(minLength: 8)
                             Button { Task { await model.sendNow(message) } } label: { Image(systemName: "paperplane") }
-                                .help("Отправить сейчас")
+                                .help(L("Отправить сейчас"))
                             Button { Task { await model.deleteScheduled(message) } } label: { Image(systemName: "trash") }
-                                .help("Удалить")
+                                .help(L("Удалить"))
                         }
                         .buttonStyle(.borderless)
                         .padding(.horizontal, 12)
@@ -213,7 +213,7 @@ struct SharedMedia: View {
     var body: some View {
         VStack(spacing: 10) {
             Picker("", selection: $kind) {
-                ForEach(SharedMediaKind.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(SharedMediaKind.allCases) { Text(Loc.translate($0.rawValue)).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -229,7 +229,7 @@ struct SharedMedia: View {
                 case .files, .links: list
                 }
                 if next != 0 {
-                    Button(isLoading ? "Загрузка…" : "Показать ещё") { Task { await load(more: true) } }
+                    Button(isLoading ? L("Загрузка…") : L("Показать ещё")) { Task { await load(more: true) } }
                         .buttonStyle(.link)
                         .disabled(isLoading)
                 }
@@ -240,9 +240,9 @@ struct SharedMedia: View {
 
     private var emptyLabel: String {
         switch kind {
-        case .photos: "Фото здесь пока нет"
-        case .files: "Файлов здесь пока нет"
-        case .links: "Ссылок здесь пока нет"
+        case .photos: L("Фото здесь пока нет")
+        case .files: L("Файлов здесь пока нет")
+        case .links: L("Ссылок здесь пока нет")
         }
     }
 
@@ -255,7 +255,7 @@ struct SharedMedia: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         .contentShape(Rectangle())
                         .onTapGesture { model.showInChat(message) }
-                        .help("Показать в чате · " + message.date.shortDate)
+                        .help(L("Показать в чате · ") + message.date.shortDate)
                 }
             }
         }
@@ -292,7 +292,7 @@ struct SharedMedia: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PressDimStyle())
-                .help("Показать в чате")
+                .help(L("Показать в чате"))
                 if message.id != items.last?.id { Divider().padding(.leading, 50) }
             }
         }
@@ -318,7 +318,7 @@ struct SharedMedia: View {
     private func detail(of message: Message) -> String {
         let day = message.date.shortDate
         if let document = message.document {
-            return document.size.formatted(.byteCount(style: .file).locale(Locale(identifier: "ru_RU"))) + " · " + day
+            return document.size.formatted(.byteCount(style: .file).locale(Loc.locale)) + " · " + day
         }
         return (link(of: message)?.absoluteString ?? "") + " · " + day
     }
@@ -359,19 +359,19 @@ struct PollView: View {
                 option(index)
             }
             HStack {
-                Text(TD.count(poll.totalVoters, "голос", "голоса", "голосов"))
+                Text(TD.count(poll.totalVoters, L("голос"), L("голоса"), L("голосов")))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
                 if poll.allowsMultipleAnswers, !poll.showsResults, !picked.isEmpty {
-                    Button("Проголосовать") {
+                    Button(L("Проголосовать")) {
                         let chosen = picked.sorted()
                         picked = []
                         Task { await model.vote(chosen, in: message) }
                     }
                     .controlSize(.small)
                 } else if poll.hasVoted, !poll.isQuiz, !poll.isClosed {
-                    Button("Отменить голос") { Task { await model.vote([], in: message) } }
+                    Button(L("Отменить голос")) { Task { await model.vote([], in: message) } }
                         .buttonStyle(.plain)
                         .foregroundStyle(accent)
                         .font(.subheadline)
@@ -387,9 +387,9 @@ struct PollView: View {
     }
 
     private var kindLabel: String {
-        var parts = [poll.isQuiz ? "Викторина" : "Опрос", poll.isAnonymous ? "анонимный" : "открытый"]
-        if poll.allowsMultipleAnswers { parts.append("можно выбрать несколько") }
-        if poll.isClosed { parts.append("завершён") }
+        var parts = [poll.isQuiz ? L("Викторина") : L("Опрос"), poll.isAnonymous ? L("анонимный") : L("открытый")]
+        if poll.allowsMultipleAnswers { parts.append(L("можно выбрать несколько")) }
+        if poll.isClosed { parts.append(L("завершён")) }
         return parts.joined(separator: " · ")
     }
 
@@ -463,8 +463,8 @@ struct MentionButton: View {
                 }
         }
         .buttonStyle(.plain)
-        .help("К непрочитанному упоминанию")
-        .accessibilityLabel("К непрочитанному упоминанию")
+        .help(L("К непрочитанному упоминанию"))
+        .accessibilityLabel(L("К непрочитанному упоминанию"))
     }
 }
 
@@ -480,22 +480,22 @@ struct LocationPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Геолокация")
+            Text(L("Геолокация"))
                 .font(.body.weight(.semibold))
             HStack {
-                TextField("Широта", text: $latitude)
+                TextField(L("Широта"), text: $latitude)
                     .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Широта")
-                TextField("Долгота", text: $longitude)
+                    .accessibilityLabel(L("Широта"))
+                TextField(L("Долгота"), text: $longitude)
                     .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Долгота")
+                    .accessibilityLabel(L("Долгота"))
             }
-            Text("Например, 55.7558 и 37.6173")
+            Text(L("Например, 55.7558 и 37.6173"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             HStack {
                 Spacer()
-                Button("Отправить") { send() }
+                Button(L("Отправить")) { send() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(point == nil)
             }

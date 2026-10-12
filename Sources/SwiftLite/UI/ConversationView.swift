@@ -159,8 +159,8 @@ struct ConversationView: View {
                                 }
                         }
                         .buttonStyle(.plain)
-                        .help("К последним сообщениям")
-                        .accessibilityLabel("К последним сообщениям")
+                        .help(L("К последним сообщениям"))
+                        .accessibilityLabel(L("К последним сообщениям"))
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
                     }
@@ -183,7 +183,7 @@ struct ConversationView: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(Color.brand, style: StrokeStyle(lineWidth: 2, dash: [6]))
                     .background(Color.brand.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(Text("Отпустите, чтобы прикрепить").font(.body.weight(.medium)))
+                    .overlay(Text(L("Отпустите, чтобы прикрепить")).font(.body.weight(.medium)))
                     .padding(8)
                     .allowsHitTesting(false)
             }
@@ -237,7 +237,7 @@ struct ConversationView: View {
                                         .font(.system(size: 10))
                                         .foregroundStyle(.green)
                                 }
-                                Text(chat.title.isEmpty ? "Без названия" : chat.title)
+                                Text(chat.title.isEmpty ? L("Без названия") : chat.title)
                                     .font(.callout.weight(.semibold))
                                     .lineLimit(1)
                                 NameBadgeView(key: chat.badgeKey, size: 14)
@@ -257,8 +257,8 @@ struct ConversationView: View {
                 }
                 .buttonStyle(.plain)
                 // ⌘I itself lives in the Формат menu, which shares the key with italic.
-                .help("Профиль и сведения (⌘I)")
-                .accessibilityLabel("Профиль")
+                .help(L("Профиль и сведения (⌘I)"))
+                .accessibilityLabel(L("Профиль"))
                 // Toolbar and sheet content live outside the window's view tree; the model is passed on explicitly.
                 .environment(model)
             }
@@ -266,18 +266,18 @@ struct ConversationView: View {
                 Button {
                     if model.isSearching { model.endSearch() } else { model.isSearching = true }
                 } label: {
-                    Label("Поиск в чате", systemImage: "magnifyingglass")
+                    Label(L("Поиск в чате"), systemImage: "magnifyingglass")
                 }
                 .keyboardShortcut("f", modifiers: .command)
-                .help("Поиск по сообщениям этого чата (⌘F)")
+                .help(L("Поиск по сообщениям этого чата (⌘F)"))
             }
             ToolbarItem {
                 Button {
                     Task { await model.markSelectedRead() }
                 } label: {
-                    Label("Отметить прочитанным", systemImage: "checkmark.circle")
+                    Label(L("Отметить прочитанным"), systemImage: "checkmark.circle")
                 }
-                .help("Отметить сообщения прочитанными")
+                .help(L("Отметить сообщения прочитанными"))
             }
             // Only supergroups can list their people; a basic group has no roster to ask for.
             if chat.groupKey.hasPrefix("s") {
@@ -285,12 +285,12 @@ struct ConversationView: View {
                     Button {
                         model.showsMembersPanel.toggle()
                     } label: {
-                        Label("Участники", systemImage: model.showsMembersPanel ? "person.2.fill" : "person.2")
+                        Label(L("Участники"), systemImage: model.showsMembersPanel ? "person.2.fill" : "person.2")
                     }
                     .keyboardShortcut("m", modifiers: [.command, .option])
                     .help(model.showsMembersPanel
-                        ? "Скрыть список участников (⌥⌘M)"
-                        : "Показать список участников (⌥⌘M)")
+                        ? L("Скрыть список участников (⌥⌘M)")
+                        : L("Показать список участников (⌥⌘M)"))
                 }
             }
         }
@@ -325,9 +325,9 @@ struct ConversationView: View {
                     .font(.system(size: 34))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(Color.brandInk)
-                Text("Здесь пока нет сообщений")
+                Text(L("Здесь пока нет сообщений"))
                     .font(.system(size: 14, weight: .semibold))
-                Text(chat.kind == .channel ? "Новые публикации появятся здесь" : "Напишите первым — начните с приветствия")
+                Text(chat.kind == .channel ? L("Новые публикации появятся здесь") : L("Напишите первым — начните с приветствия"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -345,7 +345,7 @@ struct ConversationView: View {
             if model.loadingHistory {
                 ProgressView().controlSize(.small)
             } else {
-                Text("Загрузить более ранние")
+                Text(L("Загрузить более ранние"))
             }
         }
         .buttonStyle(.plain)
@@ -378,30 +378,30 @@ private struct SearchBar: View {
         @Bindable var model = model
         return HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Поиск в чате", text: $model.searchQuery)
+            TextField(L("Поиск в чате"), text: $model.searchQuery)
                 .textFieldStyle(.plain)
                 .focused($focused)
                 .onSubmit { Task { await model.runSearch() } }
             if model.isSearchRunning {
                 ProgressView().controlSize(.small)
             } else if !model.searchResults.isEmpty {
-                Text("\(model.searchPosition + 1) из \(max(model.searchTotal, model.searchResults.count))")
+                Text(L("\(model.searchPosition + 1) из \(max(model.searchTotal, model.searchResults.count))"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             } else if !model.searchQuery.isEmpty {
-                Text("Return — искать")
+                Text(L("Return — искать"))
                     .font(.subheadline)
                     .foregroundStyle(.tertiary)
             }
             Button { Task { await model.stepSearch(1) } } label: { Image(systemName: "chevron.up") }
                 .disabled(!model.canStepSearchOlder)
-                .help("Раньше")
+                .help(L("Раньше"))
             Button { Task { await model.stepSearch(-1) } } label: { Image(systemName: "chevron.down") }
                 .disabled(model.searchPosition == 0)
-                .help("Позже")
+                .help(L("Позже"))
             Button { model.endSearch() } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
-                .help("Закрыть поиск")
+                .help(L("Закрыть поиск"))
         }
         .buttonStyle(PressDimStyle())
         .font(.callout)
@@ -480,7 +480,7 @@ private struct TranslationCard: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.tertiary)
-                .help("Скрыть перевод")
+                .help(L("Скрыть перевод"))
             }
             .foregroundStyle(accent)
             Text(formattedText(translation.text, translation.entities))
@@ -501,7 +501,7 @@ private struct SelectionBar: View {
     var body: some View {
         let count = model.selectedMessageIds.count
         HStack(spacing: 14) {
-            Text(count == 0 ? "Выберите сообщения" : "Выбрано: \(count)")
+            Text(count == 0 ? L("Выберите сообщения") : L("Выбрано: \(count)"))
                 .font(.body.weight(.medium))
                 .monospacedDigit()
             Spacer()
@@ -510,14 +510,14 @@ private struct SelectionBar: View {
                 NSPasteboard.general.setString(model.selectionAsText(), forType: .string)
                 model.endSelection()
             } label: {
-                Label("Скопировать", systemImage: "doc.on.doc")
+                Label(L("Скопировать"), systemImage: "doc.on.doc")
             }
             .keyboardShortcut("c", modifiers: .command)
             .disabled(count == 0)
             Button {
                 model.prepareForwarding(model.selectedMessages, fromSelection: true)
             } label: {
-                Label("Переслать", systemImage: "arrowshape.turn.up.right")
+                Label(L("Переслать"), systemImage: "arrowshape.turn.up.right")
             }
             .disabled(count == 0)
             Button(role: .destructive) {
@@ -527,10 +527,10 @@ private struct SelectionBar: View {
                     await model.deleteSelection(forEveryone: forEveryone)
                 }
             } label: {
-                Label("Удалить", systemImage: "trash")
+                Label(L("Удалить"), systemImage: "trash")
             }
             .disabled(count == 0)
-            Button("Готово") { model.endSelection() }
+            Button(L("Готово")) { model.endSelection() }
                 .buttonStyle(.borderedProminent)
         }
         .labelStyle(.titleAndIcon)
@@ -553,7 +553,7 @@ struct TopicBar: View {
     var body: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 6) {
-                chip(id: nil, title: "Все", unread: chat.unread)
+                chip(id: nil, title: L("Все"), unread: chat.unread)
                 ForEach(model.topics) { topic in
                     chip(id: topic.id, title: topic.name, unread: topic.unread, closed: topic.isClosed,
                          color: topic.color, note: topic.snippet)
@@ -566,7 +566,7 @@ struct TopicBar: View {
                             .background(.thinMaterial, in: Capsule())
                     }
                     .buttonStyle(.plain)
-                    .help("Новая тема")
+                    .help(L("Новая тема"))
                 }
             }
             .padding(.horizontal, 14)
@@ -591,7 +591,7 @@ struct TopicBar: View {
                 if closed {
                     Image(systemName: "lock.fill").font(.system(size: 10))
                 }
-                Text(title.isEmpty ? "Без названия" : title)
+                Text(title.isEmpty ? L("Без названия") : title)
                     .font(.callout.weight(.medium))
                     .lineLimit(1)
                 if unread > 0 {
@@ -610,15 +610,15 @@ struct TopicBar: View {
             .foregroundStyle(chosen ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
         }
         .buttonStyle(.plain)
-        .help(note.isEmpty ? "Показать только «\(title)»" : "«\(title)»: \(note)")
+        .help(note.isEmpty ? L("Показать только «\(title)»") : "«\(title)»: \(note)")
         .contextMenu {
             if let id, let topic = model.topics.first(where: { $0.id == id }) {
-                Button("Скопировать ссылку на тему", systemImage: "link") {
+                Button(L("Скопировать ссылку на тему"), systemImage: "link") {
                     Task { await model.copyTopicLink(topic, in: chat.id) }
                 }
                 if model.chatAccess.canManageTopics {
-                    Button("Переименовать тему…", systemImage: "pencil") { rename(topic) }
-                    Button(topic.isClosed ? "Открыть тему" : "Закрыть тему",
+                    Button(L("Переименовать тему…"), systemImage: "pencil") { rename(topic) }
+                    Button(topic.isClosed ? L("Открыть тему") : L("Закрыть тему"),
                            systemImage: topic.isClosed ? "lock.open" : "lock") {
                         Task { await model.setTopic(topic, in: chat.id, closed: !topic.isClosed) }
                     }
@@ -628,12 +628,12 @@ struct TopicBar: View {
     }
 
     private func rename(_ topic: Topic) {
-        guard let name = Dialogs.prompt("Переименовать тему", hint: "Как назвать тему «\(topic.name)»?") else { return }
+        guard let name = Dialogs.prompt(L("Переименовать тему"), hint: L("Как назвать тему «\(topic.name)»?")) else { return }
         Task { await model.renameTopic(topic, in: chat.id, to: name) }
     }
 
     private func create() {
-        guard let name = Dialogs.prompt("Новая тема", hint: "Название можно оставить пустым: Telegram назовёт её по первому сообщению.") else { return }
+        guard let name = Dialogs.prompt(L("Новая тема"), hint: L("Название можно оставить пустым: Telegram назовёт её по первому сообщению.")) else { return }
         Task { await model.createTopic(in: chat.id, name: name) }
     }
 }
@@ -651,7 +651,7 @@ private struct PinnedBar: View {
                     .fill(Color.brand)
                     .frame(width: 2, height: 28)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Закреплённое сообщение")
+                    Text(L("Закреплённое сообщение"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.brandInk)
                     Text(TD.preview(of: message))
@@ -673,7 +673,7 @@ private struct PinnedBar: View {
         .glassSurface(in: RoundedRectangle(cornerRadius: 14, style: .continuous), interactive: true)
         .padding(.horizontal, 12)
         .padding(.top, 6)
-        .help("Показать закреплённое сообщение")
+        .help(L("Показать закреплённое сообщение"))
     }
 }
 
@@ -682,7 +682,7 @@ struct UnreadSeparator: View {
     var body: some View {
         HStack(spacing: 8) {
             Rectangle().fill(Color.brand.opacity(0.3)).frame(height: 1)
-            Text("Новые сообщения")
+            Text(L("Новые сообщения"))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color.brandInk)
                 .padding(.horizontal, 10)
@@ -716,21 +716,21 @@ struct DayHeader: View {
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .help("Перейти к дате")
+        .help(L("Перейти к дате"))
         // Like Telegram: the date opens a calendar, and a chosen day brings its messages.
         .popover(isPresented: $picksDate, arrowEdge: .bottom) {
             VStack(spacing: 10) {
                 DatePicker("", selection: $picked, in: ...Date(), displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .labelsHidden()
-                    .environment(\.locale, Locale(identifier: "ru_RU"))
+                    .environment(\.locale, Loc.locale)
                 HStack {
-                    Button("Сегодня") {
+                    Button(L("Сегодня")) {
                         picksDate = false
                         Task { await model.showLatest() }
                     }
                     Spacer()
-                    Button("Перейти") {
+                    Button(L("Перейти")) {
                         picksDate = false
                         let day = picked
                         Task { await model.jump(toDay: day) }
@@ -902,16 +902,16 @@ struct MessageRow: View {
     /// Reply, a quick 👍 and forward, like the hover buttons of Telegram Desktop and Messages.
     private var hoverActions: some View {
         HStack(spacing: 2) {
-            hoverButton("arrowshape.turn.up.left", help: "Ответить") { model.beginReply(to: message) }
+            hoverButton("arrowshape.turn.up.left", help: L("Ответить")) { model.beginReply(to: message) }
             Button {
                 Task { await model.toggleReaction(AppModel.quickReactions[0], on: message) }
             } label: {
                 Text(AppModel.quickReactions[0]).font(.body).frame(width: 26, height: 26)
             }
             .buttonStyle(.plain)
-            .help("Поставить \(AppModel.quickReactions[0])")
-            .accessibilityLabel("Поставить реакцию")
-            hoverButton("arrowshape.turn.up.right", help: "Переслать") {
+            .help(L("Поставить \(AppModel.quickReactions[0])"))
+            .accessibilityLabel(L("Поставить реакцию"))
+            hoverButton("arrowshape.turn.up.right", help: L("Переслать")) {
                 model.prepareForwarding([message])
             }
         }
@@ -957,7 +957,7 @@ struct MessageRow: View {
         if row.endsGroup {
             Avatar(title: senderName, seed: seed, photo: model.photo(for: message), diameter: 30)
                 .onTapGesture { Task { await model.showProfile(ofSender: message) } }
-                .help("Профиль")
+                .help(L("Профиль"))
                 .padding(.bottom, showsStatus ? 16 : 0)
         } else {
             Color.clear.frame(width: 30, height: 1)
@@ -1102,7 +1102,7 @@ struct MessageRow: View {
     private var bubbleBody: some View {
         BubbleStack(spacing: 4) {
             if message.isForwarded {
-                Label(forwardName.map { "Переслано от \($0)" } ?? "Переслано", systemImage: "arrowshape.turn.up.right")
+                Label(forwardName.map { L("Переслано от \($0)") } ?? L("Переслано"), systemImage: "arrowshape.turn.up.right")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(message.isOutgoing ? Color.white : Color.brandInk)
             }
@@ -1163,7 +1163,7 @@ struct MessageRow: View {
                 }
                 .layoutValue(key: BubblePartKey.self, value: .fill)
             } else if model.isTranslating(message) {
-                Label("Перевод…", systemImage: "globe")
+                Label(L("Перевод…"), systemImage: "globe")
                     .font(.system(size: Double(messageFontSize - 1)))
                     .foregroundStyle(.secondary)
             }
@@ -1254,7 +1254,7 @@ struct MessageRow: View {
                     .overlay(Capsule().strokeBorder(reaction.isChosen ? Color.brand.opacity(0.6) : .clear))
                 }
                 .buttonStyle(.plain)
-                .help(reaction.isChosen ? "Убрать реакцию" : reaction.emoji.isEmpty ? "Поставить такую же" : "Поставить \(reaction.emoji)")
+                .help(reaction.isChosen ? L("Убрать реакцию") : reaction.emoji.isEmpty ? L("Поставить такую же") : L("Поставить \(reaction.emoji)"))
                 .transition(.scale(scale: 0.4).combined(with: .opacity))
             }
         }
@@ -1281,15 +1281,15 @@ struct MessageRow: View {
     private var statusLine: some View {
         HStack(spacing: 4) {
             if message.isDeleted {
-                Label("удалено", systemImage: "trash")
+                Label(L("удалено"), systemImage: "trash")
                     .foregroundStyle(.red)
             } else if message.isEdited || message.hasEditHistory {
-                Text("изменено")
+                Text(L("изменено"))
             }
             if marksLocalEdits, message.localText != nil {
-                Label("изменено локально", systemImage: "pencil.and.outline")
+                Label(L("изменено локально"), systemImage: "pencil.and.outline")
                     .foregroundStyle(.orange)
-                    .help("Текст изменён только на этом Mac. На сервере и у собеседника он прежний.")
+                    .help(L("Текст изменён только на этом Mac. На сервере и у собеседника он прежний."))
             }
             if message.isPinned {
                 Image(systemName: "pin.fill")
@@ -1299,7 +1299,7 @@ struct MessageRow: View {
             }
             if message.viewCount > 0 {
                 Label(message.viewCount.formatted(.number.notation(.compactName)), systemImage: "eye")
-                    .help("Просмотры")
+                    .help(L("Просмотры"))
             }
             Text(message.date.timeStamp)
             if showsIdentifiers {
@@ -1315,12 +1315,12 @@ struct MessageRow: View {
     @ViewBuilder
     private var delivery: some View {
         if message.isPending {
-            Label("Отправка", systemImage: "clock")
+            Label(L("Отправка"), systemImage: "clock")
         } else if message.isFailed {
-            Label("Не отправлено", systemImage: "exclamationmark.circle.fill")
+            Label(L("Не отправлено"), systemImage: "exclamationmark.circle.fill")
                 .foregroundStyle(.red)
         } else if !message.isDeleted {
-            Text(isRead ? "Прочитано" : "Доставлено")
+            Text(isRead ? L("Прочитано") : L("Доставлено"))
         }
     }
 
@@ -1328,92 +1328,92 @@ struct MessageRow: View {
     private var menu: some View {
         // Grouped like the system's menus: talk, the text itself, the file, the author, your own tools, delete.
         if message.isSent, !message.isDeleted {
-            Button("Ответить", systemImage: "arrowshape.turn.up.left") { model.beginReply(to: message) }
-            Menu("Реакция", systemImage: "face.smiling") {
+            Button(L("Ответить"), systemImage: "arrowshape.turn.up.left") { model.beginReply(to: message) }
+            Menu(L("Реакция"), systemImage: "face.smiling") {
                 ForEach(AppModel.quickReactions, id: \.self) { emoji in
                     Button(emoji) { Task { await model.toggleReaction(emoji, on: message) } }
                 }
             }
-            Button(row.album.count > 1 ? "Переслать альбом…" : "Переслать…", systemImage: "arrowshape.turn.up.right") {
+            Button(row.album.count > 1 ? L("Переслать альбом…") : L("Переслать…"), systemImage: "arrowshape.turn.up.right") {
                 model.prepareForwarding([message])
             }
-            Button("В Избранное", systemImage: "bookmark") { Task { await model.saveToSavedMessages(message) } }
-            Button("Выбрать", systemImage: "checkmark.circle") { model.beginSelection(with: message) }
+            Button(L("В Избранное"), systemImage: "bookmark") { Task { await model.saveToSavedMessages(message) } }
+            Button(L("Выбрать"), systemImage: "checkmark.circle") { model.beginSelection(with: message) }
             Divider()
         }
         if model.canEdit(message) {
-            Button("Изменить", systemImage: "pencil") { Task { await model.beginEdit(message) } }
+            Button(L("Изменить"), systemImage: "pencil") { Task { await model.beginEdit(message) } }
         }
-        Button("Скопировать текст", systemImage: "doc.on.doc") { copyText() }
+        Button(L("Скопировать текст"), systemImage: "doc.on.doc") { copyText() }
         if !message.isDeleted, model.canTranslate(message) {
             if model.translation(of: message) != nil {
-                Button("Скрыть перевод", systemImage: "globe") { model.hideTranslation(of: message) }
+                Button(L("Скрыть перевод"), systemImage: "globe") { model.hideTranslation(of: message) }
             } else {
-                Button("Перевести", systemImage: "globe") { Task { await model.translate(message) } }
+                Button(L("Перевести"), systemImage: "globe") { Task { await model.translate(message) } }
             }
         }
         if message.isSent, !message.isDeleted {
-            Button(message.isPinned ? "Открепить" : "Закрепить", systemImage: message.isPinned ? "pin.slash" : "pin") {
+            Button(message.isPinned ? L("Открепить") : L("Закрепить"), systemImage: message.isPinned ? "pin.slash" : "pin") {
                 Task { await model.togglePin(message) }
             }
         }
         if message.isFailed {
-            Button("Отправить ещё раз", systemImage: "arrow.clockwise") { Task { await model.resend(message) } }
+            Button(L("Отправить ещё раз"), systemImage: "arrow.clockwise") { Task { await model.resend(message) } }
         }
         if message.isSent, !message.isDeleted, chat.kind == .group || chat.kind == .channel {
-            Button("Скопировать ссылку на сообщение", systemImage: "link") { Task { await model.copyLink(to: message) } }
+            Button(L("Скопировать ссылку на сообщение"), systemImage: "link") { Task { await model.copyLink(to: message) } }
         }
         if message.attachment != nil, !message.isDeleted {
             Divider()
             if message.media?.kind == .photo {
-                Button("Скопировать фото", systemImage: "photo.on.rectangle") { Task { await model.copyPhoto(of: message) } }
+                Button(L("Скопировать фото"), systemImage: "photo.on.rectangle") { Task { await model.copyPhoto(of: message) } }
             }
-            Button("Открыть вложение", systemImage: "arrow.up.forward.app") { Task { await model.openAttachment(of: message) } }
-            Button("Сохранить вложение…", systemImage: "square.and.arrow.down") { saveAttachment() }
+            Button(L("Открыть вложение"), systemImage: "arrow.up.forward.app") { Task { await model.openAttachment(of: message) } }
+            Button(L("Сохранить вложение…"), systemImage: "square.and.arrow.down") { saveAttachment() }
         }
         Divider()
         if !message.senderKey.isEmpty {
-            Button(message.isOutgoing ? "Мой профиль" : "Профиль отправителя", systemImage: "person.crop.circle") {
+            Button(message.isOutgoing ? L("Мой профиль") : L("Профиль отправителя"), systemImage: "person.crop.circle") {
                 Task { await model.showProfile(ofSender: message) }
             }
         }
         if message.hasEditHistory {
-            Button("История изменений…", systemImage: "clock.arrow.circlepath") { model.showEditHistory(of: message) }
+            Button(L("История изменений…"), systemImage: "clock.arrow.circlepath") { model.showEditHistory(of: message) }
         }
         if !message.isService, message.sticker == nil {
-            Button("Изменить локально…", systemImage: "square.and.pencil") {
+            Button(L("Изменить локально…"), systemImage: "square.and.pencil") {
                 if let text = Dialogs.editLocally(message.localText ?? MessageArchive.text(of: message)) {
                     model.setLocalText(text, of: message)
                 }
             }
             if message.localText != nil {
-                Button("Вернуть оригинал", systemImage: "arrow.uturn.backward") { model.setLocalText(nil, of: message) }
+                Button(L("Вернуть оригинал"), systemImage: "arrow.uturn.backward") { model.setLocalText(nil, of: message) }
             }
         }
         if securityTools {
-            Menu("Безопасность", systemImage: "lock.shield") {
-                Button("Индикаторы (IOC)…", systemImage: "list.bullet.rectangle") { model.showIndicators(in: [message]) }
+            Menu(L("Безопасность"), systemImage: "lock.shield") {
+                Button(L("Индикаторы (IOC)…"), systemImage: "list.bullet.rectangle") { model.showIndicators(in: [message]) }
                 if message.attachment != nil || message.media != nil, !message.isDeleted {
-                    Button("SHA-256 файла…", systemImage: "number") { Task { await model.showHash(of: message) } }
+                    Button(L("SHA-256 файла…"), systemImage: "number") { Task { await model.showHash(of: message) } }
                 }
-                Button("Скопировать обезвреженным", systemImage: "link.badge.plus") {
+                Button(L("Скопировать обезвреженным"), systemImage: "link.badge.plus") {
                     copy(SecurityTools.defang(MessageArchive.text(of: message)))
                 }
             }
         }
         if showsCode, !message.isDeleted {
-            Button("Код сообщения…", systemImage: "curlybraces") { Task { await model.inspect(message) } }
+            Button(L("Код сообщения…"), systemImage: "curlybraces") { Task { await model.inspect(message) } }
         }
         if showsIdentifiers {
-            Button("Скопировать ID сообщения", systemImage: "number.square") { copy(String(message.id)) }
+            Button(L("Скопировать ID сообщения"), systemImage: "number.square") { copy(String(message.id)) }
         }
         Divider()
         if message.isDeleted {
-            Button("Убрать из сохранённых", systemImage: "trash", role: .destructive) {
+            Button(L("Убрать из сохранённых"), systemImage: "trash", role: .destructive) {
                 Task { await model.delete(message, forEveryone: false) }
             }
         } else {
-            Button(row.album.count > 1 ? "Удалить альбом…" : "Удалить…", systemImage: "trash", role: .destructive) { deleteMessage() }
+            Button(row.album.count > 1 ? L("Удалить альбом…") : L("Удалить…"), systemImage: "trash", role: .destructive) { deleteMessage() }
         }
     }
 
@@ -1447,7 +1447,7 @@ struct MessageRow: View {
 
     private func foreignName(_ reply: ForeignReply) -> String {
         if let name = model.senderNames[reply.senderKey], !name.isEmpty { return name }
-        return reply.senderName.isEmpty ? "Из другого чата" : reply.senderName
+        return reply.senderName.isEmpty ? L("Из другого чата") : reply.senderName
     }
 
     private var seed: Int64 {
@@ -1571,7 +1571,7 @@ private struct ReplyQuote: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Перейти к сообщению")
+        .help(L("Перейти к сообщению"))
     }
 }
 
@@ -1607,7 +1607,7 @@ struct Composer: View {
                 Button {
                     Task { await model.startBot() }
                 } label: {
-                    Text("Запустить")
+                    Text(L("Запустить"))
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 32)
                         .foregroundStyle(.white)
@@ -1717,15 +1717,15 @@ struct Composer: View {
 
     private var placeholder: String {
         switch openChat?.secretState {
-        case .pending: return "Отправится, когда собеседник появится в сети"
-        case .closed: return "Секретный чат закрыт"
+        case .pending: return L("Отправится, когда собеседник появится в сети")
+        case .closed: return L("Секретный чат закрыт")
         default: break
         }
         let hint = model.replyKeyboard?.placeholder ?? ""
         if !hint.isEmpty { return hint }
         // With several accounts the field says which of them the message goes from.
-        if let hub, hub.accounts.count > 1, !model.accountName.isEmpty { return "Сообщение от \(model.accountName)" }
-        return "Сообщение"
+        if let hub, hub.accounts.count > 1, !model.accountName.isEmpty { return L("Сообщение от \(model.accountName)") }
+        return L("Сообщение")
     }
 
     private var inputRow: some View {
@@ -1738,16 +1738,16 @@ struct Composer: View {
                     BotMenuButton(menu: menu)
                 }
                 Menu {
-                    Button("Фото и файлы…", systemImage: "doc.on.doc") { attachFiles() }
-                    Button("Вставить из буфера", systemImage: "doc.on.clipboard") { Task { await model.sendPasteboard() } }
+                    Button(L("Фото и файлы…"), systemImage: "doc.on.doc") { attachFiles() }
+                    Button(L("Вставить из буфера"), systemImage: "doc.on.clipboard") { Task { await model.sendPasteboard() } }
                     Divider()
-                    Button("Стикеры", systemImage: "face.smiling") { showsStickers = true }
-                    Button("Эмодзи и символы", systemImage: "character.cursor.ibeam") { showEmojiPicker() }
+                    Button(L("Стикеры"), systemImage: "face.smiling") { showsStickers = true }
+                    Button(L("Эмодзи и символы"), systemImage: "character.cursor.ibeam") { showEmojiPicker() }
                     if model.composerContext?.kind != .edit {
-                        Button("Голосовое сообщение", systemImage: "mic") { startRecording() }
+                        Button(L("Голосовое сообщение"), systemImage: "mic") { startRecording() }
                         Divider()
-                        Button("Кости", systemImage: "die.face.5") { Task { await model.sendDice("🎲") } }
-                        Button("Геолокация…", systemImage: "mappin") { showsLocation = true }
+                        Button(L("Кости"), systemImage: "die.face.5") { Task { await model.sendDice("🎲") } }
+                        Button(L("Геолокация…"), systemImage: "mappin") { showsLocation = true }
                     }
                 } label: {
                     GlassCircleLabel(diameter: 36) {
@@ -1763,8 +1763,8 @@ struct Composer: View {
                 .popover(isPresented: $showsLocation, arrowEdge: .top) {
                     LocationPanel { showsLocation = false }
                 }
-                .help("Файлы, фото, стикеры, голосовые, кости и геолокация. Файлы можно и просто перетащить в чат")
-                .accessibilityLabel("Прикрепить")
+                .help(L("Файлы, фото, стикеры, голосовые, кости и геолокация. Файлы можно и просто перетащить в чат"))
+                .accessibilityLabel(L("Прикрепить"))
 
                 HStack(alignment: .bottom, spacing: 6) {
                     TextField(placeholder, text: $model.draft, selection: $selection, axis: .vertical)
@@ -1809,21 +1809,21 @@ struct Composer: View {
                             Task { await model.editLastMessage() }
                             return .handled
                         }
-                        .help((sendsWithCommandReturn ? "⌘Return — отправить, Return — новая строка" : "Return — отправить, Option-Return — новая строка")
-                            + ", ↑ — изменить последнее. "
-                            + "Выделите слова и нажмите ⌘B, ⌘I или ⌘K, либо пишите разметкой: **жирный**, __курсив__, `код`")
+                        .help((sendsWithCommandReturn ? L("⌘Return — отправить, Return — новая строка") : L("Return — отправить, Option-Return — новая строка"))
+                            + L(", ↑ — изменить последнее. ")
+                            + L("Выделите слова и нажмите ⌘B, ⌘I или ⌘K, либо пишите разметкой: **жирный**, __курсив__, `код`"))
 
                     if !model.scheduledMessages.isEmpty {
-                        fieldButton("clock", help: "Отложенные сообщения: \(model.scheduledMessages.count)") { showsScheduled = true }
+                        fieldButton("clock", help: L("Отложенные сообщения: \(model.scheduledMessages.count)")) { showsScheduled = true }
                             .popover(isPresented: $showsScheduled, arrowEdge: .top) { ScheduledList() }
                     }
                     if model.replyKeyboard != nil, !canSend {
                         fieldButton(model.isReplyKeyboardShown ? "keyboard.chevron.compact.down" : "keyboard",
-                                    help: model.isReplyKeyboardShown ? "Скрыть клавиатуру бота" : "Показать клавиатуру бота") {
+                                    help: model.isReplyKeyboardShown ? L("Скрыть клавиатуру бота") : L("Показать клавиатуру бота")) {
                             model.isReplyKeyboardShown.toggle()
                         }
                     }
-                    fieldButton("face.smiling", help: "Стикеры") { showsStickers.toggle() }
+                    fieldButton("face.smiling", help: L("Стикеры")) { showsStickers.toggle() }
                         .popover(isPresented: $showsStickers, arrowEdge: .top) {
                             StickerPanel { showsStickers = false }
                         }
@@ -1840,12 +1840,12 @@ struct Composer: View {
                         .buttonStyle(PressDimStyle())
                         .padding(.bottom, 2)
                         .transition(.scale.combined(with: .opacity))
-                        .help("Отправить. Правый клик — без звука или по расписанию")
-                        .accessibilityLabel(model.composerContext?.kind == .edit ? "Сохранить изменения" : "Отправить")
+                        .help(L("Отправить. Правый клик — без звука или по расписанию"))
+                        .accessibilityLabel(model.composerContext?.kind == .edit ? L("Сохранить изменения") : L("Отправить"))
                         .contextMenu {
                             if model.composerContext?.kind != .edit {
-                                Button("Отправить без звука") { Task { await model.send(silently: true) } }
-                                Button("Отправить позже…") { showsSchedule = true }
+                                Button(L("Отправить без звука")) { Task { await model.send(silently: true) } }
+                                Button(L("Отправить позже…")) { showsSchedule = true }
                             }
                         }
                         .popover(isPresented: $showsSchedule, arrowEdge: .top) {
@@ -1864,8 +1864,8 @@ struct Composer: View {
                                 .frame(width: 22, height: 28)
                         }
                         .buttonStyle(PressDimStyle())
-                        .help("Записать голосовое сообщение")
-                        .accessibilityLabel("Записать голосовое сообщение")
+                        .help(L("Записать голосовое сообщение"))
+                        .accessibilityLabel(L("Записать голосовое сообщение"))
                     }
                 }
                 .padding(.leading, 14)
@@ -1891,8 +1891,8 @@ struct Composer: View {
                 }
             }
             .buttonStyle(.plain)
-            .help("Отменить запись")
-            .accessibilityLabel("Отменить запись")
+            .help(L("Отменить запись"))
+            .accessibilityLabel(L("Отменить запись"))
             HStack(spacing: 12) {
             Circle()
                 .fill(.red)
@@ -1901,14 +1901,14 @@ struct Composer: View {
                 .animation(reduceMotion ? nil : .smooth(duration: 0.08), value: recorder.level)
             Text(Duration.seconds(recorder.elapsed).formatted(.time(pattern: .minuteSecond)))
                 .font(.body.weight(.medium).monospacedDigit())
-            Text("Запись…")
+            Text(L("Запись…"))
                 .font(.body)
                 .foregroundStyle(.secondary)
             Spacer()
             Button {
                 Task {
                     guard let recording = await recorder.finish() else {
-                        model.showToast("Слишком короткое сообщение")
+                        model.showToast(L("Слишком короткое сообщение"))
                         return
                     }
                     await model.sendVoiceNote(at: recording.file, duration: recording.duration, waveform: recording.waveform)
@@ -1921,8 +1921,8 @@ struct Composer: View {
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.return, modifiers: [])
-            .help("Отправить голосовое (Return)")
-            .accessibilityLabel("Отправить голосовое сообщение")
+            .help(L("Отправить голосовое (Return)"))
+            .accessibilityLabel(L("Отправить голосовое сообщение"))
             }
             .padding(.leading, 14)
             .padding(.trailing, 4)
@@ -1934,7 +1934,7 @@ struct Composer: View {
     private func startRecording() {
         Task {
             if !(await recorder.start()) {
-                model.report("Нет доступа к микрофону: разрешите его в Системных настройках → Конфиденциальность → Микрофон.")
+                model.report(L("Нет доступа к микрофону: разрешите его в Системных настройках → Конфиденциальность → Микрофон."))
             }
         }
     }
@@ -2029,7 +2029,7 @@ private struct ComposerContextBar: View {
                 Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Отменить (Esc)")
+            .help(L("Отменить (Esc)"))
         }
     }
 }

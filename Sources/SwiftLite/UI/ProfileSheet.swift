@@ -20,7 +20,7 @@ struct ProfileSheet: View {
                 VStack(spacing: 16) {
                     header
                     if !info.about.isEmpty {
-                        heading(info.userId != 0 ? (info.subtitle == "бот" ? "О боте" : "О себе") : "Описание")
+                        heading(info.userId != 0 ? (info.subtitle == L("бот") ? L("О боте") : L("О себе")) : L("Описание"))
                         card {
                             Text(Self.linked(info.about))
                                 .font(.body)
@@ -30,10 +30,10 @@ struct ProfileSheet: View {
                                 .padding(12)
                         }
                     }
-                    heading("Сведения")
+                    heading(L("Сведения"))
                     details
                     if !info.facts.isEmpty {
-                        heading("Подробности")
+                        heading(L("Подробности"))
                         card {
                             ForEach(info.facts.indices, id: \.self) { index in
                                 row(info.facts[index].0, info.facts[index].1)
@@ -48,10 +48,10 @@ struct ProfileSheet: View {
                         card {
                             Button {
                                 let blocking = !isBlocked
-                                if blocking, !Dialogs.confirm("Заблокировать \(info.title)?", message: "Он не сможет писать вам и звонить.", action: "Заблокировать") { return }
+                                if blocking, !Dialogs.confirm(L("Заблокировать \(info.title)?"), message: L("Он не сможет писать вам и звонить."), action: L("Заблокировать")) { return }
                                 Task { if await model.setBlocked(blocking, userId: info.userId) { isBlocked = blocking } }
                             } label: {
-                                Text(isBlocked ? "Разблокировать" : "Заблокировать")
+                                Text(isBlocked ? L("Разблокировать") : L("Заблокировать"))
                                     .foregroundStyle(isBlocked ? Color.brandInk : Color.red)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 9)
@@ -67,7 +67,7 @@ struct ProfileSheet: View {
             Divider()
             HStack {
                 if showsCode, let raw = info.raw {
-                    Button("Код…") {
+                    Button(L("Код…")) {
                         let json = (try? JSONSerialization.data(withJSONObject: raw, options: [.prettyPrinted, .sortedKeys]))
                             .flatMap { String(data: $0, encoding: .utf8) } ?? ""
                         let code = InspectedCode(title: info.title, json: json, node: raw)
@@ -80,7 +80,7 @@ struct ProfileSheet: View {
                     }
                 }
                 Spacer()
-                Button("Готово") { dismiss() }
+                Button(L("Готово")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
                     .tint(Color.brand)
@@ -114,7 +114,7 @@ struct ProfileSheet: View {
                 .frame(maxWidth: .infinity)
                 .background(alignment: .top) { banner }
             HStack(spacing: 5) {
-                Text(info.title.isEmpty ? "Без имени" : info.title)
+                Text(info.title.isEmpty ? L("Без имени") : info.title)
                     .font(.system(size: 21, weight: .bold))
                     .multilineTextAlignment(.center)
                     .textSelection(.enabled)
@@ -123,10 +123,10 @@ struct ProfileSheet: View {
             if !info.subtitle.isEmpty {
                 Text(info.subtitle)
                     .font(.callout)
-                    .foregroundStyle(info.subtitle == "в сети" ? AnyShapeStyle(Color.brandInk) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(info.subtitle == L("в сети") ? AnyShapeStyle(Color.brandInk) : AnyShapeStyle(.secondary))
             }
             if isBlocked {
-                Label("Заблокирован", systemImage: "hand.raised.fill")
+                Label(L("Заблокирован"), systemImage: "hand.raised.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.red)
             }
@@ -184,29 +184,29 @@ struct ProfileSheet: View {
     /// The tiles under the name, as on a contact's card: write, search, silence.
     private var actions: some View {
         HStack(spacing: 8) {
-            action(info.isSelf ? "Избранное" : info.userId != 0 ? "Написать" : "Открыть", "message.fill") {
+            action(info.isSelf ? L("Избранное") : info.userId != 0 ? L("Написать") : L("Открыть"), "message.fill") {
                 Task { await model.openChat(fromProfile: info.chatId) }
             }
-            action("Поиск", "magnifyingglass") {
+            action(L("Поиск"), "magnifyingglass") {
                 Task { await model.openChat(fromProfile: info.chatId, searching: true) }
             }
             if info.isSelf {
                 // Name, bio and username are edited in the settings' account pane.
-                action("Изменить", "pencil") {
+                action(L("Изменить"), "pencil") {
                     dismiss()
                     openSettings()
                 }
             }
-            if info.userId != 0, !info.isSelf, info.subtitle != "бот" {
-                action("Секретный", "lock.fill") {
+            if info.userId != 0, !info.isSelf, info.subtitle != L("бот") {
+                action(L("Секретный"), "lock.fill") {
                     Task { await model.startSecretChat(with: info.userId) }
                 }
             }
-            if info.userId != 0, !info.isSelf, info.subtitle != "бот" {
-                action("Подарок", "gift.fill") { showsGifts = true }
+            if info.userId != 0, !info.isSelf, info.subtitle != L("бот") {
+                action(L("Подарок"), "gift.fill") { showsGifts = true }
             }
             if !info.isSelf, let muted = isMuted {
-                action(muted ? "Со звуком" : "Без звука", muted ? "bell.fill" : "bell.slash.fill") {
+                action(muted ? L("Со звуком") : L("Без звука"), muted ? "bell.fill" : "bell.slash.fill") {
                     isMuted = !muted
                     Task { await model.toggleMuted(chatId: info.chatId) }
                 }
@@ -236,24 +236,24 @@ struct ProfileSheet: View {
 
     private var details: some View {
         card {
-            copyRow(info.userId != 0 ? "Telegram ID" : "ID чата", String(info.telegramId))
+            copyRow(info.userId != 0 ? "Telegram ID" : L("ID чата"), String(info.telegramId))
             if info.innerId != 0 {
                 Divider().padding(.leading, 12)
-                copyRow("Внутренний ID", String(info.innerId))
+                copyRow(L("Внутренний ID"), String(info.innerId))
             }
             Divider().padding(.leading, 12)
             if let dc = info.dataCenter {
-                copyRow("Дата-центр", "DC\(dc) · \(TD.dataCenterLocation(dc))", copying: "DC\(dc)")
+                copyRow(L("Дата-центр"), "DC\(dc) · \(TD.dataCenterLocation(dc))", copying: "DC\(dc)")
             } else {
-                row("Дата-центр", "неизвестен — нет фото профиля")
+                row(L("Дата-центр"), L("неизвестен — нет фото профиля"))
             }
             ForEach(info.usernames, id: \.self) { username in
                 Divider().padding(.leading, 12)
-                copyRow("Имя пользователя", "@" + username)
+                copyRow(L("Имя пользователя"), "@" + username)
             }
             if !info.phone.isEmpty {
                 Divider().padding(.leading, 12)
-                copyRow("Телефон", info.phone)
+                copyRow(L("Телефон"), info.phone)
             }
         }
     }
@@ -314,7 +314,7 @@ struct ProfileSheet: View {
                     .frame(width: 16)
             }
             .buttonStyle(.plain)
-            .help("Скопировать")
+            .help(L("Скопировать"))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)

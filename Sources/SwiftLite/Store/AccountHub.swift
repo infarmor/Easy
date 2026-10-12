@@ -73,7 +73,23 @@ final class AccountHub {
     var allChats: [OwnedChat] {
         let signedIn = accounts.compactMap { models[$0.id] }.filter { $0.phase == .working }
         let merged = signedIn.flatMap { owner in owner.chats.map { OwnedChat(chat: $0, owner: owner) } }
-        return Array(merged.sorted { ($0.chat.snippetDate ?? .distantPast) > ($1.chat.snippetDate ?? .distantPast) }.prefix(200))
+        // Pinned chats keep their place at the top, whichever account pinned them; then the newest first.
+        return Array(merged.sorted { a, b in
+            if a.chat.isPinned != b.chat.isPinned { return a.chat.isPinned }
+            return (a.chat.snippetDate ?? .distantPast) > (b.chat.snippetDate ?? .distantPast)
+        }.prefix(200))
+    }
+
+    /// Chats of the other accounts whose name has the words being searched for: the sidebar's search looks
+    /// through the account in the window, and this is what it would otherwise miss.
+    func matches(_ query: String, outside model: AppModel) -> [OwnedChat] {
+        let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard needle.count >= 2 else { return [] }
+        return accounts.compactMap { models[$0.id] }
+            .filter { $0 !== model && $0.phase == .working }
+            .flatMap { owner in
+                owner.listableChats.filter { $0.title.lowercased().contains(needle) }.prefix(15).map { OwnedChat(chat: $0, owner: owner) }
+            }
     }
 
     /// ⌃1…⌃9 and the account menu.

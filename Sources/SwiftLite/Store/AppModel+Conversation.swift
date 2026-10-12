@@ -156,7 +156,7 @@ extension AppModel {
         do {
             _ = try await request(payload)
             if let date {
-                showToast("Отправится " + date.formatted(.dateTime.day().month(.wide).hour().minute().locale(Locale(identifier: "ru_RU"))))
+                showToast(L("Отправится ") + date.formatted(.dateTime.day().month(.wide).hour().minute().locale(Loc.locale)))
                 await loadScheduledMessages(of: chatId)
             }
             await readAfterReplying(in: chatId)
@@ -288,7 +288,7 @@ extension AppModel {
                 let username = (user.tdNode("usernames")?["active_usernames"] as? [String])?.first ?? ""
                 let name = TD.displayName(ofUser: user)
                 people.append(ComposerSuggestion(
-                    id: "u\(userId)", title: name.isEmpty ? "Пользователь" : name,
+                    id: "u\(userId)", title: name.isEmpty ? L("Пользователь") : name,
                     detail: username.isEmpty ? "" : "@" + username,
                     photo: TD.photo(user.tdNode("profile_photo")), seed: userId,
                     kind: .mention(userId: userId, username: username)))
@@ -349,7 +349,7 @@ extension AppModel {
         composerContext = ComposerContext(
             kind: .reply,
             messageId: message.id,
-            title: "Ответ: \(name(for: message))",
+            title: L("Ответ: \(name(for: message))"),
             preview: TD.preview(of: message)
         )
     }
@@ -385,7 +385,7 @@ extension AppModel {
                 "message_id": message.id,
             ])
             guard properties.tdBool("can_be_edited") else {
-                fail("Это сообщение уже нельзя изменить")
+                fail(L("Это сообщение уже нельзя изменить"))
                 return
             }
         } catch {
@@ -410,7 +410,7 @@ extension AppModel {
         composerContext = ComposerContext(
             kind: .edit,
             messageId: message.id,
-            title: editable.isCaption ? "Редактирование подписи" : "Редактирование",
+            title: editable.isCaption ? L("Редактирование подписи") : L("Редактирование"),
             preview: TD.preview(of: message),
             editsCaption: editable.isCaption
         )
@@ -467,7 +467,7 @@ extension AppModel {
                 forEveryone: properties.tdBool("can_be_deleted_for_all_users")
             )
             guard options.forSelf || options.forEveryone else {
-                fail("Это сообщение нельзя удалить")
+                fail(L("Это сообщение нельзя удалить"))
                 return nil
             }
             return options
@@ -535,7 +535,7 @@ extension AppModel {
         guard let found = try? await request([
             "@type": "getChatMessageByDate", "chat_id": chatId, "date": Int(end.timeIntervalSince1970) - 1,
         ]), found.tdInt64("id") != 0, openChatId == chatId else {
-            showToast("В этот день сообщений нет")
+            showToast(L("В этот день сообщений нет"))
             return
         }
         await jump(to: found.tdInt64("id"))
@@ -669,7 +669,7 @@ extension AppModel {
     /// can see it.
     func open(_ reply: ForeignReply) {
         guard reply.chatId != 0, reply.messageId != 0, knownChats[reply.chatId] != nil else {
-            showToast("Это сообщение из чата, которого у вас нет")
+            showToast(L("Это сообщение из чата, которого у вас нет"))
             return
         }
         if openChatId == reply.chatId {
@@ -1132,7 +1132,7 @@ extension AppModel {
             ])
             let local = file.tdNode("local") ?? [:]
             guard local.tdBool("is_downloading_completed"), !local.tdString("path").isEmpty else {
-                fail("Не удалось скачать «\(attachment.name)»")
+                fail(L("Не удалось скачать «\(attachment.name)»"))
                 return nil
             }
             return URL(fileURLWithPath: local.tdString("path"))

@@ -40,9 +40,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.setNotificationCategories([UNNotificationCategory(
             identifier: Self.category,
             actions: [
-                UNTextInputNotificationAction(identifier: Self.replyAction, title: "Ответить", options: [],
-                                              textInputButtonTitle: "Отправить", textInputPlaceholder: "Сообщение"),
-                UNNotificationAction(identifier: Self.readAction, title: "Прочитано", options: []),
+                UNTextInputNotificationAction(identifier: Self.replyAction, title: L("Ответить"), options: [],
+                                              textInputButtonTitle: L("Отправить"), textInputPlaceholder: L("Сообщение")),
+                UNNotificationAction(identifier: Self.readAction, title: L("Прочитано"), options: []),
             ],
             intentIdentifiers: [])])
         center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in

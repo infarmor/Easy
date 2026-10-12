@@ -80,21 +80,21 @@ private struct WebAppContent: View {
             ToolbarItem(placement: .navigation) {
                 if bridge.isBackButtonVisible {
                     Button { bridge.send("back_button_pressed") } label: { Image(systemName: "chevron.left") }
-                        .help("Назад")
+                        .help(L("Назад"))
                 }
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button("Обновить") { bridge.reload() }
+                    Button(L("Обновить")) { bridge.reload() }
                     if bridge.isSettingsButtonVisible {
-                        Button("Настройки") { bridge.send("settings_button_pressed") }
+                        Button(L("Настройки")) { bridge.send("settings_button_pressed") }
                     }
                     Divider()
-                    Button("Закрыть") { model.closeWebApp() }
+                    Button(L("Закрыть")) { model.closeWebApp() }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
-                .help("Ещё")
+                .help(L("Ещё"))
             }
         }
         .onChange(of: colorScheme) { _, scheme in bridge.sendTheme(dark: scheme == .dark) }
@@ -372,15 +372,15 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
                 }
             }
         case "web_app_request_write_access":
-            let allowed = BotDialogs.ask("Разрешить \(session.botName) писать вам?",
-                                         "Бот сможет присылать вам сообщения.", action: "Разрешить")
+            let allowed = BotDialogs.ask(L("Разрешить \(session.botName) писать вам?"),
+                                         L("Бот сможет присылать вам сообщения."), action: L("Разрешить"))
             Task {
                 let done = allowed ? await model?.allowMessages(from: session) ?? false : false
                 send("write_access_requested", ["status": done ? "allowed" : "cancelled"])
             }
         case "web_app_request_phone":
-            let allowed = BotDialogs.ask("Поделиться номером телефона?",
-                                         "\(session.botName) получит ваш номер телефона.", action: "Поделиться")
+            let allowed = BotDialogs.ask(L("Поделиться номером телефона?"),
+                                         L("\(session.botName) получит ваш номер телефона."), action: L("Поделиться"))
             Task {
                 let done = allowed ? await model?.sharePhoneNumber(with: session) ?? false : false
                 send("phone_requested", ["status": done ? "sent" : "cancelled"])
@@ -424,8 +424,8 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
 
         // A status emoji is public: it shows in your profile to everyone, so it is never set without asking.
         case "web_app_request_emoji_status_access":
-            let allowed = BotDialogs.ask("Разрешить \(session.botName) менять статус-эмодзи?",
-                                         "Его увидят все, кто откроет ваш профиль.", action: "Разрешить")
+            let allowed = BotDialogs.ask(L("Разрешить \(session.botName) менять статус-эмодзи?"),
+                                         L("Его увидят все, кто откроет ваш профиль."), action: L("Разрешить"))
             send("emoji_status_access_requested", ["status": allowed ? "allowed" : "cancelled"])
         case "web_app_set_emoji_status":
             let customEmojiId = Int64(string("custom_emoji_id")) ?? 0
@@ -434,9 +434,9 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
                 send("emoji_status_failed", ["error": WebAppStorage.Failure.invalid.rawValue])
                 return
             }
-            guard BotDialogs.ask("Поставить статус-эмодзи?",
-                                 "\(session.botName) предлагает показать этот эмодзи в вашем профиле.",
-                                 action: "Поставить") else {
+            guard BotDialogs.ask(L("Поставить статус-эмодзи?"),
+                                 L("\(session.botName) предлагает показать этот эмодзи в вашем профиле."),
+                                 action: L("Поставить")) else {
                 send("emoji_status_failed", ["error": "CANCELLED"])
                 return
             }
@@ -451,7 +451,7 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
 
         // Things a desktop window cannot do: the page is told so instead of waiting forever.
         case "web_app_open_invoice":
-            model?.showToast("Оплата доступна только в официальном приложении")
+            model?.showToast(L("Оплата доступна только в официальном приложении"))
             send("invoice_closed", ["slug": string("slug"), "status": "failed"])
         case "web_app_biometry_get_info":
             send("biometry_info_received", ["available": false])
@@ -523,14 +523,14 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
             let text: String
             switch button["type"] as? String {
             case "ok": text = "OK"
-            case "close": text = "Закрыть"
-            case "cancel": text = "Отмена"
+            case "close": text = L("Закрыть")
+            case "cancel": text = L("Отмена")
             default: text = button["text"] as? String ?? ""
             }
             let added = alert.addButton(withTitle: text.isEmpty ? "OK" : text)
             added.hasDestructiveAction = button["type"] as? String == "destructive"
         }
-        if shown.isEmpty { alert.addButton(withTitle: "Закрыть") }
+        if shown.isEmpty { alert.addButton(withTitle: L("Закрыть")) }
         let index = alert.runModal().rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
         guard shown.indices.contains(index) else { return nil }
         return shown[index]["id"] as? String
@@ -550,7 +550,7 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
                 return
             }
             if Preferences.isOn(Preferences.fileGuard), let warning = SecurityTools.fileWarning(for: fileName),
-               !BotDialogs.ask("Сохранить «\(fileName)»?", "\(warning)\n\nИсточник: \(url.host ?? link)", action: "Сохранить") {
+               !BotDialogs.ask(L("Сохранить «\(fileName)»?"), L("\(warning)\n\nИсточник: \(url.host ?? link)"), action: L("Сохранить")) {
                 send("file_download_requested", ["status": "cancelled"])
                 return
             }
@@ -610,7 +610,7 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
     nonisolated func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         MainActor.assumeIsolated {
             isLoading = false
-            model?.report("Мини-приложение не открылось: \(error.localizedDescription)")
+            model?.report(L("Мини-приложение не открылось: \(error.localizedDescription)"))
         }
     }
 

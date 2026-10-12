@@ -110,7 +110,7 @@ extension AppModel {
                 case .mine:
                     _ = try? await request(["@type": "confirmSession", "session_id": session.id])
                 case .notMine:
-                    if await terminateSession(session.id) { showToast("Сеанс завершён") }
+                    if await terminateSession(session.id) { showToast(L("Сеанс завершён")) }
                 case .later:
                     break
                 }
@@ -122,11 +122,11 @@ extension AppModel {
 
     /// Sets a passcode and re-keys the database and the archive with it. The error to show, or nil.
     func setPasscode(_ passcode: String) async -> String? {
-        guard passcode.count >= AppLock.minimumLength else { return "Код-пароль — не меньше \(AppLock.minimumLength) символов" }
-        guard isReady else { return "Сначала войдите в аккаунт" }
-        guard !hasPasscode else { return "Код-пароль уже задан" }
+        guard passcode.count >= AppLock.minimumLength else { return L("Код-пароль — не меньше \(AppLock.minimumLength) символов") }
+        guard isReady else { return L("Сначала войдите в аккаунт") }
+        guard !hasPasscode else { return L("Код-пароль уже задан") }
         let made = await Task.detached(priority: .userInitiated) { AppLock.make(passcode: passcode) }.value
-        guard let made else { return "Не удалось создать ключ" }
+        guard let made else { return L("Не удалось создать ключ") }
         do {
             // The record goes to disk first, marked as not yet encrypting: if the app dies in the middle, the
             // next launch has the salt to rebuild the key and tries the database both ways.
@@ -138,7 +138,7 @@ extension AppModel {
             try AppLock.save(record)
         } catch {
             AppLock.remove()
-            return "База не зашифрована: \((error as? TDError)?.message ?? error.localizedDescription)"
+            return L("База не зашифрована: \((error as? TDError)?.message ?? error.localizedDescription)")
         }
         lockKeys = made.keys
         archive.setKey(made.keys.archive)
@@ -155,8 +155,8 @@ extension AppModel {
             return nil
         }
         let matches = await Task.detached(priority: .userInitiated) { AppLock.unlock(passcode, record) != nil }.value
-        guard matches else { return "Неверный код-пароль" }
-        guard isReady else { return "Сначала войдите в аккаунт" }
+        guard matches else { return L("Неверный код-пароль") }
+        guard isReady else { return L("Сначала войдите в аккаунт") }
         do {
             if record.encryptsDatabase {
                 var leaving = record
@@ -167,7 +167,7 @@ extension AppModel {
             }
         } catch {
             try? AppLock.save(record)
-            return "Не удалось снять шифрование: \((error as? TDError)?.message ?? error.localizedDescription)"
+            return L("Не удалось снять шифрование: \((error as? TDError)?.message ?? error.localizedDescription)")
         }
         AppLock.remove()
         lockKeys = nil

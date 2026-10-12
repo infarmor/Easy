@@ -37,12 +37,12 @@ private struct ClosedSessionView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("Сессия завершена")
+            Text(L("Сессия завершена"))
                 .font(.title2.weight(.semibold))
             Text(message)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Перезапустить Easy") { model.restartSession() }
+            Button(L("Перезапустить Easy")) { model.restartSession() }
         }
         .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

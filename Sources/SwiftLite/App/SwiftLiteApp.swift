@@ -29,22 +29,22 @@ struct SwiftLiteApp: App {
             // "New" here is a new chat. Not a new window: a second one would share this AppModel, and both
             // composers would write the same draft while each view re-runs `select` on the other's chat.
             CommandGroup(replacing: .newItem) {
-                Button("Новый чат…") { model.showsNewChat = true }
+                Button(L("Новый чат…")) { model.showsNewChat = true }
                     .keyboardShortcut("n", modifiers: .command)
                     .disabled(!model.takesCommands)
-                Button("Избранное") { Task { await model.openSavedMessages() } }
+                Button(L("Избранное")) { Task { await model.openSavedMessages() } }
                     .keyboardShortcut("0", modifiers: .command)
                     .disabled(!model.takesCommands)
             }
             CommandGroup(after: .newItem) {
-                Button("Отметить прочитанным") {
+                Button(L("Отметить прочитанным")) {
                     Task { await model.markSelectedRead() }
                 }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
                 .disabled(!model.takesCommands)
             }
             CommandGroup(after: .pasteboard) {
-                Button("Отправить из буфера обмена") {
+                Button(L("Отправить из буфера обмена")) {
                     Task { await model.sendPasteboard() }
                 }
                 .keyboardShortcut("v", modifiers: [.command, .shift])
@@ -52,44 +52,44 @@ struct SwiftLiteApp: App {
             }
             CommandGroup(after: .sidebar) {
                 Group {
-                Button("Синхронизировать чаты") {
+                Button(L("Синхронизировать чаты")) {
                     Task { await model.loadChats() }
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
                 // One key, two meanings, told apart the way Mail and Notes tell them: with words selected in
                 // the composer ⌘K makes them a link.
-                Button(model.composerHasSelection ? "Ссылка на выделенное" : "Найти чат") { model.linkOrFindChat() }
+                Button(model.composerHasSelection ? L("Ссылка на выделенное") : L("Найти чат")) { model.linkOrFindChat() }
                     .keyboardShortcut("k", modifiers: .command)
-                Button("Предыдущий чат") { model.selectAdjacentChat(-1) }
+                Button(L("Предыдущий чат")) { model.selectAdjacentChat(-1) }
                     .keyboardShortcut(.upArrow, modifiers: [.command, .option])
-                Button("Следующий чат") { model.selectAdjacentChat(1) }
+                Button(L("Следующий чат")) { model.selectAdjacentChat(1) }
                     .keyboardShortcut(.downArrow, modifiers: [.command, .option])
                 // ⌘↓ is also "caret to the end of the text". A menu takes a key before the field sees it, so
                 // while something is being written the key is left to the field.
-                Button("К последним сообщениям") { Task { await model.showLatest() } }
+                Button(L("К последним сообщениям")) { Task { await model.showLatest() } }
                     .keyboardShortcut(.downArrow, modifiers: .command)
                     .disabled(model.hasDraftText)
-                Button("Увеличить текст сообщений") { Preferences.stepFontSize(1) }
+                Button(L("Увеличить текст сообщений")) { Preferences.stepFontSize(1) }
                     .keyboardShortcut("+", modifiers: .command)
-                Button("Уменьшить текст сообщений") { Preferences.stepFontSize(-1) }
+                Button(L("Уменьшить текст сообщений")) { Preferences.stepFontSize(-1) }
                     .keyboardShortcut("-", modifiers: .command)
                 Divider()
                 // Not ⌥⇧↑/↓, which they first were: in a text field those extend the selection by a paragraph,
                 // and the menu was taking them away from the composer.
-                Button("Предыдущий непрочитанный") { model.selectUnreadChat(-1) }
+                Button(L("Предыдущий непрочитанный")) { model.selectUnreadChat(-1) }
                     .keyboardShortcut(.upArrow, modifiers: [.control, .shift])
-                Button("Следующий непрочитанный") { model.selectUnreadChat(1) }
+                Button(L("Следующий непрочитанный")) { model.selectUnreadChat(1) }
                     .keyboardShortcut(.downArrow, modifiers: [.control, .shift])
                 ForEach(1...9, id: \.self) { number in
-                    Button("Чат \(number)") { model.selectChat(number: number) }
+                    Button(L("Чат \(number)")) { model.selectChat(number: number) }
                         .keyboardShortcut(KeyEquivalent(Character(String(number))), modifiers: .command)
                 }
                 }
                 .disabled(!model.takesCommands)
-                Button("Заблокировать Easy") { model.lock() }
+                Button(L("Заблокировать Easy")) { model.lock() }
                     .keyboardShortcut("l", modifiers: [.command, .option])
                     .disabled(!model.hasPasscode || model.isLocked)
-                Button("Режим призрака") {
+                Button(L("Режим призрака")) {
                     UserDefaults.standard.set(!Preferences.isOn(Preferences.ghostMode), forKey: Preferences.ghostMode)
                 }
                 .keyboardShortcut("g", modifiers: [.command, .shift])
@@ -98,27 +98,27 @@ struct SwiftLiteApp: App {
         }
 
         .commands {
-            CommandMenu("Аккаунты") {
+            CommandMenu(L("Аккаунты")) {
                 ForEach(Array(hub.accounts.prefix(9).enumerated()), id: \.element.id) { index, account in
-                    Button(account.name.isEmpty ? "Новый аккаунт" : account.name) { hub.activate(account.id) }
+                    Button(account.name.isEmpty ? L("Новый аккаунт") : account.name) { hub.activate(account.id) }
                         .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .control)
                         .disabled(account.id == hub.activeId)
                 }
                 Divider()
-                Button("Добавить аккаунт…") { hub.addAccount() }
+                Button(L("Добавить аккаунт…")) { hub.addAccount() }
                     .disabled(model.isLocked)
             }
-            CommandMenu("Формат") {
+            CommandMenu(L("Формат")) {
                 Group {
-                Button("Жирный") { model.format(.bold) }
+                Button(L("Жирный")) { model.format(.bold) }
                     .keyboardShortcut("b", modifiers: .command)
-                Button(model.composerHasSelection ? "Курсив" : "Профиль собеседника") { model.italicOrProfile() }
+                Button(model.composerHasSelection ? L("Курсив") : L("Профиль собеседника")) { model.italicOrProfile() }
                     .keyboardShortcut("i", modifiers: .command)
-                Button("Зачёркнутый") { model.format(.strikethrough) }
+                Button(L("Зачёркнутый")) { model.format(.strikethrough) }
                     .keyboardShortcut("x", modifiers: [.command, .shift])
-                Button("Моноширинный") { model.format(.code) }
+                Button(L("Моноширинный")) { model.format(.code) }
                     .keyboardShortcut("k", modifiers: [.command, .shift])
-                Button("Спойлер") { model.format(.spoiler) }
+                Button(L("Спойлер")) { model.format(.spoiler) }
                     .keyboardShortcut("p", modifiers: [.command, .shift])
                 }
                 .disabled(!model.takesCommands)
@@ -133,7 +133,7 @@ struct SwiftLiteApp: App {
                 .id(hub.activeId)
         }
 
-        Window("Мини-приложение", id: WebAppWindow.id) {
+        Window(L("Мини-приложение"), id: WebAppWindow.id) {
             WebAppWindow()
                 .environment(model)
                 .environment(hub)

@@ -38,7 +38,7 @@ struct ChatManageSheet: View {
                         .lineLimit(2)
                 }
                 Spacer()
-                Button("Готово") { dismiss() }
+                Button(L("Готово")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
             }
             .padding(12)
@@ -80,23 +80,23 @@ struct ChatManageSheet: View {
 
     private var subtitle: String {
         let access = model.chatAccess
-        let who = access.isCreator ? "вы владелец" : access.isAdmin ? "вы администратор" : "вы участник"
+        let who = access.isCreator ? L("вы владелец") : access.isAdmin ? L("вы администратор") : L("вы участник")
         let count = access.memberCount != 0 ? access.memberCount : chat.memberCount
-        let kind = access.isChannel ? "канал" : "группа"
-        return count > 0 ? "\(kind) · \(count) участников · \(who)" : "\(kind) · \(who)"
+        let kind = access.isChannel ? L("канал") : L("группа")
+        return count > 0 ? L("\(kind) · \(count) участников · \(who)") : "\(kind) · \(who)"
     }
 
     // MARK: - the chat itself
 
     private var infoCard: some View {
-        ManageCard("О чате") {
-            TextField("Название", text: $title)
+        ManageCard(L("О чате")) {
+            TextField(L("Название"), text: $title)
                 .textFieldStyle(.roundedBorder)
-            TextField("Описание", text: $about, axis: .vertical)
+            TextField(L("Описание"), text: $about, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(2...4)
             HStack {
-                Button(saved ? "Сохранено" : "Сохранить") { save() }
+                Button(saved ? L("Сохранено") : L("Сохранить")) { save() }
                     .disabled(title.isEmpty || title == chat.title && about == model.chatAccess.about)
                 if saved {
                     Image(systemName: "checkmark.circle.fill")
@@ -123,19 +123,19 @@ struct ChatManageSheet: View {
     // MARK: - members
 
     private var membersCard: some View {
-        ManageCard("Участники") {
-            TextField("Поиск по имени", text: $query)
+        ManageCard(L("Участники")) {
+            TextField(L("Поиск по имени"), text: $query)
                 .textFieldStyle(.roundedBorder)
                 .focused($searchFocused)
             if model.isLoadingMembers {
-                HStack { ProgressView().controlSize(.small); Text("Участники…") }
+                HStack { ProgressView().controlSize(.small); Text(L("Участники…")) }
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             } else if model.members.isEmpty {
                 Text(model.chatAccess.canGetMembers
-                     ? "Список участников пуст или скрыт."
-                     : "Список участников этому аккаунту не показан.")
+                     ? L("Список участников пуст или скрыт.")
+                     : L("Список участников этому аккаунту не показан."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 8)
@@ -147,7 +147,7 @@ struct ChatManageSheet: View {
                 if member.id != model.members.last?.id { Divider() }
             }
             if model.membersTotal > model.members.count {
-                Text("Показано \(model.members.count) из \(model.membersTotal)")
+                Text(L("Показано \(model.members.count) из \(model.membersTotal)"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -157,24 +157,24 @@ struct ChatManageSheet: View {
     // MARK: - invite links
 
     private var linksCard: some View {
-        ManageCard("Ссылки-приглашения") {
+        ManageCard(L("Ссылки-приглашения")) {
             if !model.chatAccess.primaryLink.isEmpty {
-                LinkRow(title: "Основная ссылка", url: model.chatAccess.primaryLink)
-                Button("Сменить и скопировать") {
+                LinkRow(title: L("Основная ссылка"), url: model.chatAccess.primaryLink)
+                Button(L("Сменить и скопировать")) {
                     Task { await model.replacePrimaryInviteLink(in: chat) }
                 }
                 .controlSize(.small)
             } else {
-                Text("У чата пока нет публичной ссылки.")
+                Text(L("У чата пока нет публичной ссылки."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
             ForEach(model.inviteLinks) { link in
-                LinkRow(title: link.name.isEmpty ? "Ссылка" : link.name, url: link.url,
-                        note: "\(link.memberCount) зашли"
-                            + (link.memberLimit > 0 ? " из \(link.memberLimit)" : "")
-                            + (link.expirationDate.map { " · до \($0.shortDate)" } ?? ""))
-                Button("Отозвать") {
+                LinkRow(title: link.name.isEmpty ? L("Ссылка") : link.name, url: link.url,
+                        note: L("\(link.memberCount) зашли")
+                            + (link.memberLimit > 0 ? L(" из \(link.memberLimit)") : "")
+                            + (link.expirationDate.map { L(" · до \($0.shortDate)") } ?? ""))
+                Button(L("Отозвать")) {
                     Task { await model.revokeInviteLink(link, in: chat) }
                 }
                 .controlSize(.small)
@@ -186,19 +186,19 @@ struct ChatManageSheet: View {
     // MARK: - statistics
 
     private var statisticsCard: some View {
-        ManageCard("Статистика канала") {
+        ManageCard(L("Статистика канала")) {
             if let stats = model.statistics {
-                statRow("Период", "\(stats.from.shortDate) — \(stats.to.shortDate)")
-                statRow("Подписчиков", count(stats.members) + (stats.membersGrowth == 0 ? "" : "  (\(percent(stats.membersGrowth)))"))
-                statRow("Просмотров на пост", count(stats.meanViews))
-                statRow("Пересылок на пост", one(stats.meanShares))
-                statRow("Реакций на пост", one(stats.meanReactions))
+                statRow(L("Период"), "\(stats.from.shortDate) — \(stats.to.shortDate)")
+                statRow(L("Подписчиков"), count(stats.members) + (stats.membersGrowth == 0 ? "" : "  (\(percent(stats.membersGrowth)))"))
+                statRow(L("Просмотров на пост"), count(stats.meanViews))
+                statRow(L("Пересылок на пост"), one(stats.meanShares))
+                statRow(L("Реакций на пост"), one(stats.meanReactions))
             } else {
-                Text("Telegram отдаёт статистику только владельцу и администраторам канала.")
+                Text(L("Telegram отдаёт статистику только владельцу и администраторам канала."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
-            Button(model.statistics == nil ? "Показать статистику" : "Обновить") {
+            Button(model.statistics == nil ? L("Показать статистику") : L("Обновить")) {
                 Task { await model.loadStatistics(of: chat) }
             }
             .controlSize(.small)
@@ -270,7 +270,7 @@ struct MemberRow: View {
         HStack(spacing: 10) {
             Avatar(title: member.name, seed: member.userId, photo: member.photo, diameter: 32)
             VStack(alignment: .leading, spacing: 1) {
-                Text(member.name.isEmpty ? "Без имени" : member.name)
+                Text(member.name.isEmpty ? L("Без имени") : member.name)
                     .font(.body.weight(.medium))
                     .lineLimit(1)
                 Text(rank)
@@ -292,7 +292,7 @@ struct MemberRow: View {
                 .buttonStyle(.plain)
                 .menuIndicator(.hidden)
                 .fixedSize()
-                .help("Что можно сделать с этим участником")
+                .help(L("Что можно сделать с этим участником"))
             }
         }
         .padding(.vertical, 5)
@@ -313,12 +313,12 @@ struct MemberRow: View {
         }
         if member.rank == .restricted {
             let allowed = Rights.summary(member.permissions, Rights.permissions)
-            if !allowed.isEmpty { text += " · можно: " + allowed }
+            if !allowed.isEmpty { text += L(" · можно: ") + allowed }
         }
         if member.untilDate > 0 {
-            text += " до " + Date(timeIntervalSince1970: TimeInterval(member.untilDate)).shortDate
+            text += L(" до ") + Date(timeIntervalSince1970: TimeInterval(member.untilDate)).shortDate
         } else if member.rank == .banned {
-            text += " навсегда"
+            text += L(" навсегда")
         }
         return text
     }
@@ -352,30 +352,30 @@ struct MemberRow: View {
     @ViewBuilder
     private var actions: some View {
         if access.canPromote, member.rank == .admin || member.rank == .member {
-            Button(member.rank == .admin ? "Права администратора…" : "Назначить администратором…") { showsAdminRights = true }
+            Button(member.rank == .admin ? L("Права администратора…") : L("Назначить администратором…")) { showsAdminRights = true }
         }
         if access.canRestrict, member.rank != .banned, member.rank != .restricted {
-            Button("Заглушить с выбором прав…") { showsRestrictions = true }
+            Button(L("Заглушить с выбором прав…")) { showsRestrictions = true }
         }
         if member.rank == .admin, member.canBeEdited, access.canPromote {
-            Button("Снять с администраторов") { perform { await model.setMember(member, in: chat, rights: nil) } }
+            Button(L("Снять с администраторов")) { perform { await model.setMember(member, in: chat, rights: nil) } }
         } else if member.rank == .member, access.canPromote {
-            Button("Сделать администратором") {
+            Button(L("Сделать администратором")) {
                 perform { await model.setMember(member, in: chat, rights: Rights.editorDefaults) }
             }
         }
         if access.canDeleteMessages {
             Divider()
-            Button("Удалить все сообщения участника", role: .destructive) {
+            Button(L("Удалить все сообщения участника"), role: .destructive) {
                 perform { await model.deleteMessages(by: member, in: chat) }
             }
         }
         if access.canRestrict {
             Divider()
             if member.rank == .restricted {
-                Button("Снять ограничения") { perform { await model.removeMember(member, in: chat) } }
+                Button(L("Снять ограничения")) { perform { await model.removeMember(member, in: chat) } }
             } else {
-                Menu("Заглушить") {
+                Menu(L("Заглушить")) {
                     ForEach(MemberPeriod.all) { period in
                         Button(period.label) { perform { await model.restrictMember(member, in: chat, minutes: period.minutes) } }
                     }
@@ -383,15 +383,15 @@ struct MemberRow: View {
             }
             Divider()
             if member.rank == .banned {
-                Button("Разблокировать") { perform { await model.removeMember(member, in: chat) } }
+                Button(L("Разблокировать")) { perform { await model.removeMember(member, in: chat) } }
             } else {
-                Button("Удалить из чата", role: .destructive) { perform { await model.removeMember(member, in: chat) } }
+                Button(L("Удалить из чата"), role: .destructive) { perform { await model.removeMember(member, in: chat) } }
             }
-            Menu("Забанить") {
+            Menu(L("Забанить")) {
                 ForEach(MemberPeriod.all) { period in
                     Button(period.label) { perform { await model.banMember(member, in: chat, minutes: period.minutes, revokeMessages: false) } }
                 }
-                Button("Навсегда, с его сообщениями", role: .destructive) {
+                Button(L("Навсегда, с его сообщениями"), role: .destructive) {
                     perform { await model.banMember(member, in: chat, minutes: 0, revokeMessages: true) }
                 }
             }
@@ -403,7 +403,7 @@ struct MemberRow: View {
     private func perform(_ action: @escaping () async -> Bool) {
         Task {
             guard await action() else { return }
-            model.showToast("Готово")
+            model.showToast(L("Готово"))
             changed()
         }
     }
@@ -426,7 +426,7 @@ private struct LinkRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
-            Button(copied ? "Скопировано" : "Копировать") {
+            Button(copied ? L("Скопировано") : L("Копировать")) {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(url, forType: .string)
                 copied = true
@@ -452,18 +452,18 @@ private struct NewLinkRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            TextField("Название", text: $name)
+            TextField(L("Название"), text: $name)
                 .textFieldStyle(.roundedBorder)
                 .frame(minWidth: 120)
-            TextField("Гостей", text: $limit)
+            TextField(L("Гостей"), text: $limit)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 60)
-                .help("Сколько человек может зайти по ссылке; пусто — сколько угодно")
-            TextField("Дней", text: $days)
+                .help(L("Сколько человек может зайти по ссылке; пусто — сколько угодно"))
+            TextField(L("Дней"), text: $days)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 60)
-                .help("Через сколько дней ссылка перестанет работать; пусто — никогда")
-            Button("Создать") { create() }
+                .help(L("Через сколько дней ссылка перестанет работать; пусто — никогда"))
+            Button(L("Создать")) { create() }
                 .controlSize(.small)
         }
     }
@@ -498,9 +498,9 @@ struct RightsSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(member.name.isEmpty ? "Без имени" : member.name)
+                Text(member.name.isEmpty ? L("Без имени") : member.name)
                     .font(.title3.weight(.semibold))
-                Text(isAdmin ? "Права администратора" : "Что разрешено, пока участник заглушен")
+                Text(isAdmin ? L("Права администратора") : L("Что разрешено, пока участник заглушен"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -536,13 +536,13 @@ struct RightsSheet: View {
             }
             Divider()
             HStack {
-                Button("Отмена") { dismiss() }
+                Button(L("Отмена")) { dismiss() }
                 Spacer()
                 if isAdmin {
-                    Button("Снять с администраторов", role: .destructive) { save(rights: nil) }
+                    Button(L("Снять с администраторов"), role: .destructive) { save(rights: nil) }
                         .disabled(member.rank != .admin || busy)
                 }
-                Button(isAdmin ? "Сохранить" : "Заглушить") { save(rights: values) }
+                Button(isAdmin ? L("Сохранить") : L("Заглушить")) { save(rights: values) }
                     .keyboardShortcut(.defaultAction)
                     .disabled(busy)
             }
@@ -594,7 +594,7 @@ struct RightsSheet: View {
             let done = isAdmin
                 ? await model.setMember(member, in: chat, rights: rights)
                 : await model.restrictMember(member, in: chat, minutes: minutes, permissions: rights ?? [:])
-            if done { model.showToast(isAdmin ? "Права обновлены" : "Участник заглушен") }
+            if done { model.showToast(isAdmin ? L("Права обновлены") : L("Участник заглушен")) }
             await model.loadMembers(of: chat)
             busy = false
             dismiss()
@@ -609,9 +609,9 @@ struct MemberPeriod: Identifiable {
     var id: Int { minutes }
 
     static let all = [
-        MemberPeriod(label: "На час", minutes: 60),
-        MemberPeriod(label: "На день", minutes: 60 * 24),
-        MemberPeriod(label: "На неделю", minutes: 60 * 24 * 7),
-        MemberPeriod(label: "Навсегда", minutes: 0),
+        MemberPeriod(label: L("На час"), minutes: 60),
+        MemberPeriod(label: L("На день"), minutes: 60 * 24),
+        MemberPeriod(label: L("На неделю"), minutes: 60 * 24 * 7),
+        MemberPeriod(label: L("Навсегда"), minutes: 0),
     ]
 }

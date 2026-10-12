@@ -17,13 +17,13 @@ struct LockView: View {
                 .interpolation(.high)
                 .frame(width: 84, height: 84)
             VStack(spacing: 4) {
-                Text("Easy заблокирован")
+                Text(L("Easy заблокирован"))
                     .font(.title3.weight(.semibold))
-                Text(isWrong ? "Неверный код-пароль" : "Введите код-пароль")
+                Text(isWrong ? L("Неверный код-пароль") : L("Введите код-пароль"))
                     .font(.callout)
                     .foregroundStyle(isWrong ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
             }
-            SecureField("Код-пароль", text: $passcode)
+            SecureField(L("Код-пароль"), text: $passcode)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 220)
                 .focused($focused)
@@ -37,7 +37,7 @@ struct LockView: View {
                         Label("Touch ID", systemImage: "touchid")
                     }
                 }
-                Button("Разблокировать") { submit() }
+                Button(L("Разблокировать")) { submit() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(passcode.isEmpty || isChecking)
             }
@@ -71,8 +71,8 @@ struct LockView: View {
 
     private func authenticate() {
         let context = LAContext()
-        context.localizedCancelTitle = "Ввести код-пароль"
-        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "разблокировать Easy") { success, _ in
+        context.localizedCancelTitle = L("Ввести код-пароль")
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: L("разблокировать Easy")) { success, _ in
             guard success else { return }
             Task { @MainActor in model.unlockAfterSystemAuthentication() }
         }

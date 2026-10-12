@@ -97,7 +97,7 @@ extension AppModel {
                 title: TD.displayName(ofUser: user),
                 photo: TD.photo(user.tdNode("profile_photo")),
                 seed: userId,
-                subtitle: type == "userTypeBot" ? "бот" : TD.presence(user.tdNode("status")).map { TD.describe($0) } ?? "",
+                subtitle: type == "userTypeBot" ? L("бот") : TD.presence(user.tdNode("status")).map { TD.describe($0) } ?? "",
                 telegramId: userId,
                 dataCenter: dataCenter(ofPhoto: user.tdNode("profile_photo"))
             )
@@ -111,52 +111,52 @@ extension AppModel {
                 let description = bot.tdString("description")
                 info.about = description.isEmpty ? bot.tdString("short_description") : description
             }
-            if verification?.tdBool("is_verified") == true { info.badges.append("Подтверждён") }
+            if verification?.tdBool("is_verified") == true { info.badges.append(L("Подтверждён")) }
             if user.tdBool("is_premium") { info.badges.append("Premium") }
             if verification?.tdBool("is_scam") == true { info.badges.append("⚠︎ SCAM") }
             if verification?.tdBool("is_fake") == true { info.badges.append("⚠︎ FAKE") }
-            if user.tdBool("is_support") { info.badges.append("Поддержка Telegram") }
-            if type == "userTypeDeleted" { info.badges.append("Удалён") }
+            if user.tdBool("is_support") { info.badges.append(L("Поддержка Telegram")) }
+            if type == "userTypeDeleted" { info.badges.append(L("Удалён")) }
             if user.tdBool("is_mutual_contact") {
-                info.badges.append("Взаимный контакт")
+                info.badges.append(L("Взаимный контакт"))
             } else if user.tdBool("is_contact") {
-                info.badges.append("В контактах")
+                info.badges.append(L("В контактах"))
             }
             info.isBlocked = full?.tdNode("block_list") != nil
             if let full {
                 let common = full.tdInt("group_in_common_count")
-                if common > 0 { info.facts.append(("Общие группы", String(common))) }
+                if common > 0 { info.facts.append((L("Общие группы"), String(common))) }
                 if let birthdate = full.tdNode("birthdate"), birthdate.tdInt("day") > 0 {
                     let year = birthdate.tdInt("year")
-                    info.facts.append(("День рождения", String(format: "%02d.%02d", birthdate.tdInt("day"), birthdate.tdInt("month")) + (year > 0 ? ".\(year)" : "")))
+                    info.facts.append((L("День рождения"), String(format: "%02d.%02d", birthdate.tdInt("day"), birthdate.tdInt("month")) + (year > 0 ? ".\(year)" : "")))
                 }
                 let personal = full.tdInt64("personal_chat_id")
                 if personal != 0, let channel = try? await request(["@type": "getChat", "chat_id": personal]) {
-                    info.facts.append(("Личный канал", channel.tdString("title")))
+                    info.facts.append((L("Личный канал"), channel.tdString("title")))
                 }
                 let gifts = full.tdInt("gift_count")
-                if gifts > 0 { info.facts.append(("Подарки", String(gifts))) }
+                if gifts > 0 { info.facts.append((L("Подарки"), String(gifts))) }
                 if let address = full.tdNode("business_info")?.tdNode("location")?.tdString("address"), !address.isEmpty {
-                    info.facts.append(("Адрес", address))
+                    info.facts.append((L("Адрес"), address))
                 }
-                if full.tdBool("has_restricted_voice_and_video_note_messages") { info.facts.append(("Голосовые", "не принимает")) }
-                if full.tdBool("has_private_forwards") { info.facts.append(("Пересылки", "скрывает профиль")) }
-                if full.tdBool("uses_unofficial_app") { info.facts.append(("Клиент", "неофициальное приложение")) }
+                if full.tdBool("has_restricted_voice_and_video_note_messages") { info.facts.append((L("Голосовые"), L("не принимает"))) }
+                if full.tdBool("has_private_forwards") { info.facts.append((L("Пересылки"), L("скрывает профиль"))) }
+                if full.tdBool("uses_unofficial_app") { info.facts.append((L("Клиент"), L("неофициальное приложение"))) }
             }
             if type == "userTypeBot", let bot = user.tdNode("type") {
                 let users = bot.tdInt("active_user_count")
-                if users > 0 { info.facts.append(("Пользователей в месяц", users.formatted(.number.locale(Locale(identifier: "ru_RU"))))) }
-                info.facts.append(("В группы", bot.tdBool("can_join_groups") ? "можно добавить" : "не добавляется"))
-                if bot.tdBool("can_read_all_group_messages") { info.facts.append(("В группах", "читает все сообщения")) }
-                if bot.tdBool("is_inline") { info.facts.append(("Инлайн-режим", "есть")) }
-                if bot.tdBool("has_main_web_app") { info.facts.append(("Мини-приложение", "есть")) }
+                if users > 0 { info.facts.append((L("Пользователей в месяц"), users.formatted(.number.locale(Loc.locale)))) }
+                info.facts.append((L("В группы"), bot.tdBool("can_join_groups") ? L("можно добавить") : L("не добавляется")))
+                if bot.tdBool("can_read_all_group_messages") { info.facts.append((L("В группах"), L("читает все сообщения"))) }
+                if bot.tdBool("is_inline") { info.facts.append((L("Инлайн-режим"), L("есть"))) }
+                if bot.tdBool("has_main_web_app") { info.facts.append((L("Мини-приложение"), L("есть"))) }
             }
-            if let badge = nameBadges["u\(userId)"], badge.isGift { info.facts.append(("Эмодзи-статус", badge.giftTitle)) }
+            if let badge = nameBadges["u\(userId)"], badge.isGift { info.facts.append((L("Эмодзи-статус"), badge.giftTitle)) }
             if userId == myUserId, let stars = await starBalance() {
-                info.facts.insert(("Звёзды", stars.formatted(.number.locale(Locale(identifier: "ru_RU")))), at: 0)
+                info.facts.insert((L("Звёзды"), stars.formatted(.number.locale(Loc.locale))), at: 0)
             }
             let language = user.tdString("language_code")
-            if !language.isEmpty { info.facts.append(("Язык", language)) }
+            if !language.isEmpty { info.facts.append((L("Язык"), language)) }
             info.raw = user
             guard generation == profileGeneration else { return }
             profile = info
@@ -186,46 +186,46 @@ extension AppModel {
                 let full = try? await request(["@type": "getSupergroupFullInfo", "supergroup_id": groupId])
                 let members = full?.tdInt("member_count") ?? group?.tdInt("member_count") ?? 0
                 let isChannel = type.tdBool("is_channel")
-                info.subtitle = (isChannel ? "канал" : "группа") + (members > 0 ? " · " + TD.count(members, "участник", "участника", "участников") : "")
+                info.subtitle = (isChannel ? L("канал") : L("группа")) + (members > 0 ? " · " + TD.count(members, L("участник"), L("участника"), L("участников")) : "")
                 info.usernames = (group?.tdNode("usernames")?["active_usernames"] as? [String]) ?? []
                 info.about = full?.tdString("description") ?? ""
                 let verification = group?.tdNode("verification_status")
-                if verification?.tdBool("is_verified") == true { info.badges.append("Подтверждён") }
+                if verification?.tdBool("is_verified") == true { info.badges.append(L("Подтверждён")) }
                 if verification?.tdBool("is_scam") == true { info.badges.append("⚠︎ SCAM") }
                 if verification?.tdBool("is_fake") == true { info.badges.append("⚠︎ FAKE") }
-                if group?.tdBool("is_forum") == true { info.badges.append("Форум") }
+                if group?.tdBool("is_forum") == true { info.badges.append(L("Форум")) }
                 if let date = group?.tdInt("date"), date > 0 {
-                    info.facts.append(("Создан или вступили", Date(timeIntervalSince1970: TimeInterval(date)).formatted(.dateTime.day().month(.wide).year().locale(Locale(identifier: "ru_RU")))))
+                    info.facts.append((L("Создан или вступили"), Date(timeIntervalSince1970: TimeInterval(date)).formatted(.dateTime.day().month(.wide).year().locale(Loc.locale))))
                 }
-                if let admins = full?.tdInt("administrator_count"), admins > 0 { info.facts.append(("Администраторы", String(admins))) }
-                if let restricted = full?.tdInt("restricted_count"), restricted > 0 { info.facts.append(("Ограничены", String(restricted))) }
-                if let banned = full?.tdInt("banned_count"), banned > 0 { info.facts.append(("Заблокированы", String(banned))) }
+                if let admins = full?.tdInt("administrator_count"), admins > 0 { info.facts.append((L("Администраторы"), String(admins))) }
+                if let restricted = full?.tdInt("restricted_count"), restricted > 0 { info.facts.append((L("Ограничены"), String(restricted))) }
+                if let banned = full?.tdInt("banned_count"), banned > 0 { info.facts.append((L("Заблокированы"), String(banned))) }
                 if let linked = full?.tdInt64("linked_chat_id"), linked != 0 {
                     // The discussion group of a channel, or the channel a group discusses: by name when it is known.
                     let title = (try? await request(["@type": "getChat", "chat_id": linked]))?.tdString("title") ?? ""
-                    info.facts.append((isChannel ? "Обсуждение" : "Канал", title.isEmpty ? String(linked) : title))
+                    info.facts.append((isChannel ? L("Обсуждение") : L("Канал"), title.isEmpty ? String(linked) : title))
                 }
                 if let slow = full?.tdInt("slow_mode_delay"), slow > 0 {
-                    info.facts.append(("Медленный режим", slow >= 60 ? "\(slow / 60) мин" : "\(slow) с"))
+                    info.facts.append((L("Медленный режим"), slow >= 60 ? L("\(slow / 60) мин") : L("\(slow) с")))
                 }
-                if let level = group?.tdInt("boost_level"), level > 0 { info.facts.append(("Уровень бустов", String(level))) }
-                if group?.tdBool("join_by_request") == true { info.facts.append(("Вступление", "по заявке")) }
-                if let gifts = full?.tdInt("gift_count"), gifts > 0 { info.facts.append(("Подарки", String(gifts))) }
-                if let link = full?.tdNode("invite_link")?.tdString("invite_link"), !link.isEmpty { info.facts.append(("Ссылка", link)) }
+                if let level = group?.tdInt("boost_level"), level > 0 { info.facts.append((L("Уровень бустов"), String(level))) }
+                if group?.tdBool("join_by_request") == true { info.facts.append((L("Вступление"), L("по заявке"))) }
+                if let gifts = full?.tdInt("gift_count"), gifts > 0 { info.facts.append((L("Подарки"), String(gifts))) }
+                if let link = full?.tdNode("invite_link")?.tdString("invite_link"), !link.isEmpty { info.facts.append((L("Ссылка"), link)) }
             case "chatTypeBasicGroup":
                 let groupId = type.tdInt64("basic_group_id")
                 info.innerId = groupId
                 let full = try? await request(["@type": "getBasicGroupFullInfo", "basic_group_id": groupId])
                 let members = full?.tdNodes("members").count ?? 0
-                info.subtitle = "группа" + (members > 0 ? " · " + TD.count(members, "участник", "участника", "участников") : "")
+                info.subtitle = L("группа") + (members > 0 ? " · " + TD.count(members, L("участник"), L("участника"), L("участников")) : "")
                 info.about = full?.tdString("description") ?? ""
             default:
-                info.subtitle = "чат"
+                info.subtitle = L("чат")
             }
-            if chat.tdBool("has_protected_content") { info.facts.append(("Копирование", "запрещено")) }
+            if chat.tdBool("has_protected_content") { info.facts.append((L("Копирование"), L("запрещено"))) }
             let autoDelete = chat.tdInt("message_auto_delete_time")
             if autoDelete > 0 {
-                info.facts.append(("Автоудаление", autoDelete >= 86_400 ? "через \(autoDelete / 86_400) дн" : "через \(max(1, autoDelete / 3600)) ч"))
+                info.facts.append((L("Автоудаление"), autoDelete >= 86_400 ? L("через \(autoDelete / 86_400) дн") : L("через \(max(1, autoDelete / 3600)) ч")))
             }
             info.raw = chat
             guard generation == profileGeneration else { return }

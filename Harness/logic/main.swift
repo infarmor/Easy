@@ -1830,5 +1830,60 @@ MainActor.assumeIsolated {
     check(model.messages.last?.viewId == 700_001, "someone else's message is a new bubble, as it should be")
 }
 
+// --- several accounts: one list for all of them, and a chat that opens in its own account ---------------
+MainActor.assumeIsolated {
+    let hub = AccountHub()
+    let first = hub.active
+    hub.addAccount()
+    let second = hub.active
+    check(hub.accounts.count == 2 && second !== first && second.slot != first.slot, "a second account has a model and a slot of its own")
+    // Signed in, as far as the lists are concerned.
+    first.phase = .working
+    second.phase = .working
+    first.apply(chat(101, "Алиса", positions: [mainPosition("300")]))
+    first.apply(chat(303, "Вера", positions: [mainPosition("200")]))
+    second.apply(chat(101, "Алиса у второго", positions: [mainPosition("500")]))
+    second.apply(chat(202, "Боб", positions: [mainPosition("100", pinned: true)]))
+    pump()
+    let all = hub.allChats
+    check(all.count == 4, "the list of all accounts holds every account's chats: \(all.count)")
+    check(all.first?.chat.id == 202 && all.first?.owner === second, "a pinned chat stays on top, whichever account pinned it")
+    check(Set(all.map(\.id)).count == 4 && all.filter { $0.chat.id == 101 }.count == 2,
+          "the same person in two accounts is two rows, told apart by their account")
+
+    let found = hub.matches("алис", outside: first)
+    check(found.count == 1 && found.first?.owner === second && found.first?.chat.id == 101,
+          "search finds a chat of the other account by name")
+    check(hub.matches("а", outside: first).isEmpty, "one letter is not a search")
+
+    hub.open(303, in: first.slot)
+    check(hub.active === first && first.selection == 303, "a chat picked from the list comes up in its own account")
+    check(second.selection == nil, "and the account left behind has no chat open to read messages in")
+    hub.open(202, in: second.slot)
+    check(hub.active === second && second.selection == 202 && first.selection == nil, "going back the other way closes the first one's chat")
+    hub.activate(first.slot)
+    check(first.selection == 303, "an account comes back to the chat it had open")
+
+    // --- a chat with unread messages opens on the first of them ---------------------------------------------
+    let unread: Int64 = 7700
+    first.apply(json(#"{"@type":"updateNewChat","chat":{"@type":"chat","id":\#(unread),"type":{"@type":"chatTypePrivate","user_id":\#(unread)},"title":"Новости","positions":[\#(mainPosition("9000"))]}}"#))
+    Task { await first.select(chatId: unread) }
+    pump(0.3)
+    check(first.openChatId == unread, "the chat is open")
+    for id in [Int64(10), 20, 30, 40] {
+        first.apply(json(#"{"@type":"updateNewMessage","message":\#(message(id, chat: unread, text: "сообщение \(id)"))}"#))
+    }
+    pump()
+    first.unreadMarkerId = nil
+    first.scrollTarget = nil
+    check(!first.placeOnFirstUnread(after: 5) && first.unreadMarkerId == nil,
+          "while the last read message is not loaded, the divider is not guessed")
+    check(first.placeOnFirstUnread(after: 20) && first.unreadMarkerId == 30 && first.scrollTarget == 30 && first.scrollsWithoutAnimation,
+          "the divider goes above the first message after the last read one, and the view is put there at once")
+    first.unreadMarkerId = nil
+    check(first.placeOnFirstUnread(after: 5, evenWithoutBoundary: true) && first.unreadMarkerId == 10,
+          "told to settle, it takes the oldest unread message in hand")
+}
+
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")
 exit(failures == 0 ? 0 : 1)

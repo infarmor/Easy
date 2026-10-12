@@ -6,7 +6,7 @@ struct TDError: Error, CustomStringConvertible {
     let message: String
 
     /// Our own answer for requests to a client that has already reported `authorizationStateClosed`.
-    static let closed = TDError(code: -2, message: "Сессия TDLib закрыта")
+    static let closed = TDError(code: -2, message: L("Сессия TDLib закрыта"))
 
     var isSessionClosed: Bool { code == Self.closed.code }
     var isRateLimited: Bool { code == 429 }
@@ -66,7 +66,7 @@ final class TDBridge: @unchecked Sendable {
 
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let encoded = String(data: data, encoding: .utf8) else {
-            throw TDError(code: -1, message: "не удалось закодировать запрос \(request["@type"] ?? "?")")
+            throw TDError(code: -1, message: L("не удалось закодировать запрос \(request["@type"] ?? "?")"))
         }
 
         return try await withTaskCancellationHandler {

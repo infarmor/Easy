@@ -65,18 +65,18 @@ enum SecurityTools {
                 sections.append("# \(title) (\(values.count))\n" + values.map(transform).joined(separator: "\n"))
             }
             add("URL", urls, fix)
-            add("Домены", domains, fix)
+            add(L("Домены"), domains, fix)
             add("IPv4", ipv4, fix)
             add("IPv6", ipv6)
-            add("Почта", emails, fix)
+            add(L("Почта"), emails, fix)
             add("SHA-512", sha512)
             add("SHA-256", sha256)
             add("SHA-1", sha1)
             add("MD5", md5)
             add("CVE", cves)
             add("MITRE ATT&CK", techniques)
-            add("Кошельки", wallets)
-            return sections.isEmpty ? "Индикаторы не найдены." : sections.joined(separator: "\n\n")
+            add(L("Кошельки"), wallets)
+            return sections.isEmpty ? L("Индикаторы не найдены.") : sections.joined(separator: "\n\n")
         }
     }
 
@@ -270,41 +270,41 @@ enum SecurityTools {
         var warnings: [String] = []
         let scheme = url.scheme?.lowercased() ?? ""
         let host = url.host?.lowercased() ?? ""
-        if scheme == "http" { warnings.append("Соединение без шифрования (http)") }
+        if scheme == "http" { warnings.append(L("Соединение без шифрования (http)")) }
         if url.user != nil {
-            warnings.append("В адресе есть «имя@»: настоящий сайт — то, что после @")
+            warnings.append(L("В адресе есть «имя@»: настоящий сайт — то, что после @"))
         }
-        if host.contains("xn--") { warnings.append("Домен в punycode (\(host)): может подделывать другой адрес буквами другого алфавита") }
-        if mixesScripts(host) { warnings.append("В домене смешаны латиница и кириллица") }
+        if host.contains("xn--") { warnings.append(L("Домен в punycode (\(host)): может подделывать другой адрес буквами другого алфавита")) }
+        if mixesScripts(host) { warnings.append(L("В домене смешаны латиница и кириллица")) }
         if host.range(of: #"^\d{1,3}(\.\d{1,3}){3}$"#, options: .regularExpression) != nil || host.hasPrefix("[") {
-            warnings.append("Вместо домена — IP-адрес")
+            warnings.append(L("Вместо домена — IP-адрес"))
         }
-        if shorteners.contains(host) { warnings.append("Сокращённая ссылка: настоящий адрес скрыт") }
+        if shorteners.contains(host) { warnings.append(L("Сокращённая ссылка: настоящий адрес скрыт")) }
         if let tld = host.split(separator: ".").last, riskyTopLevel.contains(String(tld)) {
-            warnings.append("Домен в зоне .\(tld), которую часто используют для фишинга")
+            warnings.append(L("Домен в зоне .\(tld), которую часто используют для фишинга"))
         }
-        if host.split(separator: ".").count > 5 { warnings.append("Необычно длинная цепочка поддоменов") }
-        if let port = url.port, ![80, 443].contains(port) { warnings.append("Нестандартный порт \(port)") }
+        if host.split(separator: ".").count > 5 { warnings.append(L("Необычно длинная цепочка поддоменов")) }
+        if let port = url.port, ![80, 443].contains(port) { warnings.append(L("Нестандартный порт \(port)")) }
         // 3232235777, 0xC0A80101 and 0300.0250.01.01 are all ways a browser reads an IPv4 address.
         if !host.isEmpty, host.range(of: #"^(?:0x[0-9a-f]+|\d+)(?:\.(?:0x[0-9a-f]+|\d+)){0,3}$"#, options: .regularExpression) != nil,
            host.range(of: #"^\d{1,3}(\.\d{1,3}){3}$"#, options: .regularExpression) == nil
             || host.split(separator: ".").contains(where: { $0.count > 1 && $0.hasPrefix("0") }) {
-            warnings.append("IP-адрес записан числом, чтобы не быть похожим на адрес")
+            warnings.append(L("IP-адрес записан числом, чтобы не быть похожим на адрес"))
         }
         if host.unicodeScalars.contains(where: { $0.value > 0x7F }), !mixesScripts(host) {
-            warnings.append("В домене буквы не из латиницы: он может выглядеть как другой сайт")
+            warnings.append(L("В домене буквы не из латиницы: он может выглядеть как другой сайт"))
         }
         if skeleton(host).contains("telegram") || skeleton(host).contains("teiegram"),
            !telegramDomains.contains(where: { host == $0 || host.hasSuffix("." + $0) }) {
-            warnings.append("Домен похож на Telegram, но Telegram не принадлежит")
+            warnings.append(L("Домен похож на Telegram, но Telegram не принадлежит"))
         }
         // Pages and scripts are what the web is made of; these are what a link has no business handing over.
         if downloads.contains(url.pathExtension.lowercased()) {
-            warnings.append("Ссылка ведёт сразу на файл .\(url.pathExtension.lowercased()), который может запускать код")
+            warnings.append(L("Ссылка ведёт сразу на файл .\(url.pathExtension.lowercased()), который может запускать код"))
         }
         if let text, let shownHost = URL(string: text.contains("://") ? text : "https://" + text)?.host?.lowercased(),
            shownHost.contains("."), !host.isEmpty, shownHost != host, !host.hasSuffix("." + shownHost) {
-            warnings.append("Текст ссылки показывает \(shownHost), а ведёт она на \(host)")
+            warnings.append(L("Текст ссылки показывает \(shownHost), а ведёт она на \(host)"))
         }
         return warnings
     }
@@ -349,15 +349,15 @@ enum SecurityTools {
         if name.unicodeScalars.contains(where: {
             [0x202A, 0x202B, 0x202C, 0x202D, 0x202E, 0x200E, 0x200F, 0x2066, 0x2067, 0x2068, 0x2069, 0x061C].contains($0.value)
         }) {
-            return "В имени файла скрытые символы направления текста: настоящее расширение замаскировано."
+            return L("В имени файла скрытые символы направления текста: настоящее расширение замаскировано.")
         }
         let parts = name.lowercased().split(separator: ".").map(String.init)
         guard parts.count > 1, let ext = parts.last else { return nil }
         if executable.contains(ext) {
             if parts.count > 2, documents.contains(parts[parts.count - 2]) {
-                return "Двойное расширение (.\(parts[parts.count - 2]).\(ext)): файл выдаёт себя за документ, а на деле исполняемый."
+                return L("Двойное расширение (.\(parts[parts.count - 2]).\(ext)): файл выдаёт себя за документ, а на деле исполняемый.")
             }
-            return "Файл .\(ext) может запускать код. Открывайте, только если доверяете отправителю."
+            return L("Файл .\(ext) может запускать код. Открывайте, только если доверяете отправителю.")
         }
         return nil
     }
@@ -371,19 +371,19 @@ enum SecurityTools {
         let bytes = [UInt8](head)
         let kind: String?
         switch (bytes[0], bytes[1], bytes[2], bytes[3]) {
-        case (0x4D, 0x5A, _, _): kind = "программа Windows"
-        case (0x7F, 0x45, 0x4C, 0x46): kind = "программа Linux"
+        case (0x4D, 0x5A, _, _): kind = L("программа Windows")
+        case (0x7F, 0x45, 0x4C, 0x46): kind = L("программа Linux")
         case (0xCF, 0xFA, 0xED, 0xFE), (0xCE, 0xFA, 0xED, 0xFE), (0xFE, 0xED, 0xFA, 0xCF), (0xFE, 0xED, 0xFA, 0xCE),
              (0xCA, 0xFE, 0xBA, 0xBE), (0xCA, 0xFE, 0xBA, 0xBF):
-            kind = "программа macOS или Java"
-        case (0x23, 0x21, _, _): kind = "скрипт"
+            kind = L("программа macOS или Java")
+        case (0x23, 0x21, _, _): kind = L("скрипт")
         default: kind = nil
         }
         guard let kind else { return nil }
         let ext = url.pathExtension.lowercased()
         // A file that admits to being a program has already been warned about by its name.
         guard !executable.contains(ext) else { return nil }
-        return "Имя говорит «.\(ext.isEmpty ? "без расширения" : ext)», а внутри \(kind). Открывайте, только если ждали именно этого."
+        return L("Имя говорит «.\(ext.isEmpty ? L("без расширения") : ext)», а внутри \(kind). Открывайте, только если ждали именно этого.")
     }
 
     /// SHA-256 of a file read in chunks, so large videos do not have to fit in memory.

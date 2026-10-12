@@ -63,7 +63,7 @@ private nonisolated(unsafe) let initialsCache: NSCache<NSString, NSString> = {
 }()
 
 /// The interface is Russian, so dates are too, whatever region the Mac is set to.
-private let russian = Locale(identifier: "ru_RU")
+private let russian = Loc.locale
 
 /// Chat list time labels by minute and day; NSCache is safe to reach from any thread.
 private nonisolated(unsafe) let chatListStampCache: NSCache<NSNumber, NSString> = {
@@ -103,7 +103,7 @@ private enum Today {
 extension Date {
     /// "12 мар 2026". Where a ban or a link expires is a day, not a minute, so no cache is worth it.
     var shortDate: String {
-        formatted(.dateTime.day().month(.abbreviated).year().locale(Locale(identifier: "ru_RU")))
+        formatted(.dateTime.day().month(.abbreviated).year().locale(Loc.locale))
     }
 
     /// "13:22". Rows ask for this on every redraw and the answer only changes once a minute, same trick as
@@ -129,7 +129,7 @@ extension Date {
     private func makeChatListStamp() -> String {
         let calendar = Calendar.current
         if calendar.isDateInToday(self) { return formatted(.dateTime.hour().minute().locale(russian)) }
-        if calendar.isDateInYesterday(self) { return "вчера" }
+        if calendar.isDateInYesterday(self) { return L("вчера") }
         // Within the last week the weekday reads faster than a date: "пн", "ср".
         if let days = calendar.dateComponents([.day], from: self, to: Date()).day, days < 7 {
             return formatted(.dateTime.weekday(.abbreviated).locale(russian))
@@ -142,8 +142,8 @@ extension Date {
 
     var daySeparator: String {
         let calendar = Calendar.current
-        if calendar.isDateInToday(self) { return "Сегодня" }
-        if calendar.isDateInYesterday(self) { return "Вчера" }
+        if calendar.isDateInToday(self) { return L("Сегодня") }
+        if calendar.isDateInYesterday(self) { return L("Вчера") }
         if calendar.isDate(self, equalTo: Date(), toGranularity: .year) {
             return formatted(.dateTime.day().month(.wide).locale(russian))
         }
@@ -232,8 +232,8 @@ struct NameBadgeView: View {
                     Color.clear.frame(width: size, height: size)
                 }
             }
-            .help(badge.isGift ? "Коллекционный подарок: \(badge.giftTitle)" : badge.customEmojiId == 0 ? "Telegram Premium" : "Эмодзи-статус")
-            .accessibilityLabel(badge.isGift ? "коллекционный подарок" : "Premium")
+            .help(badge.isGift ? L("Коллекционный подарок: \(badge.giftTitle)") : badge.customEmojiId == 0 ? "Telegram Premium" : L("Эмодзи-статус"))
+            .accessibilityLabel(badge.isGift ? L("коллекционный подарок") : "Premium")
             .task(id: badge.customEmojiId) {
                 guard badge.customEmojiId != 0 else { return }
                 if await CustomEmoji.load([badge.customEmojiId], with: model) { round += 1 }
@@ -251,7 +251,7 @@ struct OnlineDot: View {
             .fill(.green)
             .frame(width: diameter, height: diameter)
             .overlay(Circle().strokeBorder(Color(nsColor: .windowBackgroundColor), lineWidth: 2))
-            .accessibilityLabel("в сети")
+            .accessibilityLabel(L("в сети"))
     }
 }
 
@@ -534,9 +534,9 @@ enum ChatBackground: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .glass: "Стекло"
-        case .plain: "Ровный"
-        case .tint: "Оттенок индиго"
+        case .glass: L("Стекло")
+        case .plain: L("Ровный")
+        case .tint: L("Оттенок индиго")
         }
     }
 }

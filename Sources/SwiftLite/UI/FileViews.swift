@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-private let russian = Locale(identifier: "ru_RU")
+private let russian = Loc.locale
 
 private func bytes(_ count: Int64) -> String {
     count.formatted(.byteCount(style: .file).locale(russian))
@@ -44,11 +44,11 @@ struct DocumentView: View {
         .onTapGesture(count: 2) { Task { await model.open(document) } }
         .onTapGesture(count: 1) { primaryAction() }
         .contextMenu {
-            Button("Открыть") { Task { await model.open(document) } }
-            Button("Показать в Finder") { Task { await model.revealInFinder(document) } }
+            Button(L("Открыть")) { Task { await model.open(document) } }
+            Button(L("Показать в Finder")) { Task { await model.revealInFinder(document) } }
             Divider()
-            Button("Сохранить в «Загрузки»") { Task { await model.saveToDownloads(document) } }
-            Button("Сохранить как…") {
+            Button(L("Сохранить в «Загрузки»")) { Task { await model.saveToDownloads(document) } }
+            Button(L("Сохранить как…")) {
                 guard let destination = Dialogs.saveLocation(suggestedName: document.name) else { return }
                 Task { await model.save(document, to: destination) }
             }
@@ -87,10 +87,10 @@ struct DocumentView: View {
     private var status: String {
         let size = document.size
         if isUploading {
-            return "Отправка: \(bytes(transfer?.uploaded ?? 0)) из \(bytes(size))"
+            return L("Отправка: \(bytes(transfer?.uploaded ?? 0)) из \(bytes(size))")
         }
         if isDownloading {
-            return "\(bytes(transfer?.downloaded ?? 0)) из \(bytes(size))"
+            return L("\(bytes(transfer?.downloaded ?? 0)) из \(bytes(size))")
         }
         var parts: [String] = []
         if size > 0 { parts.append(bytes(size)) }
@@ -98,14 +98,14 @@ struct DocumentView: View {
             parts.append(Duration.seconds(document.duration).formatted(.time(pattern: .minuteSecond)))
         }
         if !document.fileExtension.isEmpty { parts.append(document.fileExtension.uppercased()) }
-        if isDownloaded { parts.append("скачан") }
+        if isDownloaded { parts.append(L("скачан")) }
         return parts.joined(separator: " · ")
     }
 
     private var primaryHelp: String {
-        if isUploading { return "Отменить отправку" }
-        if isDownloading { return "Остановить загрузку" }
-        return isDownloaded ? "Открыть" : "Скачать"
+        if isUploading { return L("Отменить отправку") }
+        if isDownloading { return L("Остановить загрузку") }
+        return isDownloaded ? L("Открыть") : L("Скачать")
     }
 
     private func primaryAction() {
@@ -163,7 +163,7 @@ struct SendFilesSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(files.count == 1 ? "Отправить файл" : "Отправить \(TD.count(files.count, "файл", "файла", "файлов"))")
+            Text(files.count == 1 ? L("Отправить файл") : L("Отправить \(TD.count(files.count, L("файл"), L("файла"), L("файлов")))"))
                 .font(.title3.weight(.semibold))
                 .padding(.horizontal, 18)
                 .padding(.top, 16)
@@ -180,14 +180,14 @@ struct SendFilesSheet: View {
             .fixedSize(horizontal: false, vertical: true)
 
             VStack(alignment: .leading, spacing: 10) {
-                TextField("Подпись", text: $caption, axis: .vertical)
+                TextField(L("Подпись"), text: $caption, axis: .vertical)
                     .textFieldStyle(.plain)
                     .lineLimit(1...5)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .glassSurface(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 if hasMedia {
-                    Toggle("Отправить фото и видео как файлы, без сжатия", isOn: $asDocuments)
+                    Toggle(L("Отправить фото и видео как файлы, без сжатия"), isOn: $asDocuments)
                         .toggleStyle(.checkbox)
                         .font(.callout)
                 }
@@ -195,11 +195,11 @@ struct SendFilesSheet: View {
             .padding(14)
 
             HStack {
-                Button("Добавить…") { model.offerFiles(Dialogs.chooseFiles()) }
+                Button(L("Добавить…")) { model.offerFiles(Dialogs.chooseFiles()) }
                 Spacer()
-                Button("Отмена", role: .cancel) { model.pendingFiles = nil }
+                Button(L("Отмена"), role: .cancel) { model.pendingFiles = nil }
                     .keyboardShortcut(.cancelAction)
-                Button("Отправить") { send() }
+                Button(L("Отправить")) { send() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
                     .disabled(files.isEmpty)
@@ -230,7 +230,7 @@ struct SendFilesSheet: View {
                 Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Убрать")
+            .help(L("Убрать"))
         }
         .padding(8)
         .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -299,7 +299,7 @@ struct LocationCard: View {
                 Text(coordinates)
                     .font(.subheadline.monospacedDigit())
                 if let expiresAt = location.expiresAt {
-                    Text("до \(expiresAt.timeStamp)")
+                    Text(L("до \(expiresAt.timeStamp)"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -312,7 +312,7 @@ struct LocationCard: View {
         .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture { if let url = mapsURL { openURL(url) } }
-        .help("Открыть в Картах")
+        .help(L("Открыть в Картах"))
     }
 
     private var coordinates: String {
@@ -355,9 +355,9 @@ struct ContactCard: View {
         .contentShape(Rectangle())
         .onTapGesture { share() }
         .contextMenu {
-            Button("Скопировать номер", systemImage: "doc.on.doc") { share() }
+            Button(L("Скопировать номер"), systemImage: "doc.on.doc") { share() }
             if contact.userId != 0 {
-                Button("Открыть профиль", systemImage: "person.crop.circle") {
+                Button(L("Открыть профиль"), systemImage: "person.crop.circle") {
                     Task { await model.showProfile(ofUser: contact.userId) }
                 }
             }
@@ -385,7 +385,7 @@ struct DiceView: View {
         VStack(spacing: 0) {
             Text(dice.emoji)
                 .font(.system(size: 44))
-            Text("Выпало: \(dice.value)")
+            Text(L("Выпало: \(dice.value)"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

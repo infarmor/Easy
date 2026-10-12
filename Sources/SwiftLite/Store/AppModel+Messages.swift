@@ -60,7 +60,7 @@ extension AppModel {
     /// "Имя, 14:32: текст" for each picked message, oldest first, ready for the clipboard.
     func selectionAsText() -> String {
         selectedMessages.map { message in
-            "\(name(for: message)), \(message.date.formatted(.dateTime.hour().minute().locale(Locale(identifier: "ru_RU")))):\n\(MessageArchive.text(of: message))"
+            "\(name(for: message)), \(message.date.formatted(.dateTime.hour().minute().locale(Loc.locale))):\n\(MessageArchive.text(of: message))"
         }
         .joined(separator: "\n\n")
     }
@@ -79,7 +79,7 @@ extension AppModel {
             forEveryone = forEveryone && properties.tdBool("can_be_deleted_for_all_users")
         }
         guard forSelf || forEveryone else {
-            fail("Часть сообщений нельзя удалить")
+            fail(L("Часть сообщений нельзя удалить"))
             return nil
         }
         return DeletionOptions(forSelf: forSelf, forEveryone: forEveryone)
@@ -165,7 +165,7 @@ extension AppModel {
               let node = try? await request(["@type": "createPrivateChat", "user_id": myUserId, "force": false]) else { return }
         // The chat object is only needed for its id and name; the forward itself reports what happened.
         var saved = knownChats[node.tdInt64("id")] ?? TD.chat(node)
-        saved.title = "Избранное"
+        saved.title = L("Избранное")
         await forward([message], to: saved)
     }
 
@@ -175,24 +175,24 @@ extension AppModel {
             "@type": "getMessageLink", "chat_id": message.chatId, "message_id": message.id,
             "media_timestamp": 0, "checklist_task_id": 0, "poll_option_id": "", "for_album": false, "in_message_thread": false,
         ]), !link.tdString("link").isEmpty else {
-            showToast("У сообщений этого чата нет ссылок")
+            showToast(L("У сообщений этого чата нет ссылок"))
             return
         }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(link.tdString("link"), forType: .string)
-        showToast(link.tdBool("is_public") ? "Ссылка скопирована" : "Ссылка скопирована — откроется только у участников")
+        showToast(link.tdBool("is_public") ? L("Ссылка скопирована") : L("Ссылка скопирована — откроется только у участников"))
     }
 
     /// The photo itself on the pasteboard, ready to paste into another app.
     func copyPhoto(of message: Message) async {
         guard let fileId = message.attachment?.fileId, let path = await localFile(id: fileId, priority: 32),
               let image = NSImage(contentsOfFile: path) else {
-            fail("Не удалось скопировать фото")
+            fail(L("Не удалось скопировать фото"))
             return
         }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects([image])
-        showToast("Фото скопировано")
+        showToast(L("Фото скопировано"))
     }
 
     // MARK: - custom emoji
@@ -262,7 +262,7 @@ extension AppModel {
                 replaceMessage(at: index, with: restored)
             }
             if let tdError = error as? TDError, tdError.message.uppercased().contains("REACTION") {
-                showToast(emoji.isEmpty ? "Эта реакция в этом чате недоступна" : "\(emoji) в этом чате недоступна")
+                showToast(emoji.isEmpty ? L("Эта реакция в этом чате недоступна") : L("\(emoji) в этом чате недоступна"))
             } else {
                 fail(error)
             }
@@ -292,11 +292,11 @@ extension AppModel {
     func showEditHistory(of message: Message) {
         guard let entry = archive.entry(chatId: message.chatId, messageId: message.id), !entry.versions.isEmpty else { return }
         let versions = entry.versions.enumerated().map { index, version in
-            "Версия \(index + 1), заменена \(version.replacedAt.formatted(.dateTime.day().month(.wide).hour().minute().locale(Locale(identifier: "ru_RU")))):\n\(version.text)"
+            L("Версия \(index + 1), заменена \(version.replacedAt.formatted(.dateTime.day().month(.wide).hour().minute().locale(Loc.locale))):\n\(version.text)")
         }
         inspectedCode = InspectedCode(
-            title: "История изменений",
-            json: (versions + ["Сейчас:\n\(MessageArchive.text(of: message))"]).joined(separator: "\n\n"),
+            title: L("История изменений"),
+            json: (versions + [L("Сейчас:\n\(MessageArchive.text(of: message))")]).joined(separator: "\n\n"),
             isCode: false
         )
     }
@@ -322,15 +322,15 @@ extension AppModel {
 
     /// The languages `translateText` accepts, kept to those worth an entry in the settings list.
     static let translationLanguages: [TranslationLanguage] = [
-        .init(code: "ru", name: "Русский"), .init(code: "en", name: "Английский"),
-        .init(code: "uk", name: "Украинский"), .init(code: "be", name: "Белорусский"),
-        .init(code: "de", name: "Немецкий"), .init(code: "fr", name: "Французский"),
-        .init(code: "es", name: "Испанский"), .init(code: "it", name: "Итальянский"),
-        .init(code: "pt", name: "Португальский"), .init(code: "pl", name: "Польский"),
-        .init(code: "nl", name: "Нидерландский"), .init(code: "tr", name: "Турецкий"),
-        .init(code: "ar", name: "Арабский"), .init(code: "fa", name: "Персидский"),
-        .init(code: "zh", name: "Китайский"), .init(code: "ja", name: "Японский"),
-        .init(code: "ko", name: "Корейский"), .init(code: "hi", name: "Хинди"),
+        .init(code: "ru", name: L("Русский")), .init(code: "en", name: L("Английский")),
+        .init(code: "uk", name: L("Украинский")), .init(code: "be", name: L("Белорусский")),
+        .init(code: "de", name: L("Немецкий")), .init(code: "fr", name: L("Французский")),
+        .init(code: "es", name: L("Испанский")), .init(code: "it", name: L("Итальянский")),
+        .init(code: "pt", name: L("Португальский")), .init(code: "pl", name: L("Польский")),
+        .init(code: "nl", name: L("Нидерландский")), .init(code: "tr", name: L("Турецкий")),
+        .init(code: "ar", name: L("Арабский")), .init(code: "fa", name: L("Персидский")),
+        .init(code: "zh", name: L("Китайский")), .init(code: "ja", name: L("Японский")),
+        .init(code: "ko", name: L("Корейский")), .init(code: "hi", name: L("Хинди")),
     ]
 
     /// A translated message. Formatting comes back only for a Telegram Premium account, and the language is

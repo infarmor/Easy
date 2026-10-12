@@ -93,7 +93,7 @@ private struct PhotoView: View {
             .blur(radius: hidden ? 24 : 0)
             .overlay {
                 if hidden {
-                    Label("Спойлер", systemImage: "eye.slash")
+                    Label(L("Спойлер"), systemImage: "eye.slash")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
@@ -111,7 +111,7 @@ private struct PhotoView: View {
                     model.viewerMessage = message
                 }
             }
-            .help("Открыть фото")
+            .help(L("Открыть фото"))
     }
 }
 
@@ -150,20 +150,20 @@ struct PhotoViewer: View {
             VStack {
                 HStack(spacing: 14) {
                     if let position = model.viewerPosition {
-                        Text("\(position.index + 1) из \(position.count)")
+                        Text(L("\(position.index + 1) из \(position.count)"))
                             .monospacedDigit()
                     }
-                    Text(model.name(for: message) + " · " + message.date.formatted(.dateTime.day().month(.wide).hour().minute().locale(Locale(identifier: "ru_RU"))))
+                    Text(model.name(for: message) + " · " + message.date.formatted(.dateTime.day().month(.wide).hour().minute().locale(Loc.locale)))
                         .foregroundStyle(.white.opacity(0.7))
                     Spacer()
                     Button { copy() } label: { Image(systemName: "doc.on.doc") }
-                        .help("Скопировать фото")
+                        .help(L("Скопировать фото"))
                     Button { save() } label: { Image(systemName: "square.and.arrow.down") }
-                        .help("Сохранить…")
+                        .help(L("Сохранить…"))
                     Button { Task { await model.openAttachment(of: message) } } label: { Image(systemName: "arrow.up.forward.app") }
-                        .help("Открыть в Просмотре")
+                        .help(L("Открыть в Просмотре"))
                     Button { close() } label: { Image(systemName: "xmark") }
-                        .help("Закрыть (Esc)")
+                        .help(L("Закрыть (Esc)"))
                 }
                 .font(.body.weight(.medium))
                 .foregroundStyle(.white)
@@ -368,7 +368,7 @@ private struct VideoNoteView: View {
             player?.pause()
             isPlaying = false
         }
-        .help("Видеосообщение, \(ClipView.duration(media.duration))")
+        .help(L("Видеосообщение, \(ClipView.duration(media.duration))"))
     }
 
     @ViewBuilder
@@ -582,7 +582,7 @@ private struct VoiceNoteView: View {
             OggOpus.playableFile(for: URL(fileURLWithPath: path))
         }.value
         guard let playable else {
-            model.report("Не удалось воспроизвести голосовое сообщение")
+            model.report(L("Не удалось воспроизвести голосовое сообщение"))
             return
         }
         voice.play(playable, fileId: media.fileId)

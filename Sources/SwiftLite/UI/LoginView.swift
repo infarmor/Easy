@@ -18,7 +18,7 @@ struct LoginView: View {
                     VStack(spacing: 4) {
                         Text("Easy")
                             .font(.system(size: 26, weight: .bold))
-                        Text("Нативный клиент Telegram для Mac")
+                        Text(L("Нативный клиент Telegram для Mac"))
                             .font(.body)
                             .foregroundStyle(.secondary)
                     }
@@ -27,7 +27,7 @@ struct LoginView: View {
                         .background(.background.opacity(0.6), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.separator))
                     if model.canLeaveSignIn {
-                        Button("Вернуться к своему аккаунту") { model.leaveSignIn() }
+                        Button(L("Вернуться к своему аккаунту")) { model.leaveSignIn() }
                             .buttonStyle(.link)
                     }
                 }
@@ -53,18 +53,18 @@ private struct LoginStage: View {
                     .textFieldStyle(.roundedBorder)
                 SecureField("api_hash", text: $model.apiHashField)
                     .textFieldStyle(.roundedBorder)
-                primaryButton("Подключиться") { model.submitCredentials() }
-                Text("Ключи выдаются на my.telegram.org для вашего аккаунта. Хранятся в ~/Library/Application Support/SwiftLite с правами 600.")
+                primaryButton(L("Подключиться")) { model.submitCredentials() }
+                Text(L("Ключи выдаются на my.telegram.org для вашего аккаунта. Хранятся в ~/Library/Application Support/SwiftLite с правами 600."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         case .phone:
             Form {
-                TextField("Номер телефона", text: $model.phoneField)
+                TextField(L("Номер телефона"), text: $model.phoneField)
                     .textFieldStyle(.roundedBorder)
-                primaryButton("Отправить код") { model.submitPhone() }
-                Button("Войти по QR-коду с телефона") { model.startQrLogin() }
+                primaryButton(L("Отправить код")) { model.submitPhone() }
+                Button(L("Войти по QR-коду с телефона")) { model.startQrLogin() }
                     .buttonStyle(.link)
                     .disabled(model.busy)
             }
@@ -78,23 +78,23 @@ private struct LoginStage: View {
                         .padding(10)
                         .background(.white, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-                Text("Откройте Telegram на телефоне → Настройки → Устройства → «Подключить устройство» и наведите камеру на код.")
+                Text(L("Откройте Telegram на телефоне → Настройки → Устройства → «Подключить устройство» и наведите камеру на код."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                Button("Войти по номеру телефона") { model.cancelQrLogin() }
+                Button(L("Войти по номеру телефона")) { model.cancelQrLogin() }
                     .buttonStyle(.link)
             }
             .frame(maxWidth: .infinity)
         case .email:
             Form {
-                Text("Telegram просит привязать почту: код для входа придёт на неё")
+                Text(L("Telegram просит привязать почту: код для входа придёт на неё"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 TextField("Email", text: $model.emailField)
                     .textFieldStyle(.roundedBorder)
-                primaryButton("Отправить код") { model.submitEmail() }
+                primaryButton(L("Отправить код")) { model.submitEmail() }
             }
         case .code(let destination):
             Form {
@@ -102,24 +102,24 @@ private struct LoginStage: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                TextField("Код подтверждения", text: $model.codeField)
+                TextField(L("Код подтверждения"), text: $model.codeField)
                     .textFieldStyle(.roundedBorder)
-                primaryButton("Подтвердить") { model.submitCode() }
+                primaryButton(L("Подтвердить")) { model.submitCode() }
                 if model.canResendCode {
-                    Button("Отправить другим способом") { model.resendCode() }
+                    Button(L("Отправить другим способом")) { model.resendCode() }
                         .disabled(model.busy)
                 }
             }
         case .password(let hint):
             Form {
                 if !hint.isEmpty {
-                    Text("Подсказка: \(hint)")
+                    Text(L("Подсказка: \(hint)"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
-                SecureField("Облачный пароль", text: $model.passwordField)
+                SecureField(L("Облачный пароль"), text: $model.passwordField)
                     .textFieldStyle(.roundedBorder)
-                primaryButton("Войти") { model.submitPassword() }
+                primaryButton(L("Войти")) { model.submitPassword() }
             }
         case .working, .failed:
             EmptyView()

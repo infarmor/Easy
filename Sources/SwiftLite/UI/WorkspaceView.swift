@@ -77,7 +77,7 @@ struct ChatListView: View {
                 allAccountsRows(hub)
             } else if !model.filter.isEmpty {
                 if !visible.isEmpty {
-                    Section { rows(visible) } header: { SectionHeading(title: "Чаты") }
+                    Section { rows(visible) } header: { SectionHeading(title: L("Чаты")) }
                 }
                 let found = model.foundPublicChats.compactMap { model.chat(withId: $0) }
                 if !found.isEmpty {
@@ -88,7 +88,23 @@ struct ChatListView: View {
                                 .listRowSeparator(.hidden)
                         }
                     } header: {
-                        SectionHeading(title: "Глобальный поиск", systemImage: "globe")
+                        SectionHeading(title: L("Глобальный поиск"), systemImage: "globe")
+                    }
+                }
+                if let hub, hub.accounts.count > 1 {
+                    let elsewhere = hub.matches(model.filter, outside: model)
+                    if !elsewhere.isEmpty {
+                        Section {
+                            ForEach(elsewhere) { item in
+                                ChatRow(chat: item.chat, showsDraft: false, owner: item.owner)
+                                    .environment(item.owner)
+                                    .listRowSeparator(.hidden)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { hub.open(item.chat.id, in: item.owner.slot) }
+                            }
+                        } header: {
+                            SectionHeading(title: L("Другие аккаунты"), systemImage: "person.2")
+                        }
                     }
                 }
                 if !model.foundMessages.isEmpty {
@@ -98,19 +114,19 @@ struct ChatListView: View {
                                 .listRowSeparator(.hidden)
                         }
                     } header: {
-                        SectionHeading(title: "Сообщения", systemImage: "text.magnifyingglass")
+                        SectionHeading(title: L("Сообщения"), systemImage: "text.magnifyingglass")
                     }
                 }
             } else if model.showsArchive {
-                Section { rows(visible) } header: { SectionHeading(title: "Архив", systemImage: "archivebox.fill") }
+                Section { rows(visible) } header: { SectionHeading(title: L("Архив"), systemImage: "archivebox.fill") }
             } else if visible.contains(where: \.isPinned) {
                 // Pinned chats keep their place at the top and get a header, so the split is obvious at a
                 // glance. Without any pinned chat no header is drawn: one would only repeat the list.
                 Section { rows(visible.filter(\.isPinned)) } header: {
                     // No pin glyph here: every row under this header already carries one.
-                    SectionHeading(title: "Закреплённые")
+                    SectionHeading(title: L("Закреплённые"))
                 }
-                Section { rows(visible.filter { !$0.isPinned }) } header: { SectionHeading(title: "Чаты") }
+                Section { rows(visible.filter { !$0.isPinned }) } header: { SectionHeading(title: L("Чаты")) }
             } else {
                 rows(visible)
             }
@@ -124,13 +140,14 @@ struct ChatListView: View {
             }
         }
         .overlay {
-            if visible.isEmpty && model.foundMessages.isEmpty && model.foundPublicChats.isEmpty && !showsAllAccounts {
+            if visible.isEmpty && model.foundMessages.isEmpty && model.foundPublicChats.isEmpty && !showsAllAccounts,
+               hub?.matches(model.filter, outside: model).isEmpty ?? true {
                 ContentUnavailableView(
-                    "Пусто",
+                    L("Пусто"),
                     systemImage: "text.bubble",
                     description: Text(model.filter.isEmpty
-                        ? "Дождитесь синхронизации или нажмите ⌘⇧R"
-                        : "Ничего не найдено")
+                        ? L("Дождитесь синхронизации или нажмите ⌘⇧R")
+                        : L("Ничего не найдено"))
                 )
             }
         }
@@ -145,27 +162,27 @@ struct ChatListView: View {
                 Button {
                     model.showsNewChat = true
                 } label: {
-                    Label("Новый чат", systemImage: "square.and.pencil")
+                    Label(L("Новый чат"), systemImage: "square.and.pencil")
                 }
-                .help("Новый чат (⌘N)")
+                .help(L("Новый чат (⌘N)"))
             }
             ToolbarItem {
                 Button {
                     Task { await model.loadChats() }
                 } label: {
-                    Label("Синхронизировать", systemImage: "arrow.clockwise")
+                    Label(L("Синхронизировать"), systemImage: "arrow.clockwise")
                 }
-                .help("Синхронизировать чаты (⇧⌘R)")
+                .help(L("Синхронизировать чаты (⇧⌘R)"))
             }
             ToolbarItem {
                 Button {
                     isGhost.toggle()
                 } label: {
-                    Label("Режим призрака", systemImage: isGhost ? "eye.slash.fill" : "eye")
+                    Label(L("Режим призрака"), systemImage: isGhost ? "eye.slash.fill" : "eye")
                 }
                 .help(isGhost
-                    ? "Режим призрака включён: вы не в сети, не печатаете и ничего не читаете"
-                    : "Включить режим призрака")
+                    ? L("Режим призрака включён: вы не в сети, не печатаете и ничего не читаете")
+                    : L("Включить режим призрака"))
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -185,7 +202,7 @@ struct ChatListView: View {
                                         .lineLimit(1)
                                     NameBadgeView(key: "u\(model.myId)", size: 14)
                                 }
-                                Text(isGhost ? "призрак · не в сети" : TD.count(model.chats.count, "чат", "чата", "чатов"))
+                                Text(isGhost ? L("призрак · не в сети") : TD.count(model.chats.count, L("чат"), L("чата"), L("чатов")))
                                     .font(.subheadline)
                                     .foregroundStyle(isGhost ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
                                     .lineLimit(1)
@@ -194,7 +211,7 @@ struct ChatListView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help("Мой профиль")
+                    .help(L("Мой профиль"))
                     Spacer(minLength: 4)
                     AccountSwitcher()
                     SettingsLink {
@@ -205,8 +222,8 @@ struct ChatListView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PressDimStyle())
-                    .help("Настройки (⌘,)")
-                    .accessibilityLabel("Настройки")
+                    .help(L("Настройки (⌘,)"))
+                    .accessibilityLabel(L("Настройки"))
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
@@ -229,31 +246,31 @@ struct ChatListView: View {
     /// accounts that is not always the one in the window, and anything that opens a sheet brings it there first.
     @ViewBuilder
     private func chatMenu(_ chat: Chat, in model: AppModel) -> some View {
-        Button("Профиль", systemImage: "person.crop.circle") {
+        Button(L("Профиль"), systemImage: "person.crop.circle") {
             hub?.activate(model.slot)
             Task { await model.showProfile(of: chat) }
         }
         Divider()
-        Button(chat.isPinned ? "Открепить" : "Закрепить", systemImage: chat.isPinned ? "pin.slash" : "pin") {
+        Button(chat.isPinned ? L("Открепить") : L("Закрепить"), systemImage: chat.isPinned ? "pin.slash" : "pin") {
             Task { await model.toggleChatPinned(chat) }
         }
         if chat.unread > 0 || chat.isMarkedUnread {
-            Button("Отметить прочитанным", systemImage: "checkmark.message") { Task { await model.markChatRead(chat) } }
+            Button(L("Отметить прочитанным"), systemImage: "checkmark.message") { Task { await model.markChatRead(chat) } }
         } else {
-            Button("Отметить непрочитанным", systemImage: "message.badge") { Task { await model.markChatUnread(chat) } }
+            Button(L("Отметить непрочитанным"), systemImage: "message.badge") { Task { await model.markChatUnread(chat) } }
         }
         if chat.isMuted {
-            Button("Включить уведомления", systemImage: "bell") { Task { await model.toggleChatMuted(chat) } }
+            Button(L("Включить уведомления"), systemImage: "bell") { Task { await model.toggleChatMuted(chat) } }
         } else {
-            Menu("Выключить уведомления", systemImage: "bell.slash") {
-                Button("На час") { Task { await model.muteChat(chat, forSeconds: 3600) } }
-                Button("На 8 часов") { Task { await model.muteChat(chat, forSeconds: 8 * 3600) } }
-                Button("На 2 дня") { Task { await model.muteChat(chat, forSeconds: 2 * 86_400) } }
+            Menu(L("Выключить уведомления"), systemImage: "bell.slash") {
+                Button(L("На час")) { Task { await model.muteChat(chat, forSeconds: 3600) } }
+                Button(L("На 8 часов")) { Task { await model.muteChat(chat, forSeconds: 8 * 3600) } }
+                Button(L("На 2 дня")) { Task { await model.muteChat(chat, forSeconds: 2 * 86_400) } }
                 Divider()
-                Button("Навсегда") { Task { await model.toggleChatMuted(chat) } }
+                Button(L("Навсегда")) { Task { await model.toggleChatMuted(chat) } }
             }
         }
-        Button(chat.isArchived ? "Вернуть из архива" : "Архивировать", systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
+        Button(chat.isArchived ? L("Вернуть из архива") : L("Архивировать"), systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
             Task { await model.toggleChatArchived(chat) }
         }
         Divider()
@@ -262,13 +279,13 @@ struct ChatListView: View {
             Divider()
         }
         if showsCode {
-            Button("Код чата…", systemImage: "curlybraces") {
+            Button(L("Код чата…"), systemImage: "curlybraces") {
                 hub?.activate(model.slot)
                 Task { await model.inspect(chat) }
             }
         }
         if showsIdentifiers {
-            Button("Скопировать ID чата", systemImage: "number.square") {
+            Button(L("Скопировать ID чата"), systemImage: "number.square") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(String(chat.id), forType: .string)
             }
@@ -279,26 +296,26 @@ struct ChatListView: View {
     @ViewBuilder
     private func chatActions(_ chat: Chat, in model: AppModel) -> some View {
         let isPrivate = chat.kind == .personal || chat.kind == .secret
-        Button("Очистить историю…", systemImage: "eraser") {
+        Button(L("Очистить историю…"), systemImage: "eraser") {
             let canRevoke = isPrivate && chat.userId != 0 && !chat.isBot
-            guard let answer = Dialogs.confirm("Очистить историю «\(chat.title)»?",
-                                               message: "Сообщения пропадут из этого чата.", action: "Очистить",
-                                               option: canRevoke ? "Также у собеседника" : nil) else { return }
+            guard let answer = Dialogs.confirm(L("Очистить историю «\(chat.title)»?"),
+                                               message: L("Сообщения пропадут из этого чата."), action: L("Очистить"),
+                                               option: canRevoke ? L("Также у собеседника") : nil) else { return }
             Task { await model.clearHistory(of: chat, forEveryone: answer) }
         }
         if isPrivate, chat.userId != 0 {
-            Button(chat.isBot ? "Остановить и заблокировать бота" : "Заблокировать", systemImage: "hand.raised") {
-                guard Dialogs.confirm("Заблокировать \(chat.title)?", message: "Он не сможет писать вам и звонить.", action: "Заблокировать") else { return }
+            Button(chat.isBot ? L("Остановить и заблокировать бота") : L("Заблокировать"), systemImage: "hand.raised") {
+                guard Dialogs.confirm(L("Заблокировать \(chat.title)?"), message: L("Он не сможет писать вам и звонить."), action: L("Заблокировать")) else { return }
                 Task { _ = await model.setBlocked(true, userId: chat.userId) }
             }
-            Button("Удалить чат…", systemImage: "trash", role: .destructive) {
-                guard let answer = Dialogs.confirm("Удалить чат с \(chat.title)?", message: "Чат исчезнет из списка вместе с историей.",
-                                                   action: "Удалить", option: chat.isBot ? nil : "Также у собеседника") else { return }
+            Button(L("Удалить чат…"), systemImage: "trash", role: .destructive) {
+                guard let answer = Dialogs.confirm(L("Удалить чат с \(chat.title)?"), message: L("Чат исчезнет из списка вместе с историей."),
+                                                   action: L("Удалить"), option: chat.isBot ? nil : L("Также у собеседника")) else { return }
                 Task { await model.deleteChat(chat, forEveryone: answer) }
             }
         } else {
             if chat.kind == .group || chat.kind == .channel, !chat.groupKey.hasPrefix("b") {
-                Button("Управление чатом…", systemImage: "person.2.circle") {
+                Button(L("Управление чатом…"), systemImage: "person.2.circle") {
                     // Managing opens the chat as well: rights, members and links are one slot of state, and
                     // the topic strip of the open chat reads the same rights.
                     hub?.activate(model.slot)
@@ -306,8 +323,8 @@ struct ChatListView: View {
                     model.managedChat = chat
                 }
             }
-            Button(chat.kind == .channel ? "Покинуть канал…" : "Покинуть группу…", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
-                guard Dialogs.confirm("Покинуть «\(chat.title)»?", message: "Вернуться можно будет по ссылке или через поиск, если чат публичный.", action: "Покинуть") else { return }
+            Button(chat.kind == .channel ? L("Покинуть канал…") : L("Покинуть группу…"), systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+                guard Dialogs.confirm(L("Покинуть «\(chat.title)»?"), message: L("Вернуться можно будет по ссылке или через поиск, если чат публичный."), action: L("Покинуть")) else { return }
                 Task { await model.deleteChat(chat, forEveryone: false) }
             }
         }
@@ -353,23 +370,23 @@ struct ChatListView: View {
                 // A two-finger swipe does what the context menu's most common items do.
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                     if chat.unread > 0 || chat.isMarkedUnread {
-                        Button("Прочитано", systemImage: "checkmark.message") { Task { await model.markChatRead(chat) } }
+                        Button(L("Прочитано"), systemImage: "checkmark.message") { Task { await model.markChatRead(chat) } }
                             .tint(.blue)
                     } else {
-                        Button("Непрочитано", systemImage: "message.badge") { Task { await model.markChatUnread(chat) } }
+                        Button(L("Непрочитано"), systemImage: "message.badge") { Task { await model.markChatUnread(chat) } }
                             .tint(.blue)
                     }
-                    Button(chat.isPinned ? "Открепить" : "Закрепить", systemImage: chat.isPinned ? "pin.slash" : "pin") {
+                    Button(chat.isPinned ? L("Открепить") : L("Закрепить"), systemImage: chat.isPinned ? "pin.slash" : "pin") {
                         Task { await model.toggleChatPinned(chat) }
                     }
                     .tint(.orange)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(chat.isArchived ? "Вернуть" : "Архив", systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
+                    Button(chat.isArchived ? L("Вернуть") : L("Архив"), systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
                         Task { await model.toggleChatArchived(chat) }
                     }
                     .tint(.indigo)
-                    Button(chat.isMuted ? "Звук" : "Без звука", systemImage: chat.isMuted ? "bell" : "bell.slash") {
+                    Button(chat.isMuted ? L("Звук") : L("Без звука"), systemImage: chat.isMuted ? "bell" : "bell.slash") {
                         Task { await model.toggleChatMuted(chat) }
                     }
                     .tint(.gray)
@@ -406,7 +423,7 @@ private struct ChatRow: View {
                         Avatar(title: owner.accountName, seed: owner.myId, photo: owner.myPhoto, diameter: 20)
                             .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 1.5))
                             .offset(x: -4, y: 4)
-                            .help("Аккаунт: \(owner.accountName)")
+                            .help(L("Аккаунт: \(owner.accountName)"))
                     }
                 }
                 // Hovering the avatar tells when a private contact was last seen.
@@ -419,9 +436,9 @@ private struct ChatRow: View {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 10))
                             .foregroundStyle(isOnAccent ? Color.white : Color.green)
-                            .help("Секретный чат")
+                            .help(L("Секретный чат"))
                     }
-                    Text(chat.title.isEmpty ? "Без названия" : chat.title)
+                    Text(chat.title.isEmpty ? L("Без названия") : chat.title)
                         .font(hasNews ? .body.weight(.semibold) : .body)
                         .lineLimit(1)
                     NameBadgeView(key: chat.badgeKey, isOnAccent: isOnAccent)
@@ -439,7 +456,7 @@ private struct ChatRow: View {
                 }
                 HStack(spacing: 6) {
                     if chat.activity.isEmpty, showsDraft, !chat.draftText.isEmpty {
-                        (Text("Черновик: ").foregroundStyle(isOnAccent ? Color.white : Color.red) + Text(chat.draftText).foregroundStyle(.secondary))
+                        (Text(L("Черновик: ")).foregroundStyle(isOnAccent ? Color.white : Color.red) + Text(chat.draftText).foregroundStyle(.secondary))
                             .font(.callout)
                             .lineLimit(2)
                     } else if chat.activity.isEmpty {
@@ -471,7 +488,7 @@ private struct ChatRow: View {
                             .foregroundStyle(isOnAccent ? Color.brand : Color.white)
                             .frame(width: 18, height: 18)
                             .background(accent, in: Circle())
-                            .help("Вас упомянули")
+                            .help(L("Вас упомянули"))
                     }
                     if chat.unread > 0 {
                         UnreadBadge(count: chat.unread, isMuted: chat.isMuted, isOnAccent: isOnAccent)
@@ -542,7 +559,7 @@ private struct AccountSwitcher: View {
                         set: { _ in hub.activate(account.id) }))
                 }
                 Divider()
-                Button("Добавить аккаунт…", systemImage: "plus") { hub.addAccount() }
+                Button(L("Добавить аккаунт…"), systemImage: "plus") { hub.addAccount() }
             } label: {
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.callout)
@@ -554,13 +571,13 @@ private struct AccountSwitcher: View {
             .buttonStyle(.plain)
             .menuIndicator(.hidden)
             .fixedSize()
-            .help("Аккаунты (⌃1…⌃9)")
-            .accessibilityLabel("Аккаунты")
+            .help(L("Аккаунты (⌃1…⌃9)"))
+            .accessibilityLabel(L("Аккаунты"))
         }
     }
 
     private func title(of account: AccountSlot, number: Int) -> String {
-        let name = account.name.isEmpty ? "Новый аккаунт" : account.name
+        let name = account.name.isEmpty ? L("Новый аккаунт") : account.name
         let unread = hub?.model(for: account.id)?.unreadBadge ?? 0
         return unread > 0 ? "\(name) — \(unread > 999 ? "999+" : String(unread))" : name
     }
@@ -591,8 +608,8 @@ private struct OtherAccountButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(PressDimStyle())
-        .help(account.name.isEmpty ? "Новый аккаунт" : "Перейти в \(account.name)")
-        .accessibilityLabel("Аккаунт \(account.name)")
+        .help(account.name.isEmpty ? L("Новый аккаунт") : L("Перейти в \(account.name)"))
+        .accessibilityLabel(L("Аккаунт \(account.name)"))
     }
 }
 
@@ -610,7 +627,7 @@ private struct FoundMessageRow: View {
                 Avatar(title: chat?.title ?? "", seed: message.chatId, photo: chat?.photo, diameter: 32)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
-                        Text(chat?.title ?? "Чат")
+                        Text(chat?.title ?? L("Чат"))
                             .font(.callout.weight(.semibold))
                             .lineLimit(1)
                         Spacer(minLength: 6)
@@ -641,19 +658,19 @@ private struct EmptyDetailView: View {
             VStack(spacing: 4) {
                 Text("Easy")
                     .font(.system(size: 22, weight: .semibold))
-                Text("Выберите чат слева")
+                Text(L("Выберите чат слева"))
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
             Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 6) {
-                shortcut("⌘K", "найти чат, человека или канал")
-                shortcut("⌥⌘↑ ↓", "предыдущий и следующий чат")
-                shortcut("⌃⇧↑ ↓", "к чату с непрочитанным")
-                shortcut("⌘F", "поиск в чате")
-                shortcut("⌘I", "профиль собеседника")
-                shortcut("⌥⌘M", "список участников в группе")
-                shortcut("⌘⇧V", "отправить из буфера")
-                shortcut("⌘⇧G", "режим призрака")
+                shortcut("⌘K", L("найти чат, человека или канал"))
+                shortcut("⌥⌘↑ ↓", L("предыдущий и следующий чат"))
+                shortcut("⌃⇧↑ ↓", L("к чату с непрочитанным"))
+                shortcut("⌘F", L("поиск в чате"))
+                shortcut("⌘I", L("профиль собеседника"))
+                shortcut("⌥⌘M", L("список участников в группе"))
+                shortcut("⌘⇧V", L("отправить из буфера"))
+                shortcut("⌘⇧G", L("режим призрака"))
             }
             .padding(14)
             .glassSurface(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -718,7 +735,7 @@ private struct SidebarHeader: View {
             HStack(spacing: 6) {
                 Menu {
                     if let hub, hub.accounts.count > 1 {
-                        Toggle("Все аккаунты", isOn: Binding(
+                        Toggle(L("Все аккаунты"), isOn: Binding(
                             get: { showsAllAccounts },
                             set: { _ in
                                 model.showsArchive = false
@@ -727,22 +744,22 @@ private struct SidebarHeader: View {
                             }))
                         Divider()
                     }
-                    Toggle(placeTitle("Все чаты", model.mainUnread), isOn: chosen(folder: nil))
+                    Toggle(placeTitle(L("Все чаты"), model.mainUnread), isOn: chosen(folder: nil))
                     ForEach(model.chatFolders) { folder in
-                        Toggle(placeTitle(folder.title.isEmpty ? "Без названия" : folder.title,
+                        Toggle(placeTitle(folder.title.isEmpty ? L("Без названия") : folder.title,
                                           model.folderUnread[folder.id] ?? UnreadTally()),
                                isOn: chosen(folder: folder.id))
                     }
                     Divider()
-                    Toggle(placeTitle("Архив", model.archiveUnread), isOn: Binding(
+                    Toggle(placeTitle(L("Архив"), model.archiveUnread), isOn: Binding(
                         get: { model.showsArchive },
                         set: { model.showsArchive = $0 }))
                     Divider()
-                    Button("Прочитать всё здесь…", systemImage: "checkmark.message") {
+                    Button(L("Прочитать всё здесь…"), systemImage: "checkmark.message") {
                         let waiting = model.unreadChatsOnScreen
-                        guard Dialogs.confirm("Отметить прочитанными \(TD.count(waiting.count, "чат", "чата", "чатов"))?",
-                                              message: "Все сообщения в «\(place)» будут отмечены прочитанными.",
-                                              action: "Прочитать") else { return }
+                        guard Dialogs.confirm(L("Отметить прочитанными \(TD.count(waiting.count, L("чат"), L("чата"), L("чатов")))?"),
+                                              message: L("Все сообщения в «\(place)» будут отмечены прочитанными."),
+                                              action: L("Прочитать")) else { return }
                         Task { await model.markAllRead(waiting) }
                     }
                     .disabled(model.unreadChatsOnScreen.isEmpty)
@@ -761,8 +778,8 @@ private struct SidebarHeader: View {
                 .buttonStyle(.plain)
                 .menuIndicator(.hidden)
                 .fixedSize()
-                .help("Папки и архив")
-                .accessibilityLabel("Папка: \(place)")
+                .help(L("Папки и архив"))
+                .accessibilityLabel(L("Папка: \(place)"))
                 Spacer(minLength: 4)
                 if !footnote.isEmpty {
                     Text(footnote)
@@ -775,7 +792,7 @@ private struct SidebarHeader: View {
                 Image(systemName: "magnifyingglass")
                     .font(.callout.weight(.medium))
                     .foregroundStyle(.secondary)
-                TextField("Поиск", text: $model.filter, prompt: Text("Поиск"))
+                TextField(L("Поиск"), text: $model.filter, prompt: Text(L("Поиск")))
                     .textFieldStyle(.plain)
                     .font(.body)
                     .focused($isSearchFocused)
@@ -789,13 +806,13 @@ private struct SidebarHeader: View {
                             .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
-                    .help("Очистить")
+                    .help(L("Очистить"))
                 }
             }
             .padding(.horizontal, 8)
             .frame(height: 28)
             .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-            .help("Чаты, люди и сообщения (⌘K)")
+            .help(L("Чаты, люди и сообщения (⌘K)"))
         }
         .padding(.horizontal, 10)
         .padding(.top, 6)
@@ -823,10 +840,10 @@ private struct SidebarHeader: View {
 
     /// Which place the list is showing.
     private var place: String {
-        if model.showsArchive { return "Архив" }
-        if showsAllAccounts { return "Все аккаунты" }
-        guard let id = model.selectedFolder else { return "Все чаты" }
-        return model.chatFolders.first { $0.id == id }?.title ?? "Папка"
+        if model.showsArchive { return L("Архив") }
+        if showsAllAccounts { return L("Все аккаунты") }
+        guard let id = model.selectedFolder else { return L("Все чаты") }
+        return model.chatFolders.first { $0.id == id }?.title ?? L("Папка")
     }
 
     /// How big that place is and, when there is news, how much of it. The folder menu's counts already say which
@@ -836,7 +853,7 @@ private struct SidebarHeader: View {
         guard model.filter.isEmpty else { return "" }
         if showsAllAccounts, let hub {
             let unread = hub.unreadTotal
-            return unread > 0 ? TD.count(unread, "новое", "новых", "новых") : TD.count(hub.accounts.count, "аккаунт", "аккаунта", "аккаунтов")
+            return unread > 0 ? TD.count(unread, L("новое"), L("новых"), L("новых")) : TD.count(hub.accounts.count, L("аккаунт"), L("аккаунта"), L("аккаунтов"))
         }
         let tally: UnreadTally
         if model.showsArchive {
@@ -846,9 +863,9 @@ private struct SidebarHeader: View {
         } else {
             tally = model.mainUnread
         }
-        let chats = TD.count(shownChats, "чат", "чата", "чатов")
+        let chats = TD.count(shownChats, L("чат"), L("чата"), L("чатов"))
         guard tally.count > 0 else { return chats }
-        return "\(chats) · \(TD.count(tally.count, "новое", "новых", "новых"))"
+        return "\(chats) · \(TD.count(tally.count, L("новое"), L("новых"), L("новых")))"
     }
 }
 
@@ -881,7 +898,7 @@ struct NewChatSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TextField("Кому", text: $query, prompt: Text("Имя или @username"))
+            TextField(L("Кому"), text: $query, prompt: Text(L("Имя или @username")))
                 .textFieldStyle(.roundedBorder)
                 .focused($focused)
                 .onSubmit { if let first = people.first { open(first) } }
@@ -893,7 +910,7 @@ struct NewChatSheet: View {
                     HStack(spacing: 10) {
                         Avatar(title: person.name, seed: person.id, photo: person.photo, diameter: 32)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(person.name.isEmpty ? "Без имени" : person.name)
+                            Text(person.name.isEmpty ? L("Без имени") : person.name)
                                 .font(.body)
                                 .lineLimit(1)
                             Text([person.username.isEmpty ? "" : "@" + person.username, person.status]
@@ -913,19 +930,19 @@ struct NewChatSheet: View {
                     if isLoading {
                         ProgressView().controlSize(.small)
                     } else {
-                        ContentUnavailableView(query.isEmpty ? "Контактов нет" : "Никого не нашлось", systemImage: "person.crop.circle.badge.questionmark",
-                                               description: Text("Человека не из контактов можно найти через поиск в боковой панели"))
+                        ContentUnavailableView(query.isEmpty ? L("Контактов нет") : L("Никого не нашлось"), systemImage: "person.crop.circle.badge.questionmark",
+                                               description: Text(L("Человека не из контактов можно найти через поиск в боковой панели")))
                     }
                 }
             }
             Divider()
             HStack {
-                Button("Избранное") {
+                Button(L("Избранное")) {
                     dismiss()
                     Task { await model.openSavedMessages() }
                 }
                 Spacer()
-                Button("Отмена") { dismiss() }
+                Button(L("Отмена")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
             }
             .padding(12)

@@ -62,7 +62,7 @@ extension AppModel {
         let list = visibleChats
         let waiting = list.indices.filter { list[$0].unread > 0 || list[$0].isMarkedUnread || list[$0].unreadMentions > 0 }
         guard !waiting.isEmpty else {
-            showToast("Непрочитанных нет")
+            showToast(L("Непрочитанных нет"))
             return
         }
         let current = list.firstIndex { $0.id == selection } ?? (step > 0 ? -1 : list.count)
@@ -78,7 +78,7 @@ extension AppModel {
     /// "Прочитать всё" of the folder menu.
     func markAllRead(_ list: [Chat]) async {
         for chat in list { await markRead(chat.id) }
-        if !list.isEmpty { showToast("Прочитано: \(TD.count(list.count, "чат", "чата", "чатов"))") }
+        if !list.isEmpty { showToast(L("Прочитано: \(TD.count(list.count, L("чат"), L("чата"), L("чатов")))")) }
     }
 
     func markSelectedRead() async {
@@ -153,8 +153,8 @@ extension AppModel {
         settings["use_default_mute_for"] = false
         settings["mute_for"] = max(0, seconds)
         if await perform(["@type": "setChatNotificationSettings", "chat_id": chat.id, "notification_settings": settings]) {
-            showToast("Без звука до " + Date().addingTimeInterval(TimeInterval(seconds))
-                .formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(Locale(identifier: "ru_RU"))))
+            showToast(L("Без звука до ") + Date().addingTimeInterval(TimeInterval(seconds))
+                .formatted(.dateTime.weekday(.abbreviated).hour().minute().locale(Loc.locale)))
         }
     }
 
@@ -180,7 +180,7 @@ extension AppModel {
             let username = (user.tdNode("usernames")?["active_usernames"] as? [String])?.first ?? ""
             people.append(Contact(id: id, name: TD.displayName(ofUser: user), username: username,
                                   photo: TD.photo(user.tdNode("profile_photo")),
-                                  status: user.tdNode("type")?.tdType == "userTypeBot" ? "бот"
+                                  status: user.tdNode("type")?.tdType == "userTypeBot" ? L("бот")
                                       : TD.presence(user.tdNode("status")).map { TD.describe($0) } ?? ""))
         }
         return people
@@ -219,7 +219,7 @@ extension AppModel {
                     "message_id": first.id,
                 ])
                 guard properties.tdBool("can_be_forwarded") else {
-                    fail("Это сообщение нельзя переслать")
+                    fail(L("Это сообщение нельзя переслать"))
                     return
                 }
             }
@@ -235,9 +235,9 @@ extension AppModel {
             // A message TDLib could not forward comes back as null.
             let failed = (sent["messages"] as? [Any])?.filter { $0 is NSNull }.count ?? 0
             if failed > 0 {
-                fail(ids.count == 1 ? "Не удалось переслать в «\(chat.title)»" : "Не удалось переслать \(failed) из \(ids.count) в «\(chat.title)»")
+                fail(ids.count == 1 ? L("Не удалось переслать в «\(chat.title)»") : L("Не удалось переслать \(failed) из \(ids.count) в «\(chat.title)»"))
             } else {
-                showToast("Переслано в «\(chat.title.isEmpty ? "чат" : chat.title)»")
+                showToast(L("Переслано в «\(chat.title.isEmpty ? L("чат") : chat.title)»"))
             }
             // Only forwarding from the selection bar ends picking; one message sent from its menu leaves it be.
             if isSelectingMessages, endsSelection { endSelection() }
@@ -288,7 +288,7 @@ extension AppModel {
         if blocked { payload["block_list"] = ["@type": "blockListMain"] }
         do {
             _ = try await request(payload)
-            showToast(blocked ? "Заблокирован" : "Разблокирован")
+            showToast(blocked ? L("Заблокирован") : L("Разблокирован"))
             return true
         } catch {
             fail(error)
@@ -375,7 +375,7 @@ extension AppModel {
             "banned_until_date": Self.untilDate(minutes),
             "revoke_messages": revokeMessages,
         ])
-        if done { showToast("\(member.name.isEmpty ? "Участник" : member.name) в списке забаненных") }
+        if done { showToast(L("\(member.name.isEmpty ? L("Участник") : member.name) в списке забаненных")) }
         return done
     }
 
@@ -417,11 +417,11 @@ extension AppModel {
 
     /// Everything this member ever said in the chat; needs the "can delete messages" right.
     func deleteMessages(by member: ChatMemberInfo, in chat: Chat) async -> Bool {
-        guard BotDialogs.ask("Удалить сообщения «\(member.name)»?",
-                             "Из чата у всех пропадут все сообщения этого участника.", action: "Удалить") else { return false }
+        guard BotDialogs.ask(L("Удалить сообщения «\(member.name)»?"),
+                             L("Из чата у всех пропадут все сообщения этого участника."), action: L("Удалить")) else { return false }
         let done = await perform(["@type": "deleteChatMessagesBySender", "chat_id": chat.id,
                                   "sender_id": Self.userSender(member.userId)])
-        if done { showToast("Сообщения участника удалены") }
+        if done { showToast(L("Сообщения участника удалены")) }
         return done
     }
 
@@ -465,9 +465,9 @@ extension AppModel {
 
     /// The old one stops working at once, so it is asked for first.
     func replacePrimaryInviteLink(in chat: Chat) async -> Bool {
-        guard BotDialogs.ask("Сменить ссылку чата?", "Старая ссылка перестанет работать.", action: "Сменить") else { return false }
+        guard BotDialogs.ask(L("Сменить ссылку чата?"), L("Старая ссылка перестанет работать."), action: L("Сменить")) else { return false }
         guard let link = try? await request(["@type": "replacePrimaryChatInviteLink", "chat_id": chat.id]) else {
-            fail("Ссылку сменить не удалось")
+            fail(L("Ссылку сменить не удалось"))
             return false
         }
         let url = link.tdString("invite_link")
@@ -475,7 +475,7 @@ extension AppModel {
         if isBeingShown(chat.id) { chatAccess.primaryLink = url }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(url, forType: .string)
-        showToast("Новая ссылка скопирована")
+        showToast(L("Новая ссылка скопирована"))
         return true
     }
 
@@ -483,7 +483,7 @@ extension AppModel {
     /// rename must not leave the description unsaved.
     func setChatInfo(_ chat: Chat, title: String, description: String) async -> String? {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty else { return "Название не может быть пустым" }
+        guard !title.isEmpty else { return L("Название не может быть пустым") }
         var problem: String?
         if title != chat.title {
             do { _ = try await request(["@type": "setChatTitle", "chat_id": chat.id, "title": title]) }
@@ -588,7 +588,7 @@ extension AppModel {
         guard !url.isEmpty else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(url, forType: .string)
-        showToast("Ссылку на «\(topic.name)» скопировали")
+        showToast(L("Ссылку на «\(topic.name)» скопировали"))
     }
 
     /// A message of a forum belongs to one topic: its unread count moves with it.

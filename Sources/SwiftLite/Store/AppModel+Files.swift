@@ -33,7 +33,7 @@ extension AppModel {
     /// The local copy, downloading it first when needed.
     private func localURL(of fileId: Int) async -> URL? {
         guard let path = await localFile(id: fileId, priority: 32) else {
-            fail("Не удалось скачать файл")
+            fail(L("Не удалось скачать файл"))
             return nil
         }
         return URL(fileURLWithPath: path)
@@ -43,7 +43,7 @@ extension AppModel {
         guard let url = await localURL(of: document.fileId) else { return }
         if Preferences.isOn(Preferences.fileGuard),
            let warning = SecurityTools.fileWarning(for: document.name) ?? SecurityTools.contentWarning(at: url),
-           !BotDialogs.ask("Открыть «\(document.name)»?", warning, action: "Открыть") {
+           !BotDialogs.ask(L("Открыть «\(document.name)»?"), warning, action: L("Открыть")) {
             return
         }
         NSWorkspace.shared.open(url)
@@ -69,10 +69,10 @@ extension AppModel {
         }
         do {
             try FileManager.default.copyItem(at: source, to: target)
-            showToast("Сохранено в «Загрузки»")
+            showToast(L("Сохранено в «Загрузки»"))
             NSWorkspace.shared.activateFileViewerSelecting([target])
         } catch {
-            fail("Не удалось сохранить: \(error.localizedDescription)")
+            fail(L("Не удалось сохранить: \(error.localizedDescription)"))
         }
     }
 
@@ -82,7 +82,7 @@ extension AppModel {
             if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
             try FileManager.default.copyItem(at: source, to: destination)
         } catch {
-            fail("Не удалось сохранить: \(error.localizedDescription)")
+            fail(L("Не удалось сохранить: \(error.localizedDescription)"))
         }
     }
 
@@ -139,24 +139,24 @@ extension AppModel {
 
     private func runExport(to folder: URL, options: ExportOptions) async {
         let stamp = Date().formatted(.iso8601.year().month().day().dateSeparator(.dash)) + " " +
-            Date().formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(Locale(identifier: "ru_RU")))
+            Date().formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(Loc.locale))
                 .replacingOccurrences(of: ":", with: "-")
-        let root = folder.appendingPathComponent("Easy — экспорт \(stamp)", isDirectory: true)
+        let root = folder.appendingPathComponent(L("Easy — экспорт \(stamp)"), isDirectory: true)
         let files = FileManager.default
         do {
             try files.createDirectory(at: root, withIntermediateDirectories: true)
 
-            exportProgress = "Профиль…"
+            exportProgress = L("Профиль…")
             let me = try await exportRequest(["@type": "getMe"])
             try ExportFormat.json(exportedUser(me)).write(to: root.appendingPathComponent("profile.json"))
 
             if options.contacts {
-                exportProgress = "Контакты…"
+                exportProgress = L("Контакты…")
                 let ids = try await exportRequest(["@type": "getContacts"]).tdInt64s("user_ids")
                 var contacts: [[String: String]] = []
                 for (index, id) in ids.enumerated() {
                     try Task.checkCancellation()
-                    if index % 20 == 0 { exportProgress = "Контакты: \(index) из \(ids.count)" }
+                    if index % 20 == 0 { exportProgress = L("Контакты: \(index) из \(ids.count)") }
                     if let user = try? await exportRequest(["@type": "getUser", "user_id": id]) {
                         contacts.append(exportedUser(user))
                     }
@@ -177,14 +177,14 @@ extension AppModel {
                 case .all: true
                 }
             }
-            var index = "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><title>Экспорт</title></head><body style=\"font: 14px -apple-system, sans-serif; padding: 24px\"><h1>\(ExportFormat.escape(TD.displayName(ofUser: me)))</h1><ul>"
+            var index = L("<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><title>Экспорт</title></head><body style=\"font: 14px -apple-system, sans-serif; padding: 24px\"><h1>\(ExportFormat.escape(TD.displayName(ofUser: me)))</h1><ul>")
             let chatsFolder = root.appendingPathComponent("chats", isDirectory: true)
             for (number, chat) in chosen.enumerated() {
                 try Task.checkCancellation()
-                let title = chat.title.isEmpty ? "Без названия" : chat.title
-                exportProgress = "Чат \(number + 1) из \(chosen.count): \(title)"
+                let title = chat.title.isEmpty ? L("Без названия") : chat.title
+                exportProgress = L("Чат \(number + 1) из \(chosen.count): \(title)")
                 let messages = try await exportHistory(of: chat, limit: options.messagesPerChat) { count in
-                    self.exportProgress = "Чат \(number + 1) из \(chosen.count): \(title) — \(count)"
+                    self.exportProgress = L("Чат \(number + 1) из \(chosen.count): \(title) — \(count)")
                 }
                 guard !messages.isEmpty else { continue }
                 let name = ExportFormat.fileName(title, id: chat.id)
@@ -247,7 +247,7 @@ extension AppModel {
             result.append(ExportFormat.ExportedMessage(
                 id: message.id,
                 date: message.date,
-                sender: message.isOutgoing ? "Вы" : await exportName(of: message.senderKey),
+                sender: message.isOutgoing ? L("Вы") : await exportName(of: message.senderKey),
                 isOutgoing: message.isOutgoing,
                 text: text,
                 replyToId: message.replyToId == 0 ? nil : message.replyToId,
@@ -292,10 +292,10 @@ extension AppModel {
             do {
                 return try await request(payload)
             } catch let error as TDError where error.isRateLimited {
-                guard waits < 20 else { throw TDError(code: 429, message: "Telegram не отпускает запросы — экспорт прерван") }
+                guard waits < 20 else { throw TDError(code: 429, message: L("Telegram не отпускает запросы — экспорт прерван")) }
                 waits += 1
                 let delay = min(error.retryAfter ?? 5, 120)
-                exportProgress = "Telegram просит подождать \(Int(delay)) с…"
+                exportProgress = L("Telegram просит подождать \(Int(delay)) с…")
                 try await Task.sleep(for: .seconds(delay))
             }
         }
@@ -314,12 +314,12 @@ extension AppModel {
             let warnings = SecurityTools.linkWarnings(url, shownAs: text ?? SecurityTools.label(for: url))
             if !warnings.isEmpty {
                 let list = warnings.map { "• " + $0 }.joined(separator: "\n")
-                guard BotDialogs.ask("Подозрительная ссылка", "\(url.absoluteString)\n\n\(list)", action: "Всё равно открыть") else { return }
+                guard BotDialogs.ask(L("Подозрительная ссылка"), "\(url.absoluteString)\n\n\(list)", action: L("Всё равно открыть")) else { return }
             }
         } else if !["http", "https", "mailto", "tel"].contains(scheme) {
             // file:, x-apple-… and other apps' schemes can do more than show a page.
-            guard BotDialogs.ask("Открыть «\(scheme):»-ссылку?",
-                                 "\(url.absoluteString)\n\nСсылка передаётся другому приложению на этом Mac.", action: "Открыть") else { return }
+            guard BotDialogs.ask(L("Открыть «\(scheme):»-ссылку?"),
+                                 L("\(url.absoluteString)\n\nСсылка передаётся другому приложению на этом Mac."), action: L("Открыть")) else { return }
         }
         NSWorkspace.shared.open(url)
     }
@@ -342,7 +342,7 @@ extension AppModel {
         }.joined(separator: "\n")
         let found = SecurityTools.indicators(in: text)
         inspectedCode = InspectedCode(
-            title: "Индикаторы (\(found.count)) · обезврежены",
+            title: L("Индикаторы (\(found.count)) · обезврежены"),
             json: found.report(),
             isCode: true,
             indicators: found.isEmpty ? nil : found
@@ -353,14 +353,14 @@ extension AppModel {
     func showHash(of message: Message) async {
         guard let file = await downloadedFile(of: message) else { return }
         let hash = await Task.detached(priority: .userInitiated) { try? SecurityTools.sha256(of: file) }.value
-        guard let hash else { return fail("Не удалось прочитать файл") }
-        var lines = ["Файл: \(file.lastPathComponent)", "SHA-256: \(hash)"]
+        guard let hash else { return fail(L("Не удалось прочитать файл")) }
+        var lines = [L("Файл: \(file.lastPathComponent)"), "SHA-256: \(hash)"]
         if let size = try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize {
-            lines.append("Размер: \(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)) (\(size) байт)")
+            lines.append(L("Размер: \(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)) (\(size) байт)"))
         }
         if let warning = SecurityTools.fileWarning(for: file.lastPathComponent) { lines.append("⚠︎ " + warning) }
         if let warning = SecurityTools.contentWarning(at: file) { lines.append("⚠︎ " + warning) }
-        inspectedCode = InspectedCode(title: "Хеш файла", json: lines.joined(separator: "\n"), isCode: true)
+        inspectedCode = InspectedCode(title: L("Хеш файла"), json: lines.joined(separator: "\n"), isCode: true)
     }
 
     struct ActiveSession: Identifiable, Equatable {
@@ -420,58 +420,58 @@ extension AppModel {
         var incomplete = false
         if let password = try? await request(["@type": "getPasswordState"]) {
             if password.tdBool("has_password") {
-                findings.append(.init(level: .good, title: "Двухэтапная проверка включена",
+                findings.append(.init(level: .good, title: L("Двухэтапная проверка включена"),
                                       detail: password.tdBool("has_recovery_email_address")
-                                          ? "Почта для восстановления задана." : "Почта для восстановления не задана: без неё забытый пароль не вернуть."))
+                                          ? L("Почта для восстановления задана.") : L("Почта для восстановления не задана: без неё забытый пароль не вернуть.")))
             } else {
-                findings.append(.init(level: .risk, title: "Двухэтапная проверка выключена",
-                                      detail: "Любой, кто получит код из SMS, войдёт в аккаунт. Включите облачный пароль в официальном приложении: Настройки → Конфиденциальность."))
+                findings.append(.init(level: .risk, title: L("Двухэтапная проверка выключена"),
+                                      detail: L("Любой, кто получит код из SMS, войдёт в аккаунт. Включите облачный пароль в официальном приложении: Настройки → Конфиденциальность.")))
             }
             // Asked for by whoever holds a code from SMS: in a week the password is gone unless it is cancelled.
             let reset = password.tdInt("pending_reset_date")
             if reset > 0 {
-                let day = Date(timeIntervalSince1970: TimeInterval(reset)).formatted(.dateTime.day().month(.wide).locale(Locale(identifier: "ru_RU")))
-                findings.append(.init(level: .risk, title: "Запрошен сброс облачного пароля",
-                                      detail: "Пароль будет снят \(day). Если это не вы — отмените сброс в официальном приложении и завершите чужие сеансы."))
+                let day = Date(timeIntervalSince1970: TimeInterval(reset)).formatted(.dateTime.day().month(.wide).locale(Loc.locale))
+                findings.append(.init(level: .risk, title: L("Запрошен сброс облачного пароля"),
+                                      detail: L("Пароль будет снят \(day). Если это не вы — отмените сброс в официальном приложении и завершите чужие сеансы.")))
             }
             if password.tdString("login_email_address_pattern").isEmpty {
-                findings.append(.init(level: .advice, title: "Почта для входа не задана",
-                                      detail: "С ней коды входа приходят на почту, а не по SMS: перехват SMS и перевыпуск SIM перестают давать доступ."))
+                findings.append(.init(level: .advice, title: L("Почта для входа не задана"),
+                                      detail: L("С ней коды входа приходят на почту, а не по SMS: перехват SMS и перевыпуск SIM перестают давать доступ.")))
             }
         } else {
             incomplete = true
         }
         if !hasPasscode {
-            findings.append(.init(level: .advice, title: "Easy открывается без код-пароля",
-                                  detail: "Любой, кто сел за этот Mac, читает переписку. Код-пароль задаётся выше; он же шифрует базу на диске."))
+            findings.append(.init(level: .advice, title: L("Easy открывается без код-пароля"),
+                                  detail: L("Любой, кто сел за этот Mac, читает переписку. Код-пароль задаётся выше; он же шифрует базу на диске.")))
         }
         // Sessions nobody has used for a month, and apps that are not Telegram's own, are where a stolen
         // session hides.
         let sessions = await activeSessions().filter { !$0.isCurrent }
         let stale = sessions.filter { Date().timeIntervalSince($0.lastActive) > 30 * 86_400 }
         if !stale.isEmpty {
-            findings.append(.init(level: .advice, title: "Сеансы без активности больше месяца: \(stale.count)",
+            findings.append(.init(level: .advice, title: L("Сеансы без активности больше месяца: \(stale.count)"),
                                   detail: stale.prefix(3).map { [$0.application, $0.device].filter { !$0.isEmpty }.joined(separator: " · ") }.joined(separator: "; ")
-                                      + ". Ненужные стоит завершить в списке ниже."))
+                                      + L(". Ненужные стоит завершить в списке ниже.")))
         }
         let unofficial = sessions.filter { !$0.isOfficial }
         if !unofficial.isEmpty {
-            findings.append(.init(level: .advice, title: "Сеансы в сторонних приложениях: \(unofficial.count)",
+            findings.append(.init(level: .advice, title: L("Сеансы в сторонних приложениях: \(unofficial.count)"),
                                   detail: unofficial.prefix(3).map(\.application).joined(separator: "; ")
-                                      + ". Стороннее приложение видит всю переписку; оставьте только те, что ставили сами."))
+                                      + L(". Стороннее приложение видит всю переписку; оставьте только те, что ставили сами.")))
         }
         if let ttl = try? await request(["@type": "getAccountTtl"]), ttl.tdInt("days") > 0 {
-            findings.append(.init(level: .good, title: "Аккаунт удалится после \(TD.count(ttl.tdInt("days"), "дня", "дней", "дней")) без входов",
-                                  detail: "Так задано в настройках Telegram: заброшенный аккаунт не остаётся висеть с вашими данными."))
+            findings.append(.init(level: .good, title: L("Аккаунт удалится после \(TD.count(ttl.tdInt("days"), L("дня"), L("дней"), L("дней"))) без входов"),
+                                  detail: L("Так задано в настройках Telegram: заброшенный аккаунт не остаётся висеть с вашими данными.")))
         }
         let checks: [(String, String, SecurityFinding.Level)] = [
-            ("userPrivacySettingShowPhoneNumber", "Номер телефона виден всем", .risk),
-            ("userPrivacySettingAllowFindingByPhoneNumber", "Вас можно найти по номеру телефона", .advice),
-            ("userPrivacySettingAllowChatInvites", "Кто угодно может добавить вас в группу", .advice),
-            ("userPrivacySettingAllowCalls", "Звонить может кто угодно", .advice),
-            ("userPrivacySettingAllowPeerToPeerCalls", "Звонки идут напрямую: собеседник видит ваш IP-адрес", .advice),
-            ("userPrivacySettingShowLinkInForwardedMessages", "Пересланные сообщения ведут на ваш профиль", .advice),
-            ("userPrivacySettingShowStatus", "Время последнего входа видно всем", .advice),
+            ("userPrivacySettingShowPhoneNumber", L("Номер телефона виден всем"), .risk),
+            ("userPrivacySettingAllowFindingByPhoneNumber", L("Вас можно найти по номеру телефона"), .advice),
+            ("userPrivacySettingAllowChatInvites", L("Кто угодно может добавить вас в группу"), .advice),
+            ("userPrivacySettingAllowCalls", L("Звонить может кто угодно"), .advice),
+            ("userPrivacySettingAllowPeerToPeerCalls", L("Звонки идут напрямую: собеседник видит ваш IP-адрес"), .advice),
+            ("userPrivacySettingShowLinkInForwardedMessages", L("Пересланные сообщения ведут на ваш профиль"), .advice),
+            ("userPrivacySettingShowStatus", L("Время последнего входа видно всем"), .advice),
         ]
         await withTaskGroup(of: (Int, Bool, Bool).self) { group in
             for (index, check) in checks.enumerated() {
@@ -487,14 +487,14 @@ extension AppModel {
             }
             for index in open.sorted() {
                 let check = checks[index]
-                findings.append(.init(level: check.2, title: check.1, detail: "Сейчас: «Все». Можно сузить до «Мои контакты» в официальном приложении."))
+                findings.append(.init(level: check.2, title: check.1, detail: L("Сейчас: «Все». Можно сузить до «Мои контакты» в официальном приложении.")))
             }
         }
         if incomplete {
-            findings.append(.init(level: .advice, title: "Проверка не полная",
-                                  detail: "TDLib не ответил на часть запросов: 2FA и отдельные настройки могли остаться непроверенными."))
+            findings.append(.init(level: .advice, title: L("Проверка не полная"),
+                                  detail: L("TDLib не ответил на часть запросов: 2FA и отдельные настройки могли остаться непроверенными.")))
         } else if findings.allSatisfy({ $0.level == .good }) {
-            findings.append(.init(level: .good, title: "Приватность настроена строго", detail: "Ничего важного не открыто для всех."))
+            findings.append(.init(level: .good, title: L("Приватность настроена строго"), detail: L("Ничего важного не открыто для всех.")))
         }
         return findings
     }
@@ -519,14 +519,14 @@ extension AppModel {
                   let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
             (data, fileExtension) = (png, "png")
         } else {
-            fail("В буфере нет картинки или файла")
+            fail(L("В буфере нет картинки или файла"))
             return
         }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("SwiftLite/pasted", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let stamp = Date().formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).second(.twoDigits))
             .replacingOccurrences(of: ":", with: ".").replacingOccurrences(of: "/", with: "-")
-        let file = folder.appendingPathComponent("Вставка \(stamp).\(fileExtension)")
+        let file = folder.appendingPathComponent(L("Вставка \(stamp).\(fileExtension)"))
         do {
             try data.write(to: file)
             offerFiles([file])
@@ -578,7 +578,7 @@ extension AppModel {
         guard let file = await downloadedFile(of: message) else { return }
         if Preferences.isOn(Preferences.fileGuard),
            let warning = SecurityTools.fileWarning(for: file.lastPathComponent) ?? SecurityTools.contentWarning(at: file),
-           !BotDialogs.ask("Открыть «\(file.lastPathComponent)»?", warning, action: "Открыть") {
+           !BotDialogs.ask(L("Открыть «\(file.lastPathComponent)»?"), warning, action: L("Открыть")) {
             return
         }
         NSWorkspace.shared.open(file)
@@ -603,11 +603,11 @@ extension AppModel {
     }
 
     func name(for message: Message) -> String {
-        if message.isOutgoing { return accountName.isEmpty ? "Вы" : accountName }
+        if message.isOutgoing { return accountName.isEmpty ? L("Вы") : accountName }
         if let cached = senderNames[message.senderKey], !cached.isEmpty { return cached }
         // Not `selectedChat`: that reads every chat, and each row would redraw on any chat's update.
-        if message.senderKey.hasPrefix("c") { return "Канал" }
-        return message.senderKey.isEmpty ? "" : "Пользователь"
+        if message.senderKey.hasPrefix("c") { return L("Канал") }
+        return message.senderKey.isEmpty ? "" : L("Пользователь")
     }
 
     func photo(for message: Message) -> ProfilePhoto? {
@@ -625,18 +625,18 @@ extension AppModel {
         switch chat.kind {
         case .personal, .secret:
             // What stops a secret chat from working comes before when its owner was last seen.
-            if chat.secretState == .pending { return "секретный чат · ждёт собеседника" }
-            if chat.secretState == .closed { return "секретный чат закрыт" }
-            if chat.userId == myUserId { return "заметки для себя" }
-            if chat.isBot { return "бот" }
+            if chat.secretState == .pending { return L("секретный чат · ждёт собеседника") }
+            if chat.secretState == .closed { return L("секретный чат закрыт") }
+            if chat.userId == myUserId { return L("заметки для себя") }
+            if chat.isBot { return L("бот") }
             return chat.presence.map { TD.describe($0) } ?? chat.kind.label
         case .group:
             guard chat.memberCount > 0 else { return chat.kind.label }
-            let members = TD.count(chat.memberCount, "участник", "участника", "участников")
-            return chat.onlineMemberCount > 1 ? "\(members), \(chat.onlineMemberCount) в сети" : members
+            let members = TD.count(chat.memberCount, L("участник"), L("участника"), L("участников"))
+            return chat.onlineMemberCount > 1 ? L("\(members), \(chat.onlineMemberCount) в сети") : members
         case .channel:
             guard chat.memberCount > 0 else { return chat.kind.label }
-            return TD.count(chat.memberCount, "подписчик", "подписчика", "подписчиков")
+            return TD.count(chat.memberCount, L("подписчик"), L("подписчика"), L("подписчиков"))
         case .other:
             return chat.kind.label
         }
@@ -693,7 +693,7 @@ extension AppModel {
     func inspect(_ message: Message) async {
         do {
             let node = try await request(["@type": "getMessage", "chat_id": message.chatId, "message_id": message.id])
-            inspectedCode = InspectedCode(title: "Сообщение \(message.id) в чате \(message.chatId)", json: Self.prettyJSON(node), node: Self.cleaned(node))
+            inspectedCode = InspectedCode(title: L("Сообщение \(message.id) в чате \(message.chatId)"), json: Self.prettyJSON(node), node: Self.cleaned(node))
         } catch {
             fail(error)
         }
@@ -702,7 +702,7 @@ extension AppModel {
     func inspect(_ chat: Chat) async {
         do {
             let node = try await request(["@type": "getChat", "chat_id": chat.id])
-            inspectedCode = InspectedCode(title: "Чат \(chat.id)", json: Self.prettyJSON(node), node: Self.cleaned(node))
+            inspectedCode = InspectedCode(title: L("Чат \(chat.id)"), json: Self.prettyJSON(node), node: Self.cleaned(node))
         } catch {
             fail(error)
         }

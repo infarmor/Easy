@@ -15,14 +15,14 @@ struct SettingsView: View {
 
     private var tabs: some View {
         TabView {
-            Tab("Основные", systemImage: "gearshape") { GeneralSettings() }
-            Tab("Уведомления", systemImage: "bell.badge") { NotificationSettings() }
-            Tab("Конфиденциальность", systemImage: "hand.raised") { PrivacySettings() }
-            Tab("Призрак", systemImage: "eye.slash") { GhostSettings() }
-            Tab("Безопасность", systemImage: "lock.shield") { SecuritySettings() }
-            Tab("Хранилище", systemImage: "internaldrive") { StorageSettings() }
-            Tab("Аккаунт", systemImage: "person.crop.circle") { AccountSettings() }
-            Tab("Для разработчиков", systemImage: "hammer") { DeveloperSettings() }
+            Tab(L("Основные"), systemImage: "gearshape") { GeneralSettings() }
+            Tab(L("Уведомления"), systemImage: "bell.badge") { NotificationSettings() }
+            Tab(L("Конфиденциальность"), systemImage: "hand.raised") { PrivacySettings() }
+            Tab(L("Призрак"), systemImage: "eye.slash") { GhostSettings() }
+            Tab(L("Безопасность"), systemImage: "lock.shield") { SecuritySettings() }
+            Tab(L("Хранилище"), systemImage: "internaldrive") { StorageSettings() }
+            Tab(L("Аккаунт"), systemImage: "person.crop.circle") { AccountSettings() }
+            Tab(L("Для разработчиков"), systemImage: "hammer") { DeveloperSettings() }
         }
         .frame(width: 640, height: 460)
     }
@@ -37,37 +37,44 @@ private struct GeneralSettings: View {
     @AppStorage(Preferences.chatBackground) private var chatBackground = ChatBackground.glass.rawValue
     @AppStorage(Preferences.translateToLanguage) private var translateTo = "ru"
     @AppStorage(Preferences.wallpaperColors) private var followsWallpaper = true
+    @AppStorage(Loc.preference) private var language = "system"
 
     var body: some View {
         Form {
             Section {
                 Stepper(value: $messageFontSize, in: 11...20) {
-                    LabeledContent("Размер текста сообщений", value: "\(messageFontSize) pt")
+                    LabeledContent(L("Размер текста сообщений"), value: "\(messageFontSize) pt")
                 }
-                .help("Также ⌘+ и ⌘− в окне переписки")
-                Picker("Отправка сообщения", selection: $sendsWithCommandReturn) {
+                .help(L("Также ⌘+ и ⌘− в окне переписки"))
+                Picker(L("Язык интерфейса"), selection: $language) {
+                    Text(L("Как в системе")).tag("system")
+                    Text("Русский").tag("ru")
+                    Text("English").tag("en")
+                }
+                .help(L("Меняется после перезапуска Easy"))
+                Picker(L("Отправка сообщения"), selection: $sendsWithCommandReturn) {
                     Text("Return").tag(false)
-                    Text("⌘Return (Return — новая строка)").tag(true)
+                    Text(L("⌘Return (Return — новая строка)")).tag(true)
                 }
-                Picker("Переводить в", selection: $translateTo) {
+                Picker(L("Переводить в"), selection: $translateTo) {
                     ForEach(AppModel.translationLanguages) { language in
                         Text(language.name).tag(language.code)
                     }
                 }
                 .frame(maxWidth: 260, alignment: .leading)
             } header: {
-                Text("Сообщения")
+                Text(L("Сообщения"))
             } footer: {
-                Text("Пункт «Перевести» в меню сообщения. Форматирование перевода Telegram сохраняет только с Premium.")
+                Text(L("Пункт «Перевести» в меню сообщения. Форматирование перевода Telegram сохраняет только с Premium."))
             }
             Section {
-                Toggle("Цвета по обоям рабочего стола", isOn: $followsWallpaper)
+                Toggle(L("Цвета по обоям рабочего стола"), isOn: $followsWallpaper)
                     .onChange(of: followsWallpaper) { _, _ in Theme.shared.refresh() }
-                    .help("Акцент и боковая панель берут основной цвет картинки рабочего стола; без неё — индиго")
-                Picker("Фон переписки", selection: $chatBackground) {
+                    .help(L("Акцент и боковая панель берут основной цвет картинки рабочего стола; без неё — индиго"))
+                Picker(L("Фон переписки"), selection: $chatBackground) {
                     ForEach(ChatBackground.allCases) { Text($0.title).tag($0.rawValue) }
                 }
-                LabeledContent("Затемнение фона") {
+                LabeledContent(L("Затемнение фона")) {
                     HStack {
                         Image(systemName: "sun.max").foregroundStyle(.secondary)
                         Slider(value: $backgroundDim, in: 0...0.6)
@@ -77,17 +84,17 @@ private struct GeneralSettings: View {
                     }
                 }
             } header: {
-                Text("Оформление")
+                Text(L("Оформление"))
             } footer: {
-                Text("Фон переписки — стекло macOS: чем меньше затемнение, тем сильнее просвечивает то, что за окном.")
+                Text(L("Фон переписки — стекло macOS: чем меньше затемнение, тем сильнее просвечивает то, что за окном."))
             }
             Section {
-                Toggle("Показывать фото профилей", isOn: $showsAvatars)
-                Toggle("Анимировать стикеры и GIF", isOn: $animatesStickers)
+                Toggle(L("Показывать фото профилей"), isOn: $showsAvatars)
+                Toggle(L("Анимировать стикеры и GIF"), isOn: $animatesStickers)
             } header: {
-                Text("Медиа")
+                Text(L("Медиа"))
             } footer: {
-                Text("Анимация останавливается, пока окно Easy не активно.")
+                Text(L("Анимация останавливается, пока окно Easy не активно."))
             }
         }
         .formStyle(.grouped)
@@ -103,17 +110,17 @@ private struct NotificationSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Уведомлять о новых сообщениях", isOn: $isEnabled)
-                Toggle("Звук", isOn: $playsSound)
+                Toggle(L("Уведомлять о новых сообщениях"), isOn: $isEnabled)
+                Toggle(L("Звук"), isOn: $playsSound)
                     .disabled(!isEnabled)
-                Toggle("Показывать текст сообщения", isOn: $showsText)
+                Toggle(L("Показывать текст сообщения"), isOn: $showsText)
                     .disabled(!isEnabled)
             } footer: {
-                Text("Чаты с выключенными уведомлениями молчат, кроме упоминаний вас.")
+                Text(L("Чаты с выключенными уведомлениями молчат, кроме упоминаний вас."))
             }
             Section {
-                Toggle("Число непрочитанных на иконке в Dock", isOn: $showsBadge)
-                Button("Системные настройки уведомлений…") {
+                Toggle(L("Число непрочитанных на иконке в Dock"), isOn: $showsBadge)
+                Button(L("Системные настройки уведомлений…")) {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
                         NSWorkspace.shared.open(url)
                     }
@@ -132,11 +139,11 @@ private struct PrivacySettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Показывать, что я в сети, пока окно Easy активно", isOn: $showsOnline)
-                Toggle("Отправлять «печатает…»", isOn: $sendsTyping)
-                Toggle("Отмечать сообщения прочитанными при открытии чата", isOn: $marksRead)
+                Toggle(L("Показывать, что я в сети, пока окно Easy активно"), isOn: $showsOnline)
+                Toggle(L("Отправлять «печатает…»"), isOn: $sendsTyping)
+                Toggle(L("Отмечать сообщения прочитанными при открытии чата"), isOn: $marksRead)
             } footer: {
-                Text("Без автоматической отметки сообщения читаются только кнопкой «Отметить прочитанным» (⌘⇧E). Кому видно время вашего последнего захода, решают настройки конфиденциальности Telegram.")
+                Text(L("Без автоматической отметки сообщения читаются только кнопкой «Отметить прочитанным» (⌘⇧E). Кому видно время вашего последнего захода, решают настройки конфиденциальности Telegram."))
             }
         }
         .formStyle(.grouped)
@@ -156,26 +163,26 @@ private struct GhostSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Режим призрака", isOn: $isGhost)
-                Toggle("Читать чат, когда отвечаю в нём", isOn: $readsOnReply)
+                Toggle(L("Режим призрака"), isOn: $isGhost)
+                Toggle(L("Читать чат, когда отвечаю в нём"), isOn: $readsOnReply)
                     .disabled(!isGhost)
             } footer: {
-                Text("Пока режим включён, вы не в сети, не видно «печатает…», сообщения и кружки остаются непрочитанными для собеседников. «Отметить прочитанным» по-прежнему работает. Переключается и кнопкой с глазом над списком чатов.")
+                Text(L("Пока режим включён, вы не в сети, не видно «печатает…», сообщения и кружки остаются непрочитанными для собеседников. «Отметить прочитанным» по-прежнему работает. Переключается и кнопкой с глазом над списком чатов."))
             }
             Section {
-                Toggle("Сохранять удалённые сообщения", isOn: $keepsDeleted)
-                Toggle("Сохранять историю изменений", isOn: $keepsEdits)
-                Toggle("Помечать сообщения, изменённые локально", isOn: $marksLocalEdits)
-                Toggle("Сохранять и из секретных чатов", isOn: $keepsSecret)
+                Toggle(L("Сохранять удалённые сообщения"), isOn: $keepsDeleted)
+                Toggle(L("Сохранять историю изменений"), isOn: $keepsEdits)
+                Toggle(L("Помечать сообщения, изменённые локально"), isOn: $marksLocalEdits)
+                Toggle(L("Сохранять и из секретных чатов"), isOn: $keepsSecret)
                     .disabled(!keepsDeleted && !keepsEdits)
-                    .help("Выключено: сообщение, удалённое в секретном чате, исчезает и здесь, как и задумано")
-                Button("Очистить сохранённое", role: .destructive) {
-                    if Dialogs.confirm("Очистить сохранённое?", message: "Сохранённые удалённые сообщения, история изменений и локальные правки пропадут с этого Mac.", action: "Очистить") {
+                    .help(L("Выключено: сообщение, удалённое в секретном чате, исчезает и здесь, как и задумано"))
+                Button(L("Очистить сохранённое"), role: .destructive) {
+                    if Dialogs.confirm(L("Очистить сохранённое?"), message: L("Сохранённые удалённые сообщения, история изменений и локальные правки пропадут с этого Mac."), action: L("Очистить")) {
                         model.clearArchive()
                     }
                 }
             } footer: {
-                Text("Сообщения, которые удалил собеседник, остаются в чате с пометкой «удалено»; у изменённых в меню есть «История изменений…». Всё хранится только на этом Mac.")
+                Text(L("Сообщения, которые удалил собеседник, остаются в чате с пометкой «удалено»; у изменённых в меню есть «История изменений…». Всё хранится только на этом Mac."))
             }
         }
         .formStyle(.grouped)
@@ -205,26 +212,26 @@ private struct SecuritySettings: View {
     private var passcodeSection: some View {
         Section {
             if model.hasPasscode {
-                Picker("Блокировать без действий", selection: $autoLockMinutes) {
-                    Text("через 1 минуту").tag(1)
-                    Text("через 5 минут").tag(5)
-                    Text("через 15 минут").tag(15)
-                    Text("через час").tag(60)
-                    Text("никогда").tag(0)
+                Picker(L("Блокировать без действий"), selection: $autoLockMinutes) {
+                    Text(L("через 1 минуту")).tag(1)
+                    Text(L("через 5 минут")).tag(5)
+                    Text(L("через 15 минут")).tag(15)
+                    Text(L("через час")).tag(60)
+                    Text(L("никогда")).tag(0)
                 }
-                Button("Заблокировать сейчас") { model.lock() }
+                Button(L("Заблокировать сейчас")) { model.lock() }
                     .keyboardShortcut("l", modifiers: [.command, .option])
-                SecureField("Код-пароль, чтобы отключить", text: $passcode)
-                Button("Отключить код-пароль", role: .destructive) {
+                SecureField(L("Код-пароль, чтобы отключить"), text: $passcode)
+                Button(L("Отключить код-пароль"), role: .destructive) {
                     run { await model.removePasscode(passcode) }
                 }
                 .disabled(passcode.isEmpty || isWorking)
             } else {
-                SecureField("Новый код-пароль", text: $passcode)
-                SecureField("Ещё раз", text: $repeated)
-                Button(isWorking ? "Шифрование…" : "Включить код-пароль") {
+                SecureField(L("Новый код-пароль"), text: $passcode)
+                SecureField(L("Ещё раз"), text: $repeated)
+                Button(isWorking ? L("Шифрование…") : L("Включить код-пароль")) {
                     guard passcode == repeated else {
-                        passcodeError = "Код-пароли не совпадают"
+                        passcodeError = L("Код-пароли не совпадают")
                         return
                     }
                     run { await model.setPasscode(passcode) }
@@ -235,11 +242,11 @@ private struct SecuritySettings: View {
                 Text(passcodeError).font(.callout).foregroundStyle(.red)
             }
         } header: {
-            Text("Код-пароль")
+            Text(L("Код-пароль"))
         } footer: {
             Text(model.hasPasscode
-                ? "Easy спрашивает код-пароль при запуске, после сна экрана и по таймеру. База Telegram и архив удалённых сообщений на этом Mac зашифрованы ключом из него. Touch ID работает после первого ввода с момента запуска."
-                : "Код-пароль закрывает Easy и шифрует базу Telegram и архив удалённых сообщений на этом Mac. Он нигде не хранится: забытый код-пароль восстановить нельзя — придётся войти в аккаунт заново, а секретные чаты на этом Mac пропадут.")
+                ? L("Easy спрашивает код-пароль при запуске, после сна экрана и по таймеру. База Telegram и архив удалённых сообщений на этом Mac зашифрованы ключом из него. Touch ID работает после первого ввода с момента запуска.")
+                : L("Код-пароль закрывает Easy и шифрует базу Telegram и архив удалённых сообщений на этом Mac. Он нигде не хранится: забытый код-пароль восстановить нельзя — придётся войти в аккаунт заново, а секретные чаты на этом Mac пропадут."))
         }
     }
 
@@ -260,11 +267,11 @@ private struct SecuritySettings: View {
         Form {
             passcodeSection
             Section {
-                Toggle("Проверять ссылки перед открытием", isOn: $guardsLinks)
-                Toggle("Предупреждать об исполняемых файлах", isOn: $guardsFiles)
-                Toggle("Меню «Безопасность» у сообщений", isOn: $showsTools)
+                Toggle(L("Проверять ссылки перед открытием"), isOn: $guardsLinks)
+                Toggle(L("Предупреждать об исполняемых файлах"), isOn: $guardsFiles)
+                Toggle(L("Меню «Безопасность» у сообщений"), isOn: $showsTools)
             } footer: {
-                Text("Ссылки: punycode и смешанные алфавиты, IP вместо домена, сокращатели, «имя@» в адресе, http. Файлы: .app, .pkg, .command, .exe, двойные расширения и скрытые символы направления текста. В меню сообщения — индикаторы (IOC) с обезвреживанием и SHA-256 вложений.")
+                Text(L("Ссылки: punycode и смешанные алфавиты, IP вместо домена, сокращатели, «имя@» в адресе, http. Файлы: .app, .pkg, .command, .exe, двойные расширения и скрытые символы направления текста. В меню сообщения — индикаторы (IOC) с обезвреживанием и SHA-256 вложений."))
             }
             Section {
                 if let findings {
@@ -279,12 +286,12 @@ private struct SecuritySettings: View {
                         }
                     }
                 }
-                Button(isChecking ? "Проверка…" : (findings == nil ? "Проверить аккаунт" : "Проверить ещё раз")) {
+                Button(isChecking ? L("Проверка…") : (findings == nil ? L("Проверить аккаунт") : L("Проверить ещё раз"))) {
                     Task { await refresh() }
                 }
                 .disabled(isChecking)
             } header: {
-                Text("Защита аккаунта")
+                Text(L("Защита аккаунта"))
             }
             Section {
                 if let sessions {
@@ -294,20 +301,20 @@ private struct SecuritySettings: View {
                                 .foregroundStyle(session.isUnconfirmed ? .orange : .secondary)
                                 .frame(width: 20)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(session.application + (session.isOfficial ? "" : " · неофициальное"))
+                                Text(session.application + (session.isOfficial ? "" : L(" · неофициальное")))
                                     .fontWeight(session.isCurrent ? .semibold : .regular)
                                 Text([session.device, session.system].filter { !$0.isEmpty }.joined(separator: " · "))
                                     .font(.caption).foregroundStyle(.secondary)
                                 Text([session.ipAddress, session.location,
-                                      session.isCurrent ? "этот Mac" : "активен " + session.lastActive.formatted(.relative(presentation: .named).locale(Locale(identifier: "ru_RU")))]
+                                      session.isCurrent ? L("этот Mac") : L("активен ") + session.lastActive.formatted(.relative(presentation: .named).locale(Loc.locale))]
                                     .filter { !$0.isEmpty }.joined(separator: " · "))
                                     .font(.caption).foregroundStyle(.secondary)
                                     .textSelection(.enabled)
                             }
                             Spacer()
                             if !session.isCurrent {
-                                Button("Завершить", role: .destructive) {
-                                    guard Dialogs.confirm("Завершить сеанс?", message: "\(session.application) на \(session.device) выйдет из аккаунта.", action: "Завершить") else { return }
+                                Button(L("Завершить"), role: .destructive) {
+                                    guard Dialogs.confirm(L("Завершить сеанс?"), message: L("\(session.application) на \(session.device) выйдет из аккаунта."), action: L("Завершить")) else { return }
                                     Task {
                                         if await model.terminateSession(session.id) { self.sessions = await model.activeSessions() }
                                     }
@@ -316,8 +323,8 @@ private struct SecuritySettings: View {
                         }
                     }
                     if sessions.count > 1 {
-                        Button("Завершить все другие сеансы", role: .destructive) {
-                            guard Dialogs.confirm("Завершить все другие сеансы?", message: "Все устройства, кроме этого Mac, выйдут из аккаунта.", action: "Завершить") else { return }
+                        Button(L("Завершить все другие сеансы"), role: .destructive) {
+                            guard Dialogs.confirm(L("Завершить все другие сеансы?"), message: L("Все устройства, кроме этого Mac, выйдут из аккаунта."), action: L("Завершить")) else { return }
                             Task {
                                 if await model.terminateOtherSessions() { self.sessions = await model.activeSessions() }
                             }
@@ -327,9 +334,9 @@ private struct SecuritySettings: View {
                     ProgressView().controlSize(.small)
                 }
             } header: {
-                Text("Активные сеансы")
+                Text(L("Активные сеансы"))
             } footer: {
-                Text("Незнакомое устройство, город или приложение — повод завершить сеанс и сменить облачный пароль. Оранжевым отмечены входы, которые ещё не подтверждены.")
+                Text(L("Незнакомое устройство, город или приложение — повод завершить сеанс и сменить облачный пароль. Оранжевым отмечены входы, которые ещё не подтверждены."))
             }
             websitesSection
         }
@@ -349,7 +356,7 @@ private struct SecuritySettings: View {
         Section {
             if let websites {
                 if websites.isEmpty {
-                    Text("Ни один сайт не подключён.")
+                    Text(L("Ни один сайт не подключён."))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(websites) { site in
@@ -358,18 +365,18 @@ private struct SecuritySettings: View {
                             .foregroundStyle(.secondary)
                             .frame(width: 20)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(site.domain.isEmpty ? "Сайт" : site.domain)
+                            Text(site.domain.isEmpty ? L("Сайт") : site.domain)
                             Text([site.browser, site.platform].filter { !$0.isEmpty }.joined(separator: " · "))
                                 .font(.caption).foregroundStyle(.secondary)
                             Text([site.ipAddress, site.location,
-                                  "активен " + site.lastActive.formatted(.relative(presentation: .named).locale(Locale(identifier: "ru_RU")))]
+                                  L("активен ") + site.lastActive.formatted(.relative(presentation: .named).locale(Loc.locale))]
                                 .filter { !$0.isEmpty }.joined(separator: " · "))
                                 .font(.caption).foregroundStyle(.secondary)
                                 .textSelection(.enabled)
                         }
                         Spacer()
-                        Button("Отключить", role: .destructive) {
-                            guard Dialogs.confirm("Отключить \(site.domain)?", message: "Сайт потеряет вход через ваш Telegram; войти туда можно будет заново.", action: "Отключить") else { return }
+                        Button(L("Отключить"), role: .destructive) {
+                            guard Dialogs.confirm(L("Отключить \(site.domain)?"), message: L("Сайт потеряет вход через ваш Telegram; войти туда можно будет заново."), action: L("Отключить")) else { return }
                             Task {
                                 if await model.disconnectWebsite(site.id) { self.websites = await model.connectedWebsites() }
                             }
@@ -377,23 +384,23 @@ private struct SecuritySettings: View {
                     }
                 }
                 if websites.count > 1 {
-                    Button("Отключить все сайты", role: .destructive) {
-                        guard Dialogs.confirm("Отключить все сайты?", message: "Все сайты потеряют вход через ваш Telegram.", action: "Отключить") else { return }
+                    Button(L("Отключить все сайты"), role: .destructive) {
+                        guard Dialogs.confirm(L("Отключить все сайты?"), message: L("Все сайты потеряют вход через ваш Telegram."), action: L("Отключить")) else { return }
                         Task {
                             if await model.disconnectAllWebsites() { self.websites = await model.connectedWebsites() }
                         }
                     }
                 }
             } else if websitesFailed {
-                Text("Telegram не отдал список сайтов.")
+                Text(L("Telegram не отдал список сайтов."))
                     .foregroundStyle(.secondary)
             } else {
                 ProgressView().controlSize(.small)
             }
         } header: {
-            Text("Сайты со входом через Telegram")
+            Text(L("Сайты со входом через Telegram"))
         } footer: {
-            Text("Сайт, на который вы входили кнопкой «Войти через Telegram», видит ваше имя и фото и может писать вам через своего бота. Незнакомый домен — повод его отключить.")
+            Text(L("Сайт, на который вы входили кнопкой «Войти через Telegram», видит ваше имя и фото и может писать вам через своего бота. Незнакомый домен — повод его отключить."))
         }
     }
 
@@ -433,14 +440,14 @@ private struct StorageSettings: View {
 
     var body: some View {
         Form {
-            Section("Занято на диске") {
-                LabeledContent("Скачанные файлы", value: usage.map {
-                    "\(Self.bytes($0.files)), \(TD.count($0.fileCount, "файл", "файла", "файлов"))"
+            Section(L("Занято на диске")) {
+                LabeledContent(L("Скачанные файлы"), value: usage.map {
+                    "\(Self.bytes($0.files)), \(TD.count($0.fileCount, L("файл"), L("файла"), L("файлов")))"
                 } ?? "—")
-                LabeledContent("База сообщений", value: usage.map { Self.bytes($0.database) } ?? "—")
+                LabeledContent(L("База сообщений"), value: usage.map { Self.bytes($0.database) } ?? "—")
             }
             Section {
-                Button(isClearing ? "Очистка…" : "Очистить кэш") {
+                Button(isClearing ? L("Очистка…") : L("Очистить кэш")) {
                     isClearing = true
                     Task {
                         await model.clearCache()
@@ -450,7 +457,7 @@ private struct StorageSettings: View {
                 }
                 .disabled(isClearing || usage == nil)
             } footer: {
-                Text("Удаляются скачанные фото, стикеры и вложения. Переписка остаётся, файлы скачаются снова, когда понадобятся.")
+                Text(L("Удаляются скачанные фото, стикеры и вложения. Переписка остаётся, файлы скачаются снова, когда понадобятся."))
             }
         }
         .formStyle(.grouped)
@@ -473,34 +480,34 @@ private struct AccountSettings: View {
     var body: some View {
         Form {
             Section {
-                TextField("Имя", text: $profile.firstName)
-                TextField("Фамилия", text: $profile.lastName)
-                TextField("Имя пользователя", text: $profile.username, prompt: Text("без @"))
-                TextField("О себе", text: $profile.bio, axis: .vertical)
+                TextField(L("Имя"), text: $profile.firstName)
+                TextField(L("Фамилия"), text: $profile.lastName)
+                TextField(L("Имя пользователя"), text: $profile.username, prompt: Text(L("без @")))
+                TextField(L("О себе"), text: $profile.bio, axis: .vertical)
                     .lineLimit(1...3)
                 HStack {
                     Text(profileStatus)
                         .font(.caption)
-                        .foregroundStyle(profileStatus.hasPrefix("Сохранено") ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
+                        .foregroundStyle(profileStatus.hasPrefix(L("Сохранено")) ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
                     Spacer()
-                    Button(isSaving ? "Сохранение…" : "Сохранить") { save() }
+                    Button(isSaving ? L("Сохранение…") : L("Сохранить")) { save() }
                         .disabled(loaded == nil || loaded == profile || isSaving || profile.firstName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             } header: {
-                Text("Мой профиль")
+                Text(L("Мой профиль"))
             } footer: {
-                Text("«О себе» — до 70 символов. Имя пользователя: латиница, цифры и _, от 5 символов; пустое — убрать.")
+                Text(L("«О себе» — до 70 символов. Имя пользователя: латиница, цифры и _, от 5 символов; пустое — убрать."))
             }
             Section {
-                Toggle("Контакты", isOn: $options.contacts)
-                Picker("Переписка", selection: $options.chats) {
-                    ForEach(AppModel.ExportOptions.Chats.allCases) { Text($0.rawValue).tag($0) }
+                Toggle(L("Контакты"), isOn: $options.contacts)
+                Picker(L("Переписка"), selection: $options.chats) {
+                    ForEach(AppModel.ExportOptions.Chats.allCases) { Text(Loc.translate($0.rawValue)).tag($0) }
                 }
-                Picker("Сообщений на чат", selection: $options.messagesPerChat) {
-                    Text("500 последних").tag(500)
-                    Text("2 000 последних").tag(2000)
-                    Text("10 000 последних").tag(10000)
-                    Text("Вся история").tag(0)
+                Picker(L("Сообщений на чат"), selection: $options.messagesPerChat) {
+                    Text(L("500 последних")).tag(500)
+                    Text(L("2 000 последних")).tag(2000)
+                    Text(L("10 000 последних")).tag(10000)
+                    Text(L("Вся история")).tag(0)
                 }
                 .disabled(options.chats == .none)
                 HStack {
@@ -511,31 +518,31 @@ private struct AccountSettings: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Spacer()
-                        Button("Остановить") { model.cancelExport() }
+                        Button(L("Остановить")) { model.cancelExport() }
                     } else {
-                        Button("Экспортировать…") { chooseFolder() }
+                        Button(L("Экспортировать…")) { chooseFolder() }
                         Spacer()
                         if let last = model.lastExport {
-                            Button("Показать последний") { NSWorkspace.shared.activateFileViewerSelecting([last]) }
+                            Button(L("Показать последний")) { NSWorkspace.shared.activateFileViewerSelecting([last]) }
                         }
                     }
                 }
             } header: {
-                Text("Резервная копия данных")
+                Text(L("Резервная копия данных"))
             } footer: {
-                Text("Профиль, контакты, список чатов и сообщения — в JSON и в HTML, который открывается в браузере. Ключи сессии и база входа в копию не попадают: по ней нельзя войти в аккаунт, её безопасно хранить и переносить.")
+                Text(L("Профиль, контакты, список чатов и сообщения — в JSON и в HTML, который открывается в браузере. Ключи сессии и база входа в копию не попадают: по ней нельзя войти в аккаунт, её безопасно хранить и переносить."))
             }
-            Section("Аккаунт") {
-                LabeledContent("Имя", value: model.accountName.isEmpty ? "—" : model.accountName)
+            Section(L("Аккаунт")) {
+                LabeledContent(L("Имя"), value: model.accountName.isEmpty ? "—" : model.accountName)
                 LabeledContent("api_id", value: model.apiIdField.isEmpty ? "—" : model.apiIdField)
-                LabeledContent("База TDLib", value: ConfigStore.databaseDirectory(for: model.slot).path)
-                Button("Выйти из аккаунта") {
-                    if Dialogs.confirm("Выйти из аккаунта?", message: "Сессия на этом Mac завершится, локальная база TDLib будет удалена. Войти снова можно по номеру телефона.", action: "Выйти") {
+                LabeledContent(L("База TDLib"), value: ConfigStore.databaseDirectory(for: model.slot).path)
+                Button(L("Выйти из аккаунта")) {
+                    if Dialogs.confirm(L("Выйти из аккаунта?"), message: L("Сессия на этом Mac завершится, локальная база TDLib будет удалена. Войти снова можно по номеру телефона."), action: L("Выйти")) {
                         model.logOut()
                     }
                 }
-                Button("Забыть ключи на этом Mac", role: .destructive) {
-                    if Dialogs.confirm("Забыть api_id и api_hash?", message: "Для подключения их придётся ввести заново. Вход в аккаунт сохранится.", action: "Забыть") {
+                Button(L("Забыть ключи на этом Mac"), role: .destructive) {
+                    if Dialogs.confirm(L("Забыть api_id и api_hash?"), message: L("Для подключения их придётся ввести заново. Вход в аккаунт сохранится."), action: L("Забыть")) {
                         model.forgetCredentials()
                     }
                 }
@@ -558,7 +565,7 @@ private struct AccountSettings: View {
                 profileStatus = problem
             } else {
                 loaded = edited
-                profileStatus = "Сохранено"
+                profileStatus = L("Сохранено")
             }
             isSaving = false
         }
@@ -566,8 +573,8 @@ private struct AccountSettings: View {
 
     private func chooseFolder() {
         let panel = NSOpenPanel()
-        panel.title = "Куда сохранить копию"
-        panel.prompt = "Сохранить сюда"
+        panel.title = L("Куда сохранить копию")
+        panel.prompt = L("Сохранить сюда")
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
@@ -586,23 +593,23 @@ private struct DeveloperSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Показывать код сообщений и чатов (JSON TDLib)", isOn: $showsCode)
-                Toggle("Показывать ID сообщений и чатов", isOn: $showsIdentifiers)
+                Toggle(L("Показывать код сообщений и чатов (JSON TDLib)"), isOn: $showsCode)
+                Toggle(L("Показывать ID сообщений и чатов"), isOn: $showsIdentifiers)
             } footer: {
-                Text("«Код сообщения…», «Код чата…» и «Скопировать ID» появятся в контекстном меню, ID — под сообщениями.")
+                Text(L("«Код сообщения…», «Код чата…» и «Скопировать ID» появятся в контекстном меню, ID — под сообщениями."))
             }
             Section("TDLib") {
-                LabeledContent("Версия", value: model.tdlibVersion.isEmpty ? "—" : model.tdlibVersion)
-                LabeledContent("Процессор", value: Self.processor)
-                Picker("Журнал", selection: $logLevel) {
-                    Text("Выключен").tag(0)
-                    Text("Только ошибки").tag(1)
-                    Text("Предупреждения").tag(2)
-                    Text("Информация").tag(3)
-                    Text("Отладка").tag(4)
-                    Text("Всё").tag(5)
+                LabeledContent(L("Версия"), value: model.tdlibVersion.isEmpty ? "—" : model.tdlibVersion)
+                LabeledContent(L("Процессор"), value: Self.processor)
+                Picker(L("Журнал"), selection: $logLevel) {
+                    Text(L("Выключен")).tag(0)
+                    Text(L("Только ошибки")).tag(1)
+                    Text(L("Предупреждения")).tag(2)
+                    Text(L("Информация")).tag(3)
+                    Text(L("Отладка")).tag(4)
+                    Text(L("Всё")).tag(5)
                 }
-                Button("Показать журнал в Finder") {
+                Button(L("Показать журнал в Finder")) {
                     NSWorkspace.shared.activateFileViewerSelecting([Preferences.logFile])
                 }
             }

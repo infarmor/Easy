@@ -8,31 +8,31 @@ enum BotDialogs {
     /// Links on buttons do not show their address, so it is shown before the browser opens it.
     static func confirmOpening(_ url: String) -> Bool {
         let alert = NSAlert()
-        alert.messageText = "Открыть ссылку?"
+        alert.messageText = L("Открыть ссылку?")
         alert.informativeText = url
         // The same checks transcripts use: an address like https://bank.ru@evil.top reads as bank.ru.
         if let parsed = URL(string: url) {
             let warnings = SecurityTools.linkWarnings(parsed)
             if !warnings.isEmpty { alert.informativeText += "\n\n" + warnings.joined(separator: "\n") }
         }
-        alert.addButton(withTitle: "Открыть")
-        alert.addButton(withTitle: "Отмена")
+        alert.addButton(withTitle: L("Открыть"))
+        alert.addButton(withTitle: L("Отмена"))
         return alert.runModal() == .alertFirstButtonReturn
     }
 
     /// "Log in with Telegram" on a site: the bot gets your name and user name for that domain.
     static func confirmLogin(domain: String, bot: String, requestsWriting: Bool) -> LoginChoice {
         let alert = NSAlert()
-        alert.messageText = "Войти на \(domain)?"
-        alert.informativeText = "Сайт получит ваше имя и имя пользователя Telegram через бота \(bot)."
+        alert.messageText = L("Войти на \(domain)?")
+        alert.informativeText = L("Сайт получит ваше имя и имя пользователя Telegram через бота \(bot).")
         if requestsWriting {
             alert.showsSuppressionButton = true
-            alert.suppressionButton?.title = "Разрешить \(bot) писать мне"
+            alert.suppressionButton?.title = L("Разрешить \(bot) писать мне")
             // Left unticked: writing permission is given by a click, not by whoever opened the dialog.
         }
-        alert.addButton(withTitle: "Войти")
-        alert.addButton(withTitle: "Открыть без входа")
-        alert.addButton(withTitle: "Отмена")
+        alert.addButton(withTitle: L("Войти"))
+        alert.addButton(withTitle: L("Открыть без входа"))
+        alert.addButton(withTitle: L("Отмена"))
         switch alert.runModal() {
         case .alertFirstButtonReturn: return .logIn(allowWriting: alert.suppressionButton?.state == .on)
         case .alertSecondButtonReturn: return .openOnly
@@ -47,11 +47,11 @@ enum BotDialogs {
     static func judgeLogin(_ details: String) -> LoginVerdict {
         let alert = NSAlert()
         alert.alertStyle = .critical
-        alert.messageText = "В аккаунт вошли с нового устройства"
-        alert.informativeText = "\(details)\n\nЕсли это не вы, завершите сеанс: устройство потеряет доступ к аккаунту."
-        alert.addButton(withTitle: "Это я")
-        alert.addButton(withTitle: "Завершить сеанс").hasDestructiveAction = true
-        alert.addButton(withTitle: "Позже")
+        alert.messageText = L("В аккаунт вошли с нового устройства")
+        alert.informativeText = L("\(details)\n\nЕсли это не вы, завершите сеанс: устройство потеряет доступ к аккаунту.")
+        alert.addButton(withTitle: L("Это я"))
+        alert.addButton(withTitle: L("Завершить сеанс")).hasDestructiveAction = true
+        alert.addButton(withTitle: L("Позже"))
         switch alert.runModal() {
         case .alertFirstButtonReturn: return .mine
         case .alertSecondButtonReturn: return .notMine
@@ -80,7 +80,7 @@ enum BotDialogs {
         alert.messageText = title
         alert.informativeText = message
         alert.addButton(withTitle: action)
-        alert.addButton(withTitle: "Отмена")
+        alert.addButton(withTitle: L("Отмена"))
         return alert.runModal() == .alertFirstButtonReturn
     }
 }

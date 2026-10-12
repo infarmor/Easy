@@ -16,7 +16,7 @@ struct CodeSheet: View {
                 Spacer()
                 if code.node != nil {
                     Picker("", selection: $showsJSON) {
-                        Text("Понятно").tag(false)
+                        Text(L("Понятно")).tag(false)
                         Text("JSON").tag(true)
                     }
                     .pickerStyle(.segmented)
@@ -36,18 +36,18 @@ struct CodeSheet: View {
             }
             Divider()
             HStack {
-                Button("Скопировать") {
+                Button(L("Скопировать")) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(copiedText, forType: .string)
                 }
                 if let found = code.indicators {
-                    Menu("Экспорт") {
-                        Button("Скопировать как JSON") { copy(found.json()) }
-                        Button("Скопировать как CSV") { copy(found.csv()) }
+                    Menu(L("Экспорт")) {
+                        Button(L("Скопировать как JSON")) { copy(found.json()) }
+                        Button(L("Скопировать как CSV")) { copy(found.csv()) }
                     }
                     .fixedSize()
                     // Opening a lookup tells that service what you are looking at; nothing leaves before a click.
-                    Menu("Проверить") {
+                    Menu(L("Проверить")) {
                         ForEach(Array(found.rows.enumerated()), id: \.offset) { _, row in
                             let lookups = SecurityTools.lookups(for: row.value, kind: row.kind)
                             if !lookups.isEmpty {
@@ -60,10 +60,10 @@ struct CodeSheet: View {
                         }
                     }
                     .fixedSize()
-                    .help("Открыть индикатор в VirusTotal, urlscan, Shodan и других. Сервис узнает, что вы искали")
+                    .help(L("Открыть индикатор в VirusTotal, urlscan, Shodan и других. Сервис узнает, что вы искали"))
                 }
                 Spacer()
-                Button("Готово") { dismiss() }
+                Button(L("Готово")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
             }
             .padding(12)
@@ -120,7 +120,7 @@ enum ReadableCode {
             }
         case let list as [Any]:
             if list.isEmpty {
-                output += line + styled("пусто", .secondary) + AttributedString("\n")
+                output += line + styled(L("пусто"), .secondary) + AttributedString("\n")
             } else if list.count <= 12, list.allSatisfy({ !($0 is TDNode) && !($0 is [Any]) }) {
                 for (index, element) in list.enumerated() {
                     if index > 0 { line += AttributedString(", ") }
@@ -128,7 +128,7 @@ enum ReadableCode {
                 }
                 output += line + AttributedString("\n")
             } else {
-                output += line + styled("\(list.count) шт.", .secondary) + AttributedString("\n")
+                output += line + styled(L("\(list.count) шт."), .secondary) + AttributedString("\n")
                 for (index, element) in list.enumerated() {
                     append(value: element, key: "[\(index)]", depth: depth + 1, to: &output)
                 }
@@ -141,12 +141,12 @@ enum ReadableCode {
     private static func scalar(_ value: Any, key: String?) -> AttributedString {
         switch value {
         case let number as NSNumber where CFGetTypeID(number) == CFBooleanGetTypeID():
-            return styled(number.boolValue ? "да" : "нет", .orange)
+            return styled(number.boolValue ? L("да") : L("нет"), .orange)
         case let number as NSNumber:
             var text = styled(number.stringValue, .blue)
             if let key, dateKeys.contains(key), number.doubleValue > 1_000_000_000 {
                 let date = Date(timeIntervalSince1970: number.doubleValue)
-                let readable = date.formatted(.dateTime.day().month(.wide).year().hour().minute().second().locale(Locale(identifier: "ru_RU")))
+                let readable = date.formatted(.dateTime.day().month(.wide).year().hour().minute().second().locale(Loc.locale))
                 text += styled("  (\(readable))", .secondary)
             }
             return text
@@ -155,7 +155,7 @@ enum ReadableCode {
             let shown = string.count > 160 ? String(string.prefix(160)) + "…" : string
             return styled("\"\(shown)\"", .green)
         case is NSNull:
-            return styled("нет", .secondary)
+            return styled(L("нет"), .secondary)
         default:
             return AttributedString(String(describing: value))
         }

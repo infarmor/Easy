@@ -11,7 +11,7 @@ struct ForwardSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TextField(messages.count > 1 ? "Кому переслать \(TD.count(messages.count, "сообщение", "сообщения", "сообщений"))" : "Кому переслать", text: $query)
+            TextField(messages.count > 1 ? L("Кому переслать \(TD.count(messages.count, L("сообщение"), L("сообщения"), L("сообщений")))") : L("Кому переслать"), text: $query)
                 .textFieldStyle(.roundedBorder)
                 .padding(12)
             List(model.forwardTargets(matching: query)) { chat in
@@ -21,7 +21,7 @@ struct ForwardSheet: View {
                 } label: {
                     HStack(spacing: 10) {
                         Avatar(title: chat.title, seed: chat.id, photo: chat.photo, diameter: 28)
-                        Text(chat.title.isEmpty ? "Без названия" : chat.title)
+                        Text(chat.title.isEmpty ? L("Без названия") : chat.title)
                             .font(.body)
                             .lineLimit(1)
                         Spacer(minLength: 0)
@@ -33,7 +33,7 @@ struct ForwardSheet: View {
             Divider()
             HStack {
                 Spacer()
-                Button("Отмена") { dismiss() }
+                Button(L("Отмена")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
             }
             .padding(12)

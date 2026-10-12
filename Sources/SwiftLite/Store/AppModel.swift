@@ -56,12 +56,12 @@ enum TextFormat: CaseIterable {
 
     var title: String {
         switch self {
-        case .bold: "Жирный"
-        case .italic: "Курсив"
-        case .strikethrough: "Зачёркнутый"
-        case .code: "Моноширинный"
-        case .spoiler: "Спойлер"
-        case .link: "Ссылка"
+        case .bold: L("Жирный")
+        case .italic: L("Курсив")
+        case .strikethrough: L("Зачёркнутый")
+        case .code: L("Моноширинный")
+        case .spoiler: L("Спойлер")
+        case .link: L("Ссылка")
         }
     }
 
@@ -645,12 +645,12 @@ final class AppModel {
 
     func submitCredentials() {
         guard let apiId = Int(apiIdField.filter(\.isNumber)), apiId > 0 else {
-            fail("api_id — число, которое видно на my.telegram.org")
+            fail(L("api_id — число, которое видно на my.telegram.org"))
             return
         }
         let apiHash = apiHashField.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard apiHash.count == 32, apiHash.allSatisfy(\.isHexDigit) else {
-            fail("api_hash состоит из 32 hex-символов")
+            fail(L("api_hash состоит из 32 hex-символов"))
             return
         }
 
@@ -676,7 +676,7 @@ final class AppModel {
     func submitPhone() {
         let number = phoneField.filter { $0.isNumber || $0 == "+" }
         guard number.count >= 8 else {
-            fail("Номер нужен в международном формате, например +79991234567")
+            fail(L("Номер нужен в международном формате, например +79991234567"))
             return
         }
         authenticate([
@@ -696,7 +696,7 @@ final class AppModel {
     func submitEmail() {
         let address = emailField.trimmingCharacters(in: .whitespacesAndNewlines)
         guard address.contains("@"), address.contains(".") else {
-            fail("Нужен адрес почты, например name@example.com")
+            fail(L("Нужен адрес почты, например name@example.com"))
             return
         }
         authenticate(["@type": "setAuthenticationEmailAddress", "email_address": address])
@@ -749,7 +749,7 @@ final class AppModel {
                 apiIdField = ""
                 apiHashField = ""
                 phase = .credentials
-                fail("Telegram не принял сохранённые api_id и api_hash. Введите ключи своего приложения с my.telegram.org — уже подключённые аккаунты останутся в сети.")
+                fail(L("Telegram не принял сохранённые api_id и api_hash. Введите ключи своего приложения с my.telegram.org — уже подключённые аккаунты останутся в сети."))
             } catch {
                 fail(error)
             }
@@ -848,7 +848,7 @@ final class AppModel {
                         "use_secret_chats": true,
                         "api_id": credentials.apiId,
                         "api_hash": credentials.apiHash,
-                        "system_language_code": "ru",
+                        "system_language_code": Loc.isEnglish ? "en" : "ru",
                         "device_model": "MacBook Pro (Apple M4)",
                         "system_version": ProcessInfo.processInfo.operatingSystemVersionString,
                         "application_version": "11.0.0",
@@ -1004,7 +1004,7 @@ final class AppModel {
             if intent == .logOut { phase = .phone }
             start(with: saved)
         case nil:
-            phase = .failed("TDLib закрыл сессию. Перезапустите Easy.")
+            phase = .failed(L("TDLib закрыл сессию. Перезапустите Easy."))
         }
     }
 
@@ -1151,8 +1151,8 @@ final class AppModel {
             let isNew = unconfirmedLogin != summary
             unconfirmedLogin = summary
             if isNew {
-                notifier.postAlert(id: "login:\(session.tdInt("date"))", title: "Новый вход в аккаунт",
-                                   body: summary.isEmpty ? "Откройте Easy, чтобы проверить" : summary)
+                notifier.postAlert(id: "login:\(session.tdInt("date"))", title: L("Новый вход в аккаунт"),
+                                   body: summary.isEmpty ? L("Откройте Easy, чтобы проверить") : summary)
             }
             presentLoginAlert()
 
@@ -1491,7 +1491,7 @@ final class AppModel {
             codeTarget = .email
             canResendCode = true
             let pattern = state.tdNode("code_info")?.tdString("email_address_pattern") ?? ""
-            phase = .code(destination: "Код отправлен на почту" + (pattern.isEmpty ? "" : " " + pattern))
+            phase = .code(destination: L("Код отправлен на почту") + (pattern.isEmpty ? "" : " " + pattern))
         case "authorizationStateWaitCode":
             let info = state.tdNode("code_info") ?? [:]
             codeTarget = .phone
@@ -1502,9 +1502,9 @@ final class AppModel {
         case "authorizationStateWaitPassword":
             phase = .password(hint: state.tdString("password_hint"))
         case "authorizationStateWaitRegistration":
-            fail("Аккаунт ещё не зарегистрирован. Создайте его в официальном клиенте Telegram.")
+            fail(L("Аккаунт ещё не зарегистрирован. Создайте его в официальном клиенте Telegram."))
         case "authorizationStateWaitPremiumPurchase":
-            fail("Для входа в этот аккаунт Telegram требует Premium. Войдите через официальный клиент.")
+            fail(L("Для входа в этот аккаунт Telegram требует Premium. Войдите через официальный клиент."))
         case "authorizationStateReady":
             // Reported both by the update and by `getAuthorizationState`; start the session once.
             guard !isReady else { return }
@@ -1629,12 +1629,12 @@ final class AppModel {
         if chat.kind == .personal || chat.kind == .secret { return first.single + "…" }
         let names = current.keys.sorted().map { key in
             // First names keep the line short: "Иван и Мария печатают…".
-            (senderNames[key] ?? "").split(separator: " ").first.map(String.init) ?? "Кто-то"
+            (senderNames[key] ?? "").split(separator: " ").first.map(String.init) ?? L("Кто-то")
         }
         switch names.count {
         case 1: return "\(names[0]) \(first.single)…"
-        case 2: return "\(names[0]) и \(names[1]) \(first.plural)…"
-        default: return "\(TD.count(names.count, "человек", "человека", "человек")) \(first.plural)…"
+        case 2: return L("\(names[0]) и \(names[1]) \(first.plural)…")
+        default: return "\(TD.count(names.count, L("человек"), L("человека"), L("человек"))) \(first.plural)…"
         }
     }
 
@@ -1887,7 +1887,7 @@ final class AppModel {
             messageId: message.id,
             title: chat.title,
             subtitle: [chat.kind == .group ? name(for: message) : "", recipient].filter { !$0.isEmpty }.joined(separator: " → "),
-            body: showsText ? TD.preview(of: message) : "Новое сообщение",
+            body: showsText ? TD.preview(of: message) : L("Новое сообщение"),
             playsSound: Preferences.isOn(Preferences.notificationSound)
         )
     }
@@ -1913,22 +1913,22 @@ final class AppModel {
     /// not the phone at all but a message in Telegram itself, and "sent to +7…" sends people waiting for an SMS.
     static func describeCodeDelivery(_ info: TDNode) -> String {
         let phone = info.tdString("phone_number")
-        let number = phone.isEmpty ? "ваш номер" : (phone.hasPrefix("+") ? phone : "+" + phone)
+        let number = phone.isEmpty ? L("ваш номер") : (phone.hasPrefix("+") ? phone : "+" + phone)
         switch info.tdNode("type")?.tdType ?? "" {
         case "authenticationCodeTypeTelegramMessage":
-            return "Код пришёл сообщением в Telegram на другом вашем устройстве — в чате «Telegram». SMS не будет."
+            return L("Код пришёл сообщением в Telegram на другом вашем устройстве — в чате «Telegram». SMS не будет.")
         case "authenticationCodeTypeSms", "authenticationCodeTypeSmsWord", "authenticationCodeTypeSmsPhrase":
-            return "Код отправлен по SMS на \(number)"
+            return L("Код отправлен по SMS на \(number)")
         case "authenticationCodeTypeCall":
-            return "На \(number) позвонят и продиктуют код"
+            return L("На \(number) позвонят и продиктуют код")
         case "authenticationCodeTypeFlashCall", "authenticationCodeTypeMissedCall":
-            return "На \(number) поступит звонок: код — последние цифры номера, с которого звонят"
+            return L("На \(number) поступит звонок: код — последние цифры номера, с которого звонят")
         case "authenticationCodeTypeFragment":
-            return "Код ждёт на fragment.com, в аккаунте этого номера"
+            return L("Код ждёт на fragment.com, в аккаунте этого номера")
         case "authenticationCodeTypeFirebaseAndroid", "authenticationCodeTypeFirebaseIos":
-            return "Telegram отправляет код на \(number) способом, доступным только официальным приложениям. Нажмите «Отправить другим способом» или войдите по QR-коду."
+            return L("Telegram отправляет код на \(number) способом, доступным только официальным приложениям. Нажмите «Отправить другим способом» или войдите по QR-коду.")
         default:
-            return "Код отправлен на \(number)"
+            return L("Код отправлен на \(number)")
         }
     }
 

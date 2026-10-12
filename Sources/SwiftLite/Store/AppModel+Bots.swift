@@ -16,7 +16,7 @@ extension AppModel {
 
     private func botName(_ userId: Int64) -> String {
         let name = senderNames["u\(userId)"] ?? ""
-        return name.isEmpty ? "Бот" : name
+        return name.isEmpty ? L("Бот") : name
     }
 
     /// Groups name the author of the last message in the list; private chats and channels need not.
@@ -84,13 +84,13 @@ extension AppModel {
         case .copy(let text):
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
-            showToast("Скопировано")
+            showToast(L("Скопировано"))
 
         case .disabled:
             break
 
         case .text, .keyboardWebApp, .unsupported:
-            showToast("Эта кнопка работает только в официальном приложении")
+            showToast(L("Эта кнопка работает только в официальном приложении"))
         }
     }
 
@@ -116,7 +116,7 @@ extension AppModel {
                 fail(error)
             }
         default:
-            showToast("Эта кнопка работает только в официальном приложении")
+            showToast(L("Эта кнопка работает только в официальном приложении"))
         }
     }
 
@@ -298,8 +298,8 @@ extension AppModel {
                 ])
                 var allowWriting = false
                 if found.tdBool("request_write_access") {
-                    allowWriting = BotDialogs.ask("Разрешить \(botName(bot)) писать вам?",
-                                                  "Приложение просит права присылать вам сообщения.", action: "Разрешить")
+                    allowWriting = BotDialogs.ask(L("Разрешить \(botName(bot)) писать вам?"),
+                                                  L("Приложение просит права присылать вам сообщения."), action: L("Разрешить"))
                 }
                 let url = try await request([
                     "@type": "getWebAppLinkUrl",
@@ -348,16 +348,16 @@ extension AppModel {
             return true
         }
         let members = info.tdInt("member_count")
-        let kind = info.tdNode("type")?.tdType == "inviteLinkChatTypeChannel" ? "канал" : "группу"
-        let details = [members > 0 ? TD.count(members, "участник", "участника", "участников") : "",
+        let kind = info.tdNode("type")?.tdType == "inviteLinkChatTypeChannel" ? L("канал") : L("группу")
+        let details = [members > 0 ? TD.count(members, L("участник"), L("участника"), L("участников")) : "",
                        info.tdString("description")].filter { !$0.isEmpty }.joined(separator: "\n")
-        guard BotDialogs.ask("Вступить в \(kind) «\(info.tdString("title"))»?", details,
-                             action: info.tdBool("creates_join_request") ? "Подать заявку" : "Вступить") else { return true }
+        guard BotDialogs.ask(L("Вступить в \(kind) «\(info.tdString("title"))»?"), details,
+                             action: info.tdBool("creates_join_request") ? L("Подать заявку") : L("Вступить")) else { return true }
         do {
             let chat = try await request(["@type": "joinChatByInviteLink", "invite_link": link])
             if chat.tdInt64("id") != 0 { selection = chat.tdInt64("id") }
         } catch let error as TDError where error.message.contains("INVITE_REQUEST_SENT") {
-            showToast("Заявка отправлена")
+            showToast(L("Заявка отправлена"))
         } catch {
             fail(error)
         }

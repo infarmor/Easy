@@ -38,10 +38,10 @@ enum ExportFormat {
     /// One chat as a page that reads like the app: days, names, times, oldest first.
     static func html(title: String, messages: [ExportedMessage]) -> String {
         let day = DateFormatter()
-        day.locale = Locale(identifier: "ru_RU")
+        day.locale = Loc.locale
         day.dateFormat = "d MMMM yyyy"
         let time = DateFormatter()
-        time.locale = Locale(identifier: "ru_RU")
+        time.locale = Loc.locale
         time.dateFormat = "HH:mm"
 
         var body = ""
@@ -53,10 +53,10 @@ enum ExportFormat {
                 body += "<div class=\"day\">\(escape(label))</div>\n"
             }
             var meta = escape(message.sender) + " · " + time.string(from: message.date)
-            if message.edited { meta += " · изменено" }
+            if message.edited { meta += L(" · изменено") }
             var extra = ""
-            if let from = message.forwardedFrom { extra += "<div class=\"fwd\">Переслано от \(escape(from))</div>" }
-            if let reply = message.replyToId { extra += "<div class=\"reply\">В ответ на <a href=\"#m\(reply)\">сообщение</a></div>" }
+            if let from = message.forwardedFrom { extra += L("<div class=\"fwd\">Переслано от \(escape(from))</div>") }
+            if let reply = message.replyToId { extra += L("<div class=\"reply\">В ответ на <a href=\"#m\(reply)\">сообщение</a></div>") }
             let text = escape(message.text).replacingOccurrences(of: "\n", with: "<br>")
             body += "<div class=\"msg\(message.isOutgoing ? " out" : "")\" id=\"m\(message.id)\"><div class=\"meta\">\(meta)</div>\(extra)<div class=\"text\">\(text)</div></div>\n"
         }

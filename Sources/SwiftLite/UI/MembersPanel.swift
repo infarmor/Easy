@@ -62,7 +62,7 @@ struct MembersPanel: View {
     private var header: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 1) {
-                Text("Участники")
+                Text(L("Участники"))
                     .font(.title3.weight(.bold))
                 Text(subtitle)
                     .font(.subheadline)
@@ -79,7 +79,7 @@ struct MembersPanel: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Скрыть список участников")
+            .help(L("Скрыть список участников"))
             // No Esc here: the conversation owns that key, and a second cancel-action button in the same
             // window makes the shortcut ambiguous. `AppModel.escape` closes this column last instead.
         }
@@ -90,12 +90,12 @@ struct MembersPanel: View {
 
     private var subtitle: String {
         let total = max(model.membersTotal, model.members.count)
-        if !model.chatAccess.canGetMembers { return "участники скрыты" }
-        if total == 0 { return "загружается…" }
+        if !model.chatAccess.canGetMembers { return L("участники скрыты") }
+        if total == 0 { return L("загружается…") }
         let online = chat.onlineMemberCount
         return online > 0
-            ? "\(TD.count(total, "участник", "участника", "участников")) · \(online) в сети"
-            : TD.count(total, "участник", "участника", "участников")
+            ? L("\(TD.count(total, L("участник"), L("участника"), L("участников"))) · \(online) в сети")
+            : TD.count(total, L("участник"), L("участника"), L("участников"))
     }
 
     private var search: some View {
@@ -103,7 +103,7 @@ struct MembersPanel: View {
             Image(systemName: "magnifyingglass")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
-            TextField("Имя участника", text: $query)
+            TextField(L("Имя участника"), text: $query)
                 .textFieldStyle(.plain)
                 .font(.callout)
         }
@@ -127,14 +127,14 @@ struct MembersPanel: View {
             }
         }
         let ranked: [(String, [ChatMemberInfo])] = [
-            ("Владелец и администраторы", owners), ("Участники", members),
-            ("Ограниченные", limited), ("Заблокированы", banned),
+            (L("Владелец и администраторы"), owners), (L("Участники"), members),
+            (L("Ограниченные"), limited), (L("Заблокированы"), banned),
         ]
         return ranked.filter { !$0.1.isEmpty }
     }
 
     @ViewBuilder private var placeholder: some View {
-        Text(model.isLoadingMembers ? "Загружаем…" : "Никого не нашлось")
+        Text(model.isLoadingMembers ? L("Загружаем…") : L("Никого не нашлось"))
             .font(.callout)
             .foregroundStyle(.secondary)
             .listRowSeparator(.hidden)

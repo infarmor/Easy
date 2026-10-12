@@ -21,10 +21,10 @@ struct GiftSheet: View {
         VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Подарок для \(name.isEmpty ? "собеседника" : name)")
+                    Text(L("Подарок для \(name.isEmpty ? L("собеседника") : name)"))
                         .font(.title3.weight(.semibold))
                         .lineLimit(1)
-                    Text("Оплачивается звёздами Telegram")
+                    Text(L("Оплачивается звёздами Telegram"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -35,14 +35,14 @@ struct GiftSheet: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.brand.opacity(0.14), in: Capsule())
-                    .help("Ваш баланс звёзд")
+                    .help(L("Ваш баланс звёзд"))
             }
             .padding(16)
             Divider()
             ScrollView {
                 if let gifts {
                     if gifts.isEmpty {
-                        Text("Telegram сейчас не предлагает подарков этому аккаунту.")
+                        Text(L("Telegram сейчас не предлагает подарков этому аккаунту."))
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, minHeight: 160)
@@ -58,27 +58,27 @@ struct GiftSheet: View {
             }
             Divider()
             VStack(alignment: .leading, spacing: 10) {
-                TextField("Подпись к подарку", text: $text, axis: .vertical)
+                TextField(L("Подпись к подарку"), text: $text, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...3)
                     .onChange(of: text) { _, new in
                         if new.count > Self.textLimit { text = String(new.prefix(Self.textLimit)) }
                     }
-                Toggle("Скрыть моё имя от посетителей его профиля", isOn: $isPrivate)
+                Toggle(L("Скрыть моё имя от посетителей его профиля"), isOn: $isPrivate)
                 if !error.isEmpty {
                     Text(error).font(.callout).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
                 }
                 HStack {
-                    Button("Отмена") { dismiss() }
+                    Button(L("Отмена")) { dismiss() }
                         .keyboardShortcut(.cancelAction)
                     Spacer()
-                    Button(chosen.map { "Подарить за \(Self.stars($0.stars))" } ?? "Выберите подарок") { send() }
+                    Button(chosen.map { L("Подарить за \(Self.stars($0.stars))") } ?? L("Выберите подарок")) { send() }
                         .buttonStyle(.borderedProminent)
                         .tint(Color.brand)
                         .disabled(chosen == nil || isSending || !canAfford)
                 }
                 if let chosen, !canAfford, let balance {
-                    Text("Нужно \(Self.stars(chosen.stars)), на балансе \(Self.stars(balance)). Пополнить можно в официальном приложении Telegram.")
+                    Text(L("Нужно \(Self.stars(chosen.stars)), на балансе \(Self.stars(balance)). Пополнить можно в официальном приложении Telegram."))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -123,7 +123,7 @@ struct GiftSheet: View {
                     .padding(.vertical, 2)
                     .background(isChosen ? Color.brand : Color.brand.opacity(0.14), in: Capsule())
                 if let remaining = gift.remaining {
-                    Text(gift.isSoldOut ? "закончился" : "осталось \(remaining.formatted(.number.locale(Locale(identifier: "ru_RU"))))")
+                    Text(gift.isSoldOut ? L("закончился") : L("осталось \(remaining.formatted(.number.locale(Loc.locale)))"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -137,14 +137,14 @@ struct GiftSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressDimStyle())
-        .accessibilityLabel("Подарок за \(Self.stars(gift.stars))")
+        .accessibilityLabel(L("Подарок за \(Self.stars(gift.stars))"))
     }
 
     private func send() {
         guard let chosen else { return }
-        guard Dialogs.confirm("Подарить за \(Self.stars(chosen.stars))?",
-                              message: "Звёзды спишутся с баланса сразу. Подарок получит \(name.isEmpty ? "собеседник" : name); вернуть его нельзя.",
-                              action: "Подарить") else { return }
+        guard Dialogs.confirm(L("Подарить за \(Self.stars(chosen.stars))?"),
+                              message: L("Звёзды спишутся с баланса сразу. Подарок получит \(name.isEmpty ? L("собеседник") : name); вернуть его нельзя."),
+                              action: L("Подарить")) else { return }
         isSending = true
         error = ""
         Task {
@@ -153,13 +153,13 @@ struct GiftSheet: View {
             if let problem {
                 error = problem
             } else {
-                model.showToast("Подарок отправлен")
+                model.showToast(L("Подарок отправлен"))
                 dismiss()
             }
         }
     }
 
     static func stars(_ count: Int) -> String {
-        TD.count(count, "звезда", "звезды", "звёзд")
+        TD.count(count, L("звезда"), L("звезды"), L("звёзд"))
     }
 }

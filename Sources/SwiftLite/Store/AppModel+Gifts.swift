@@ -62,8 +62,8 @@ extension AppModel {
             return nil
         } catch {
             let message = Self.describe(error)
-            if message.contains("BALANCE_TOO_LOW") { return "Не хватает звёзд. Пополнить баланс можно в официальном приложении Telegram." }
-            if message.contains("STARGIFT_USAGE_LIMITED") { return "Этот подарок закончился." }
+            if message.contains("BALANCE_TOO_LOW") { return L("Не хватает звёзд. Пополнить баланс можно в официальном приложении Telegram.") }
+            if message.contains("STARGIFT_USAGE_LIMITED") { return L("Этот подарок закончился.") }
             return message
         }
     }

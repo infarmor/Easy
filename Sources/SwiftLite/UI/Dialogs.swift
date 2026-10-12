@@ -6,8 +6,8 @@ import AppKit
 enum Dialogs {
     static func chooseFiles() -> [URL] {
         let panel = NSOpenPanel()
-        panel.title = "Отправить файлы"
-        panel.prompt = "Отправить"
+        panel.title = L("Отправить файлы")
+        panel.prompt = L("Отправить")
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
@@ -25,8 +25,8 @@ enum Dialogs {
     /// "Изменить локально…": the text in an editable box; nil when cancelled.
     static func editLocally(_ text: String) -> String? {
         let alert = NSAlert()
-        alert.messageText = "Изменить локально"
-        alert.informativeText = "Новый текст увидите только вы на этом Mac. Сообщение на сервере не меняется; оригинал можно вернуть в меню сообщения."
+        alert.messageText = L("Изменить локально")
+        alert.informativeText = L("Новый текст увидите только вы на этом Mac. Сообщение на сервере не меняется; оригинал можно вернуть в меню сообщения.")
         let scroll = NSTextView.scrollableTextView()
         scroll.frame = NSRect(x: 0, y: 0, width: 360, height: 120)
         scroll.borderType = .bezelBorder
@@ -36,8 +36,8 @@ enum Dialogs {
         editor.isRichText = false
         editor.allowsUndo = true
         alert.accessoryView = scroll
-        alert.addButton(withTitle: "Сохранить")
-        alert.addButton(withTitle: "Отмена")
+        alert.addButton(withTitle: L("Сохранить"))
+        alert.addButton(withTitle: L("Отмена"))
         alert.window.initialFirstResponder = editor
         return alert.runModal() == .alertFirstButtonReturn ? editor.string : nil
     }
@@ -50,8 +50,8 @@ enum Dialogs {
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
         field.stringValue = ""
         alert.accessoryView = field
-        alert.addButton(withTitle: "ОК")
-        alert.addButton(withTitle: "Отмена")
+        alert.addButton(withTitle: L("ОК"))
+        alert.addButton(withTitle: L("Отмена"))
         alert.window.initialFirstResponder = field
         guard alert.runModal() == .alertFirstButtonReturn else { return nil }
         return field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -64,7 +64,7 @@ enum Dialogs {
         alert.messageText = title
         alert.informativeText = message
         alert.addButton(withTitle: action)
-        alert.addButton(withTitle: "Отмена")
+        alert.addButton(withTitle: L("Отмена"))
         alert.buttons.first?.hasDestructiveAction = true
         if let option {
             alert.showsSuppressionButton = true
@@ -82,7 +82,7 @@ enum Dialogs {
         alert.messageText = title
         alert.informativeText = message
         alert.addButton(withTitle: action)
-        alert.addButton(withTitle: "Отмена")
+        alert.addButton(withTitle: L("Отмена"))
         alert.buttons.first?.hasDestructiveAction = true
         return alert.runModal() == .alertFirstButtonReturn
     }
@@ -91,23 +91,23 @@ enum Dialogs {
     static func confirmDeletion(_ options: DeletionOptions) -> Bool? {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Удалить сообщение?"
+        alert.messageText = L("Удалить сообщение?")
         switch (options.forEveryone, options.forSelf) {
-        case (true, true): alert.informativeText = "Его можно удалить у всех участников чата или только у себя."
-        case (true, false): alert.informativeText = "Сообщение пропадёт у всех участников чата."
-        default: alert.informativeText = "Сообщение пропадёт только у вас."
+        case (true, true): alert.informativeText = L("Его можно удалить у всех участников чата или только у себя.")
+        case (true, false): alert.informativeText = L("Сообщение пропадёт у всех участников чата.")
+        default: alert.informativeText = L("Сообщение пропадёт только у вас.")
         }
 
         var choices: [Bool] = []
         if options.forEveryone {
-            alert.addButton(withTitle: options.forSelf ? "Удалить у всех" : "Удалить")
+            alert.addButton(withTitle: options.forSelf ? L("Удалить у всех") : L("Удалить"))
             choices.append(true)
         }
         if options.forSelf {
-            alert.addButton(withTitle: options.forEveryone ? "Удалить только у меня" : "Удалить")
+            alert.addButton(withTitle: options.forEveryone ? L("Удалить только у меня") : L("Удалить"))
             choices.append(false)
         }
-        alert.addButton(withTitle: "Отмена")
+        alert.addButton(withTitle: L("Отмена"))
         alert.buttons.first?.hasDestructiveAction = true
 
         let index = alert.runModal().rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue

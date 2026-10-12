@@ -8,6 +8,8 @@
 # Credentials, Preferences and MessageArchive point there, and the run stops if any of them could still reach
 # the real app folders (~/Library/Application Support, ~/Library/Logs, the sandbox container).
 set -u
+# The stands check the interface's Russian text, whatever language the Mac is set to.
+export EASY_LANG=ru
 HERE=${0:A:h}
 ROOT=${HERE:h}
 WORK=$HERE/.work
