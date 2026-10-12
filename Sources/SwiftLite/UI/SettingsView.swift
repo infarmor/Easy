@@ -38,6 +38,8 @@ private struct GeneralSettings: View {
     @AppStorage(Preferences.translateToLanguage) private var translateTo = "ru"
     @AppStorage(Preferences.wallpaperColors) private var followsWallpaper = true
     @AppStorage(Loc.preference) private var language = "system"
+    @AppStorage(Preferences.hideAds) private var hidesAds = true
+    @AppStorage(Preferences.filterWords) private var filterWords = ""
 
     var body: some View {
         Form {
@@ -87,6 +89,14 @@ private struct GeneralSettings: View {
                 Text(L("Оформление"))
             } footer: {
                 Text(L("Фон переписки — стекло macOS: чем меньше затемнение, тем сильнее просвечивает то, что за окном."))
+            }
+            Section {
+                Toggle(L("Скрывать рекламные посты в каналах"), isOn: $hidesAds)
+                TextField(L("Скрывать сообщения со словами"), text: $filterWords, prompt: Text(L("казино, ставки, розыгрыш")))
+            } header: {
+                Text(L("Фильтр"))
+            } footer: {
+                Text(L("Рекламой считается пост канала с пометкой: «erid», «Реклама» с ИНН рекламодателя, #реклама, #ad. Слова — через запятую; сообщение с любым из них сворачивается в любом чате. Скрытое можно показать одним нажатием, и уведомлений о нём нет. Спонсорские сообщения Telegram в Easy не показываются вовсе."))
             }
             Section {
                 Toggle(L("Показывать фото профилей"), isOn: $showsAvatars)

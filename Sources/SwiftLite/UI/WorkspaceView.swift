@@ -57,6 +57,8 @@ struct ChatListView: View {
     /// The window's own scheme. Everything below is told it is dark, so its ink is white on the indigo.
     @Environment(\.colorScheme) private var scheme
     @Environment(AccountHub.self) private var hub: AccountHub?
+    /// Only chats with something unread, and the open one so it does not vanish from under the pointer.
+    @State private var showsUnreadOnly = false
 
     /// The chats of every account in one list: with more than one account, unless a search is on.
     private var showsAllAccounts: Bool {
@@ -67,7 +69,9 @@ struct ChatListView: View {
     var body: some View {
         @Bindable var model = model
         // Computed once per redraw: while searching it filters and sorts every known chat.
-        let visible = model.visibleChats
+        let visible = showsUnreadOnly && model.filter.isEmpty
+            ? model.visibleChats.filter { $0.unread > 0 || $0.isMarkedUnread || $0.unreadMentions > 0 || $0.id == model.selection }
+            : model.visibleChats
         // The order of what is on screen, for the animation below: a chat with a new message rises to the top
         // rather than the rows being swapped under the eye. Not while the list is still filling at launch,
         // when hundreds of rows arrive at once and would all be sent sliding.
@@ -154,7 +158,7 @@ struct ChatListView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             // The header counts what is on screen, so it is handed the list the rows were built from rather
             // than recomputing it: while searching, `model.chats` is still the whole place.
-            SidebarHeader(shownChats: visible.count)
+            SidebarHeader(shownChats: visible.count, showsUnreadOnly: $showsUnreadOnly)
         }
         .toolbar {
             // Where Messages keeps "compose": a new chat with someone from your contacts.
@@ -334,7 +338,11 @@ struct ChatListView: View {
     /// another account brings that account into the window with its chat, so the answer goes from the
     /// account the message came to, without picking it first.
     private func allAccountsRows(_ hub: AccountHub) -> some View {
-        ForEach(hub.allChats) { item in
+        let all = showsUnreadOnly
+            ? hub.allChats.filter { $0.chat.unread > 0 || $0.chat.isMarkedUnread || $0.chat.unreadMentions > 0
+                || ($0.owner === model && $0.chat.id == model.selection) }
+            : hub.allChats
+        return ForEach(all) { item in
             let isOwn = item.owner === model
             let isOpen = isOwn && item.chat.id == model.selection
             let row = ChatRow(chat: item.chat, showsDraft: !isOpen, isCard: isOpen && scheme == .light, owner: item.owner)
@@ -725,6 +733,7 @@ private struct SidebarHeader: View {
 
     /// Chats the list is showing right now — the place's own, or the matches while searching.
     let shownChats: Int
+    @Binding var showsUnreadOnly: Bool
 
     var body: some View {
         @Bindable var model = model
@@ -798,6 +807,17 @@ private struct SidebarHeader: View {
                     .focused($isSearchFocused)
                     .onSubmit { model.openFirstSearchResult() }
                     .onExitCommand { model.filter = ""; isSearchFocused = false }
+                if model.filter.isEmpty {
+                    Button {
+                        showsUnreadOnly.toggle()
+                    } label: {
+                        Image(systemName: showsUnreadOnly ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                            .foregroundStyle(showsUnreadOnly ? AnyShapeStyle(.white) : AnyShapeStyle(.tertiary))
+                    }
+                    .buttonStyle(.plain)
+                    .help(showsUnreadOnly ? L("Показать все чаты") : L("Только непрочитанные"))
+                    .accessibilityLabel(L("Только непрочитанные"))
+                }
                 if !model.filter.isEmpty {
                     Button {
                         model.filter = ""

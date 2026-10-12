@@ -11,6 +11,10 @@ enum Preferences {
     static let chatBackground = "chatBackground"
     /// The accent and the sidebar take the desktop picture's colour instead of the app's indigo.
     static let wallpaperColors = "wallpaperColors"
+    /// Advertising posts in channels are folded away; see `AdFilter`.
+    static let hideAds = "hideAds"
+    /// Words, separated by commas: an incoming message with any of them is folded away too.
+    static let filterWords = "filterWords"
 
     static let notificationsEnabled = "notificationsEnabled"
     static let notificationSound = "notificationSound"
@@ -55,6 +59,7 @@ enum Preferences {
         UserDefaults.standard.register(defaults: [
             messageFontSize: 14,
             chatBackground: "glass",
+            hideAds: true,
             showAvatars: true,
             animateStickers: true,
             backgroundDim: 0.26,

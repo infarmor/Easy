@@ -788,6 +788,11 @@ struct MessageRow: View {
     @AppStorage(Preferences.showIdentifiers) private var showsIdentifiers = false
     @AppStorage(Preferences.securityTools) private var securityTools = true
     @AppStorage(Preferences.markLocalEdits) private var marksLocalEdits = false
+    // Read so the row is drawn again when either setting changes; `AdFilter` reads the values itself.
+    @AppStorage(Preferences.hideAds) private var hidesAds = true
+    @AppStorage(Preferences.filterWords) private var filterWords = ""
+    /// A message the filter folded away, shown after all because it was asked for.
+    @State private var isRevealed = false
 
     let row: TranscriptRow
     let chat: RowChat
@@ -802,6 +807,11 @@ struct MessageRow: View {
 
     private var message: Message { row.message }
 
+    private var hiddenReason: AdFilter.Reason? {
+        guard hidesAds || !filterWords.isEmpty else { return nil }
+        return AdFilter.reason(for: message, in: chat.kind)
+    }
+
     var body: some View {
         if case .service(let text) = message.body {
             Text(text)
@@ -812,6 +822,26 @@ struct MessageRow: View {
                 .padding(.vertical, 4)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
+        } else if !isRevealed, !model.isSelectingMessages, let reason = hiddenReason {
+            // Folded, not removed: the post is one click away, and the transcript keeps its place.
+            Button {
+                withAnimation(.smooth(duration: 0.2)) { isRevealed = true }
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "eye.slash")
+                    Text(reason == .advertisement ? L("Реклама скрыта") : L("Скрыто фильтром"))
+                    Text(L("Показать")).foregroundStyle(Color.brandInk)
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 4)
+                .glassSurface(in: Capsule())
+                .contentShape(Capsule())
+            }
+            .buttonStyle(PressDimStyle())
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
         } else {
             HStack(alignment: .bottom, spacing: 8) {
                 if model.isSelectingMessages {

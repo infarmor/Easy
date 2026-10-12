@@ -1870,6 +1870,8 @@ final class AppModel {
         guard notifier.isActive, Preferences.isOn(Preferences.notificationsEnabled), !message.isOutgoing,
               let chat = knownChats[message.chatId] else { return }
         if case .service = message.body { return }
+        // What the filter folds away in the chat does not get a banner either.
+        if AdFilter.reason(for: message, in: chat.kind) != nil { return }
         // Already on screen.
         if message.chatId == openChatId, NSApp?.isActive == true, hub.map({ $0.active === self }) ?? true { return }
         // Catching up after being offline replays older messages as new ones; skip what is read or stale.

@@ -11,6 +11,16 @@ enum Translations {
     }()
 
     private static let part1: [String: String] = [
+        "Реклама скрыта": "Ad hidden",
+        "Скрыто фильтром": "Hidden by filter",
+        "Показать": "Show",
+        "Скрывать рекламные посты в каналах": "Hide advertising posts in channels",
+        "Скрывать сообщения со словами": "Hide messages with the words",
+        "казино, ставки, розыгрыш": "casino, bets, giveaway",
+        "Фильтр": "Filter",
+        "Рекламой считается пост канала с пометкой: «erid», «Реклама» с ИНН рекламодателя, #реклама, #ad. Слова — через запятую; сообщение с любым из них сворачивается в любом чате. Скрытое можно показать одним нажатием, и уведомлений о нём нет. Спонсорские сообщения Telegram в Easy не показываются вовсе.": "A channel post counts as an ad when it is marked: \"erid\", \"Реклама\" with the advertiser's tax number, #реклама, #ad. Words are separated by commas; a message with any of them is folded in any chat. A hidden message can be shown with one click, and it sends no notification. Telegram's sponsored messages are not shown in Easy at all.",
+        "Показать все чаты": "Show all chats",
+        "Только непрочитанные": "Unread only",
         "Другие аккаунты": "Other accounts",
         "Вы": "You",
         "ОК": "OK",

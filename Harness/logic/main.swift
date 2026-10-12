@@ -1885,5 +1885,27 @@ MainActor.assumeIsolated {
           "told to settle, it takes the oldest unread message in hand")
 }
 
+// --- the ad filter: marked posts are folded, a channel talking about ads is not --------------------------------
+MainActor.assumeIsolated {
+    check(AdFilter.looksLikeAd("реклама. ооо «ромашка», инн 7700000000. erid: 2vtzqwx1abc"), "a post with the legal mark and an erid token is an ad")
+    check(AdFilter.looksLikeAd("лучшие курсы https://example.com/?utm=1&erid=lj3abc"), "an erid in a link is enough")
+    check(AdFilter.looksLikeAd("новая коллекция уже в продаже #реклама"), "the hashtag is enough")
+    check(AdFilter.looksLikeAd("great tool, try it #ad\nlink below"), "the English hashtag too")
+    check(!AdFilter.looksLikeAd("у нас в канале нет рекламы и не будет"), "talking about ads is not an ad")
+    check(!AdFilter.looksLikeAd("скидки до конца недели"), "nor is a post without any mark")
+    check(!AdFilter.looksLikeAd("we added a new #address field"), "a hashtag that only starts with #ad is not the mark")
+
+    func post(_ text: String, outgoing: Bool = false) -> Message {
+        TD.message(json(message(1, chat: -1009, text: text, outgoing: outgoing)))
+    }
+    check(AdFilter.reason(for: post("Реклама. ИП Иванов, ИНН 1234. erid: 2VtzqwX1abc"), in: .channel) == .advertisement, "a marked channel post is folded")
+    check(AdFilter.reason(for: post("Реклама. ИП Иванов, ИНН 1234. erid: 2VtzqwX1abc"), in: .group) == nil, "the same text in a group is somebody's message, not an ad")
+    check(AdFilter.reason(for: post("#реклама", outgoing: true), in: .channel) == nil, "your own posts are never folded")
+    UserDefaults.standard.set("казино, Ставки", forKey: Preferences.filterWords)
+    check(AdFilter.reason(for: post("Заходи в КАЗИНО"), in: .personal) == .word("казино"), "a word from the user's list folds a message in any chat")
+    check(AdFilter.reason(for: post("обычное сообщение"), in: .personal) == nil, "and leaves the rest alone")
+    UserDefaults.standard.removeObject(forKey: Preferences.filterWords)
+}
+
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")
 exit(failures == 0 ? 0 : 1)
