@@ -5,8 +5,8 @@
 <h1 align="center">Easy</h1>
 
 <p align="center">
-  A native Telegram client for the Mac.<br>
-  SwiftUI on top of TDLib, Liquid Glass, several accounts at once, and a few things the official app does not do.
+  <b>A Telegram client for the Mac built to be light: about 171 MB of memory where Telegram Lite takes about 400.</b><br>
+  Native SwiftUI on top of TDLib, Liquid Glass, several accounts at once, and a few things the official app does not do.
 </p>
 
 <p align="center">
@@ -14,6 +14,24 @@
 </p>
 
 > Easy is an unofficial client. It is not affiliated with or endorsed by Telegram.
+
+## Light on memory
+
+This is the point of Easy. Measured by the author on the same Mac:
+
+| Client | Memory |
+| --- | --- |
+| Telegram Lite | about 400 MB |
+| **Easy** | **about 171 MB** |
+
+One measurement on one machine, not a benchmark: the numbers move with the number of chats, the accounts
+connected and how long the app has been open. What keeps Easy low:
+
+- Native views and TDLib, no web runtime.
+- Pictures are decoded at the size they are drawn, cached within a fixed budget, and let go after five minutes
+  in the background.
+- The chat list builds its context menu when it is asked for, not one per row.
+- Only what a chat needs to restore a deleted message is kept in memory: sixty messages per chat.
 
 ## What it does
 
