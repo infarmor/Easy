@@ -1138,10 +1138,46 @@ struct MessageRow: View {
             && message.foreignReply == nil
     }
 
-    /// Time and delivery show once per run; anything unusual about a message shows on it directly.
+    /// A bubble carries its own time, ticks and "edited" in its corner; what has no bubble (a sticker, an
+    /// album, a bare picture) has them on the line under it, once per run.
+    private var hasInlineMeta: Bool { !carriesOwnSurface }
+
+    /// The line under a message: for a bubble only what is unusual about it, since its time is inside.
     private var showsStatus: Bool {
-        (row.endsGroup && !timeOnMedia) || message.isPending || message.isFailed || message.isDeleted || message.isPinned
-            || message.isEdited || message.hasEditHistory || showsIdentifiers || (marksLocalEdits && message.localText != nil)
+        let unusual = message.isPending || message.isFailed || message.isDeleted || message.isPinned
+            || showsIdentifiers || (marksLocalEdits && message.localText != nil)
+        if hasInlineMeta { return unusual }
+        return unusual || (row.endsGroup && !timeOnMedia) || message.isEdited || message.hasEditHistory
+    }
+
+    /// "изм. 14:32 ✓✓" as plain text: its length is what the last line of the message leaves room for.
+    private var metaText: String {
+        var parts: [String] = []
+        if message.viewCount > 0 { parts.append("◉ " + message.viewCount.formatted(.number.notation(.compactName).locale(Loc.locale))) }
+        if message.isEdited || message.hasEditHistory { parts.append(L("изм.")) }
+        parts.append(message.date.timeStamp)
+        if message.isOutgoing, message.isSent { parts.append(isRead ? "✓✓" : "✓") }
+        return parts.joined(separator: " ")
+    }
+
+    /// In the bubble's lower right corner, where every messenger keeps it.
+    private var metaLabel: some View {
+        Text(verbatim: metaText)
+            .font(.system(size: 10, weight: .medium))
+            .monospacedDigit()
+            .foregroundStyle(message.isOutgoing ? AnyShapeStyle(.white.opacity(0.72)) : AnyShapeStyle(.secondary))
+            .lineLimit(1)
+            .fixedSize()
+            .help(message.isOutgoing ? (isRead ? L("Прочитано") : L("Доставлено")) : "")
+    }
+
+    /// The bubble ends in words, so the time shares their last line; otherwise it gets a strip of its own.
+    private var endsWithText: Bool {
+        if model.translation(of: message) != nil || model.isTranslating(message) || message.linkPreview != nil { return false }
+        if message.poll != nil || message.contact != nil || message.dice != nil { return false }
+        if message.location != nil || message.document != nil || message.media != nil { return !message.caption.isEmpty }
+        if case .text = message.body { return true }
+        return false
     }
 
     private var bubbleBody: some View {
@@ -1216,11 +1252,23 @@ struct MessageRow: View {
                 LinkPreviewCard(preview: preview)
                     .layoutValue(key: BubblePartKey.self, value: .fill)
             }
+            if !endsWithText {
+                // Nothing to share a line with: a strip under the card or the file for the time to sit on,
+                // as wide as the time so a narrow bubble grows to hold it.
+                metaLabel.hidden()
+                    .frame(height: 8)
+                    .layoutValue(key: BubblePartKey.self, value: .fill)
+            }
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 8)
         .bubbleInk(isOutgoing: message.isOutgoing)
         .background(bubbleColor, in: BubbleShape(isOutgoing: message.isOutgoing, hasTail: row.endsGroup))
+        .overlay(alignment: .bottomTrailing) {
+            metaLabel
+                .padding(.trailing, 11)
+                .padding(.bottom, 6)
+        }
         .overlay { failureOutline(radius: 18) }
     }
 
@@ -1262,7 +1310,13 @@ struct MessageRow: View {
         // `emojiRound` is read so the text is drawn again once this row's custom emoji have been decoded.
         let pictured = emojiRound >= 0 && !customEmojiIds.isEmpty
             ? CustomEmoji.text(shown, entities, fontSize: Double(messageFontSize)) : nil
-        let words: Text = pictured ?? (entities.isEmpty ? Text(verbatim: shown) : Text(formattedText(shown, entities)))
+        var words: Text = pictured ?? (entities.isEmpty ? Text(verbatim: shown) : Text(formattedText(shown, entities)))
+        if hasInlineMeta, endsWithText {
+            // Unbreakable blanks as wide as the time: the last line keeps that much free for it, and when it
+            // has no room they wrap, which makes a line for the time to sit on.
+            let room = String(repeating: "\u{2007}", count: metaText.count + 2)
+            words = words + Text(verbatim: " " + room).font(.system(size: 10, weight: .medium))
+        }
         return words
             .font(.system(size: Double(messageFontSize)))
             .lineSpacing(1.5)
@@ -1328,7 +1382,7 @@ struct MessageRow: View {
             if message.isDeleted {
                 Label(L("удалено"), systemImage: "trash")
                     .foregroundStyle(.red)
-            } else if message.isEdited || message.hasEditHistory {
+            } else if !hasInlineMeta, message.isEdited || message.hasEditHistory {
                 Text(L("изменено"))
             }
             if marksLocalEdits, message.localText != nil {
@@ -1339,14 +1393,16 @@ struct MessageRow: View {
             if message.isPinned {
                 Image(systemName: "pin.fill")
             }
-            if message.isOutgoing {
+            if message.isOutgoing, !hasInlineMeta || message.isPending || message.isFailed {
                 delivery
             }
-            if message.viewCount > 0 {
-                Label(message.viewCount.formatted(.number.notation(.compactName)), systemImage: "eye")
-                    .help(L("Просмотры"))
+            if !hasInlineMeta {
+                if message.viewCount > 0 {
+                    Label(message.viewCount.formatted(.number.notation(.compactName)), systemImage: "eye")
+                        .help(L("Просмотры"))
+                }
+                Text(message.date.timeStamp)
             }
-            Text(message.date.timeStamp)
             if showsIdentifiers {
                 Text("· id \(String(message.id))")
                     .font(.system(size: 10, design: .monospaced))

@@ -24,7 +24,10 @@ struct SettingsView: View {
             Tab(L("Аккаунт"), systemImage: "person.crop.circle") { AccountSettings() }
             Tab(L("Для разработчиков"), systemImage: "hammer") { DeveloperSettings() }
         }
-        .frame(width: 640, height: 460)
+        // Eight panes do not fit a toolbar of tabs: they went behind a "»". A sidebar holds them all, as in
+        // System Settings.
+        .tabViewStyle(.sidebarAdaptable)
+        .frame(width: 800, height: 540)
     }
 }
 
@@ -46,18 +49,22 @@ private struct GeneralSettings: View {
     var body: some View {
         Form {
             Section {
-                Stepper(value: $messageFontSize, in: 11...20) {
-                    LabeledContent(L("Размер текста сообщений"), value: "\(messageFontSize) pt")
-                }
-                .help(L("Также ⌘+ и ⌘− в окне переписки"))
                 Picker(L("Язык интерфейса"), selection: $language) {
                     Text(L("Как в системе")).tag("system")
                     Text("Русский").tag("ru")
                     Text("English").tag("en")
                 }
-                .help(L("Меняется после перезапуска Easy"))
                 Toggle(L("Проверять обновления при запуске"), isOn: $checksUpdates)
-                    .help(L("Один запрос к GitHub при запуске: есть ли версия новее. Больше ничего не передаётся."))
+            } header: {
+                Text(L("Приложение"))
+            } footer: {
+                Text(L("Язык меняется после перезапуска Easy. Проверка обновлений — один запрос к GitHub при запуске; больше ничего не передаётся."))
+            }
+            Section {
+                Stepper(value: $messageFontSize, in: 11...20) {
+                    LabeledContent(L("Размер текста сообщений"), value: "\(messageFontSize) pt")
+                }
+                .help(L("Также ⌘+ и ⌘− в окне переписки"))
                 Picker(L("Отправка сообщения"), selection: $sendsWithCommandReturn) {
                     Text("Return").tag(false)
                     Text(L("⌘Return (Return — новая строка)")).tag(true)
@@ -67,7 +74,6 @@ private struct GeneralSettings: View {
                         Text(language.name).tag(language.code)
                     }
                 }
-                .frame(maxWidth: 260, alignment: .leading)
             } header: {
                 Text(L("Сообщения"))
             } footer: {

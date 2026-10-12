@@ -1928,5 +1928,26 @@ MainActor.assumeIsolated {
           "versions are compared number by number")
 }
 
+// --- stories in the sidebar: what is up, what is unwatched, and in which order ----------------------------------
+MainActor.assumeIsolated {
+    let model = AppModel()
+    func stories(_ chat: Int64, order: Int64, ids: [Int], read: Int, list: String = #"{"@type":"storyListMain"}"#) -> TDNode {
+        let infos = ids.map { #"{"@type":"storyInfo","story_id":\#($0),"date":1,"is_for_close_friends":false}"# }.joined(separator: ",")
+        return json(#"{"@type":"updateChatActiveStories","active_stories":{"@type":"chatActiveStories","chat_id":\#(chat),"list":\#(list),"order":\#(order),"max_read_story_id":\#(read),"stories":[\#(infos)]}}"#)
+    }
+    model.apply(stories(11, order: 100, ids: [1, 2], read: 2))
+    model.apply(stories(22, order: 50, ids: [5], read: 0))
+    model.apply(stories(33, order: 300, ids: [7, 8], read: 8))
+    check(model.storyChats.map(\.id) == [22, 33, 11], "unwatched stories come first, then Telegram's order: \(model.storyChats.map(\.id))")
+    check(model.storyChats.first?.hasUnseen == true && model.storyChats.last?.hasUnseen == false && model.storyChats.last?.count == 2,
+          "a chat knows whether its newest story was watched, and how many it has")
+    model.apply(stories(22, order: 50, ids: [5], read: 5))
+    check(model.storyChats.map(\.id) == [33, 11, 22], "watching one moves it behind the others")
+    model.apply(stories(33, order: 300, ids: [], read: 8))
+    check(model.storyChats.map(\.id) == [11, 22], "a chat whose stories ran out leaves the row")
+    model.apply(stories(11, order: 100, ids: [1, 2, 3], read: 2, list: #"{"@type":"storyListArchive"}"#))
+    check(model.storyChats.map(\.id) == [22], "and so does one moved to the hidden list")
+}
+
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")
 exit(failures == 0 ? 0 : 1)

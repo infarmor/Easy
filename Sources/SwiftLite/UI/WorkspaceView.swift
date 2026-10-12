@@ -52,6 +52,20 @@ struct WorkspaceView: View {
             DownloadsSheet()
                 .environment(model)
         }
+        .sheet(item: $model.mediaGallery) { scope in
+            MediaGallerySheet(scope: scope)
+                .environment(model)
+        }
+        .sheet(item: $model.storyViewer) { target in
+            StoryViewer(chatId: target.id, name: target.name)
+                .environment(model)
+        }
+        .sheet(isPresented: Binding(get: { model.storyDraft != nil }, set: { if !$0 { model.storyDraft = nil } })) {
+            if let file = model.storyDraft {
+                StoryPostSheet(file: file)
+                    .environment(model)
+            }
+        }
     }
 }
 
@@ -369,6 +383,10 @@ struct ChatListView: View {
             Button(skipped ? L("Скрывать рекламу в этом канале") : L("Не скрывать рекламу в этом канале"), systemImage: skipped ? "eye.slash" : "eye") {
                 AdFilter.setExempt(!skipped, chatId: chat.id)
             }
+        }
+        Button(L("Фото и видео чата…"), systemImage: "photo.on.rectangle") {
+            hub?.activate(model.slot)
+            model.mediaGallery = .chat(chat.id, title: chat.title)
         }
         Button(L("Сохранить чат в Markdown…"), systemImage: "square.and.arrow.down") {
             let panel = NSSavePanel()
@@ -894,6 +912,7 @@ private struct SidebarHeader: View {
                     Toggle(L("Только с черновиками"), isOn: $showsDraftsOnly)
                     Button(L("Избранное"), systemImage: "bookmark") { Task { await model.openSavedMessages() } }
                     Button(L("Загрузки…"), systemImage: "arrow.down.circle") { model.showsDownloads = true }
+                    Button(L("Фото и видео…"), systemImage: "photo.on.rectangle") { model.mediaGallery = .everywhere }
                     Divider()
                     Button(L("Прочитать всё здесь…"), systemImage: "checkmark.message") {
                         let waiting = model.unreadChatsOnScreen
@@ -964,6 +983,9 @@ private struct SidebarHeader: View {
             .frame(height: 28)
             .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             .help(L("Чаты, люди и сообщения (⌘K)"))
+            if model.filter.isEmpty {
+                StoriesRow()
+            }
         }
         .padding(.horizontal, 10)
         .padding(.top, 6)

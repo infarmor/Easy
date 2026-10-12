@@ -229,6 +229,14 @@ final class AppModel {
     /// The sheets for a new group, channel or contact, and for the files this account has downloaded.
     var showsCreateChat = false
     var showsDownloads = false
+    /// The gallery of photos and videos: of one chat, or of all of them.
+    var mediaGallery: MediaScope?
+    /// Whose stories the viewer is showing.
+    var storyViewer: StoryTarget?
+    /// The picture or video picked for a story of your own, waiting for its caption.
+    var storyDraft: URL?
+    /// People and channels with stories up right now, in Telegram's order.
+    var storyChats: [StoryChat] = []
     /// A chat was opened from the keyboard (Return in the sidebar search): its composer takes the focus, so
     /// the next thing typed is the message rather than more of the search.
     var wantsComposerFocus = false
@@ -888,6 +896,7 @@ final class AppModel {
             onRead: { [weak self] chatId in Task { await self?.markRead(chatId) } })
         // The chat list is what the window waits for: it starts first, the rest runs alongside it.
         Task { await loadChats() }
+        Task { await loadStories() }
         async let meRequest = request(["@type": "getMe"])
         // Scope defaults decide which chats are muted; TDLib also pushes them as updates later.
         let scopes = [ChatKind.personal, .group, .channel].map { TD.notificationScope(of: $0) }
@@ -1067,6 +1076,10 @@ final class AppModel {
         tdlibVersion = ""
         accountName = ""
         ownedStars = nil
+        storyChats = []
+        storyViewer = nil
+        storyDraft = nil
+        mediaGallery = nil
         myUserId = 0
         forwardingBatch = nil
         loadingChatLists = []
@@ -1291,6 +1304,9 @@ final class AppModel {
                 $0.lastReadInboxId = lastRead
             }
             notifier.withdraw(account: slot, chatId: chatId, upTo: lastRead)
+
+        case "updateChatActiveStories":
+            noteActiveStories(update.tdNode("active_stories") ?? [:])
 
         case "updateOwnedStarCount":
             ownedStars = update.tdNode("star_amount")?.tdInt("star_count")
