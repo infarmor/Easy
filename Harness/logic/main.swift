@@ -1905,6 +1905,27 @@ MainActor.assumeIsolated {
     check(AdFilter.reason(for: post("Заходи в КАЗИНО"), in: .personal) == .word("казино"), "a word from the user's list folds a message in any chat")
     check(AdFilter.reason(for: post("обычное сообщение"), in: .personal) == nil, "and leaves the rest alone")
     UserDefaults.standard.removeObject(forKey: Preferences.filterWords)
+
+    // One channel can be left alone, and a post pointed at teaches the filter what its ads look like.
+    AdFilter.setExempt(true, chatId: -1009)
+    check(AdFilter.reason(for: post("#реклама"), in: .channel) == nil, "a channel taken out of the filter keeps its ads")
+    AdFilter.setExempt(false, chatId: -1009)
+    check(AdFilter.reason(for: post("#реклама"), in: .channel) == .advertisement, "and gets it back")
+    AdFilter.forgetLearned()
+    let unmarked = post("Лучшие кроссовки тут: https://shoes-shop.example/sale и у @sneaker_dealer")
+    check(AdFilter.reason(for: unmarked, in: .channel) == nil, "an ad without marks gets through at first")
+    check(AdFilter.learn(from: unmarked) == 2, "pointing at it teaches the link's host and the @name")
+    check(AdFilter.reason(for: post("Снова скидки на shoes-shop.example"), in: .channel) == .advertisement, "the same shop is hidden next time")
+    check(AdFilter.reason(for: post("спасибо @sneaker_dealer за обзор"), in: .channel) == .advertisement, "and the same @name")
+    check(AdFilter.learn(from: unmarked) == 0, "nothing is learned twice")
+    AdFilter.forgetLearned()
+    check(AdFilter.reason(for: post("Снова скидки на shoes-shop.example"), in: .channel) == nil, "forgetting puts it back")
+    check(!AdFilter.noteReveal(in: 5) && !AdFilter.noteReveal(in: 5) && AdFilter.noteReveal(in: 5) && !AdFilter.noteReveal(in: 5),
+          "the third post shown in a channel is the one moment the hint is given")
+
+    check(Updates.isNewer("0.10.0", than: "0.9.3") && Updates.isNewer("1.0", than: "0.9.9") && !Updates.isNewer("0.3.0", than: "0.3.0")
+            && !Updates.isNewer("0.2.9", than: "0.3.0") && Updates.isNewer("0.3.1", than: "0.3"),
+          "versions are compared number by number")
 }
 
 print(failures == 0 ? "ALL PASSED (\(checks) checks)" : "\(failures) FAILED of \(checks)")

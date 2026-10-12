@@ -15,9 +15,95 @@ enum AdFilter {
         let text = searchable(message)
         guard !text.isEmpty else { return nil }
         if let word = userWords.first(where: { text.contains($0) }) { return .word(word) }
-        guard kind == .channel, Preferences.isOn(Preferences.hideAds) else { return nil }
-        return looksLikeAd(text) ? .advertisement : nil
+        guard kind == .channel, Preferences.isOn(Preferences.hideAds), !isExempt(message.chatId) else { return nil }
+        if looksLikeAd(text) { return .advertisement }
+        // What the user pointed at as an ad before: the same shop's link or the same @name again.
+        return learned.contains(where: { text.contains($0) }) ? .advertisement : nil
     }
+
+    // MARK: - one channel at a time
+
+    static func isExempt(_ chatId: Int64) -> Bool {
+        exempt.contains(chatId)
+    }
+
+    static func setExempt(_ isExempt: Bool, chatId: Int64) {
+        var chats = exempt
+        if isExempt { chats.insert(chatId) } else { chats.remove(chatId) }
+        UserDefaults.standard.set(chats.map(String.init).sorted().joined(separator: ","), forKey: Preferences.adExemptChats)
+    }
+
+    private static var exempt: Set<Int64> {
+        Set((UserDefaults.standard.string(forKey: Preferences.adExemptChats) ?? "").split(separator: ",").compactMap { Int64($0) })
+    }
+
+    /// Posts of a channel shown again and again are a sign its "ads" are wanted. True on the third one of a
+    /// channel in this session, once: the moment to say that the filter can be turned off for it.
+    static func noteReveal(in chatId: Int64) -> Bool {
+        reveals[chatId, default: 0] += 1
+        return reveals[chatId] == 3
+    }
+
+    nonisolated(unsafe) private static var reveals: [Int64: Int] = [:]
+
+    // MARK: - learning
+
+    /// What marks this post as somebody's advertisement beyond the legal marks: where its links lead and
+    /// whom it mentions. Telegram's own hosts say nothing by themselves, so for them the name after the
+    /// slash is taken. Returns how many new marks were learned.
+    @discardableResult
+    static func learn(from message: Message) -> Int {
+        var found: Set<String> = []
+        var links: [URL] = []
+        for entity in message.entities {
+            if case .link(let url) = entity.style { links.append(url) }
+        }
+        if let preview = message.linkPreview { links.append(preview.url) }
+        let text = searchable(message)
+        for match in plainLink.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            if let range = Range(match.range, in: text), let url = URL(string: String(text[range])) { links.append(url) }
+        }
+        for url in links {
+            guard let host = url.host?.lowercased() else { continue }
+            if ["t.me", "telegram.me", "telegram.dog"].contains(host) {
+                if let name = url.pathComponents.dropFirst().first, name.count >= 4, !name.hasPrefix("+") {
+                    found.insert("t.me/" + name.lowercased())
+                }
+            } else {
+                found.insert(host.hasPrefix("www.") ? String(host.dropFirst(4)) : host)
+            }
+        }
+        for match in mention.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            if let range = Range(match.range, in: text) { found.insert(String(text[range])) }
+        }
+        let known = Set(learned)
+        let fresh = found.subtracting(known)
+        guard !fresh.isEmpty else { return 0 }
+        // A few hundred marks at most: the oldest give way, so a long-used list does not slow every row.
+        let all = Array((learned + fresh.sorted()).suffix(300))
+        UserDefaults.standard.set(all.joined(separator: "\n"), forKey: Preferences.adLearned)
+        return fresh.count
+    }
+
+    static func forgetLearned() {
+        UserDefaults.standard.removeObject(forKey: Preferences.adLearned)
+    }
+
+    static var learnedCount: Int { learned.count }
+
+    private static var learned: [String] {
+        let raw = UserDefaults.standard.string(forKey: Preferences.adLearned) ?? ""
+        if raw != cachedLearnedRaw {
+            cachedLearnedRaw = raw
+            cachedLearned = raw.split(separator: "\n").map(String.init).filter { $0.count >= 4 }
+        }
+        return cachedLearned
+    }
+
+    nonisolated(unsafe) private static var cachedLearnedRaw = ""
+    nonisolated(unsafe) private static var cachedLearned: [String] = []
+    private static let mention = try! NSRegularExpression(pattern: #"@[a-z0-9_]{5,32}"#)
+    private static let plainLink = try! NSRegularExpression(pattern: #"https?://[^\s<>"']+"#)
 
     /// Everything a marker can hide in: the text or caption, the addresses behind links, the link preview.
     private static func searchable(_ message: Message) -> String {

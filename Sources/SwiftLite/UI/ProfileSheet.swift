@@ -12,6 +12,9 @@ struct ProfileSheet: View {
     /// nil for a chat this account does not have, which has no notifications to silence.
     @State private var isMuted: Bool?
     @State private var showsGifts = false
+    @State private var showsStories = false
+    /// The photo settles into place when the sheet comes up.
+    @State private var hasAppeared = false
     let info: ProfileInfo
 
     var body: some View {
@@ -89,6 +92,7 @@ struct ProfileSheet: View {
         }
         .frame(width: 440, height: 640)
         .onAppear {
+            withAnimation(.spring(duration: 0.45, bounce: 0.3).delay(0.08)) { hasAppeared = true }
             isBlocked = info.isBlocked
             isMuted = model.isChatMuted(info.chatId)
         }
@@ -99,6 +103,9 @@ struct ProfileSheet: View {
             Task { await model.openMessageLink(url) }
             return .handled
         })
+        .sheet(isPresented: $showsStories) {
+            StoryViewer(chatId: info.chatId, name: info.title).environment(model)
+        }
         .sheet(isPresented: $showsGifts) {
             GiftSheet(userId: info.userId, name: info.title).environment(model)
         }
@@ -110,6 +117,8 @@ struct ProfileSheet: View {
             Avatar(title: info.title, seed: info.seed, photo: info.photo, diameter: 104)
                 .overlay(Circle().strokeBorder(.white.opacity(0.85), lineWidth: 3))
                 .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
+                .scaleEffect(hasAppeared ? 1 : 0.86)
+                .opacity(hasAppeared ? 1 : 0)
                 .padding(.top, 34)
                 .frame(maxWidth: .infinity)
                 .background(alignment: .top) { banner }
@@ -204,6 +213,9 @@ struct ProfileSheet: View {
             }
             if info.userId != 0, !info.isSelf, info.subtitle != L("бот") {
                 action(L("Подарок"), "gift.fill") { showsGifts = true }
+            }
+            if !info.isSelf, info.subtitle != L("бот") {
+                action(L("Истории"), "circle.dashed") { showsStories = true }
             }
             if !info.isSelf, let muted = isMuted {
                 action(muted ? L("Со звуком") : L("Без звука"), muted ? "bell.fill" : "bell.slash.fill") {

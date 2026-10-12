@@ -15,6 +15,14 @@ enum Preferences {
     static let hideAds = "hideAds"
     /// Words, separated by commas: an incoming message with any of them is folded away too.
     static let filterWords = "filterWords"
+    /// Channels whose advertising posts are left as they are: chat ids, separated by commas.
+    static let adExemptChats = "adExemptChats"
+    /// What "hide as an ad" taught the filter: link hosts and @names, one per line.
+    static let adLearned = "adLearned"
+    /// Ask GitHub at launch whether a newer release is out.
+    static let checkUpdates = "checkUpdates"
+    /// The release the user said "not this one" to.
+    static let skippedUpdate = "skippedUpdate"
 
     static let notificationsEnabled = "notificationsEnabled"
     static let notificationSound = "notificationSound"
@@ -60,6 +68,7 @@ enum Preferences {
             messageFontSize: 14,
             chatBackground: "glass",
             hideAds: true,
+            checkUpdates: true,
             showAvatars: true,
             animateStickers: true,
             backgroundDim: 0.26,

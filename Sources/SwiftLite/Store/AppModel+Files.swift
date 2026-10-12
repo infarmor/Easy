@@ -207,6 +207,51 @@ extension AppModel {
         }
     }
 
+    // MARK: - one chat as Markdown
+
+    /// Writes the chat's history as a Markdown file: a heading per day, then who said what and when. Text
+    /// only; a photo or a file is named, not embedded.
+    func exportMarkdown(of chat: Chat, to file: URL, limit: Int = 10_000) {
+        guard exportTask == nil else {
+            fail(L("Другой экспорт ещё идёт"))
+            return
+        }
+        exportTask = Task {
+            defer { exportTask = nil; exportProgress = nil }
+            do {
+                exportProgress = L("Читаю историю…")
+                let messages = try await exportHistory(of: chat, limit: limit) { count in
+                    self.exportProgress = L("Сообщений прочитано: \(count)")
+                }
+                var lines = ["# " + (chat.title.isEmpty ? L("Без названия") : chat.title), ""]
+                var day = ""
+                let dayFormat = Date.FormatStyle.dateTime.day().month(.wide).year().locale(Loc.locale)
+                let timeFormat = Date.FormatStyle.dateTime.hour().minute().locale(Loc.locale)
+                for message in messages {
+                    let stamp = message.date.formatted(dayFormat)
+                    if stamp != day {
+                        day = stamp
+                        lines += ["## " + stamp, ""]
+                    }
+                    var head = "**" + message.sender.replacingOccurrences(of: "*", with: "\\*") + "** · " + message.date.formatted(timeFormat)
+                    if let from = message.forwardedFrom, !from.isEmpty { head += " · " + L("переслано от \(from)") }
+                    if message.edited { head += " · " + L("изменено") }
+                    lines.append(head)
+                    // Two trailing spaces keep a line break a line break in Markdown.
+                    lines.append(message.text.split(separator: "\n", omittingEmptySubsequences: false).joined(separator: "  \n"))
+                    lines.append("")
+                }
+                try lines.joined(separator: "\n").write(to: file, atomically: true, encoding: .utf8)
+                lastExport = file
+                showToast(L("Чат сохранён в Markdown: \(messages.count) сообщений"))
+            } catch is CancellationError {
+                // Stopped from the settings.
+            } catch {
+                fail(error)
+            }
+        }
+    }
+
     /// Newest first from TDLib, returned oldest first. Pages continue from the oldest message seen.
     private func exportHistory(of chat: Chat, limit: Int, progress: (Int) -> Void) async throws -> [ExportFormat.ExportedMessage] {
         var collected: [TDNode] = []

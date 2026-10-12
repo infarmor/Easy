@@ -148,6 +148,29 @@ final class MessageArchive {
         }
     }
 
+    /// Everything kept whose text, or an earlier version of it, has the words: newest first. Looks through
+    /// what is in memory, which is all of it.
+    func search(_ query: String, limit: Int = 40) -> [Message] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard needle.count >= 2 else { return [] }
+        var found: [Entry] = []
+        for chat in entries.values {
+            for entry in chat.values where entry.deletedAt != nil || !entry.versions.isEmpty {
+                if entry.text.lowercased().contains(needle) || entry.versions.contains(where: { $0.text.lowercased().contains(needle) }) {
+                    found.append(entry)
+                }
+            }
+        }
+        return found.sorted { $0.date > $1.date }.prefix(limit).map { entry in
+            var message = Message(id: entry.messageId, chatId: entry.chatId, senderKey: entry.senderKey, isOutgoing: entry.isOutgoing,
+                                  body: .text(entry.text), date: entry.date, isPending: false, isFailed: false, isPinned: false)
+            message.isDeleted = entry.deletedAt != nil
+            message.hasEditHistory = !entry.versions.isEmpty
+            message.localText = entry.localText
+            return message
+        }
+    }
+
     func localText(chatId: Int64, messageId: Int64) -> String? {
         entries[chatId]?[messageId]?.localText
     }

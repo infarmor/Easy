@@ -20,6 +20,7 @@ struct SwiftLiteApp: App {
                 .task {
                     delegate.hub = hub
                     hub.boot()
+                    Updates.shared.check()
                 }
         }
         .defaultSize(width: 1160, height: 740)

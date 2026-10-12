@@ -226,6 +226,9 @@ final class AppModel {
     var hasDraftText = false
     /// The "Новый чат" sheet is on screen.
     var showsNewChat = false
+    /// The sheets for a new group, channel or contact, and for the files this account has downloaded.
+    var showsCreateChat = false
+    var showsDownloads = false
     /// A chat was opened from the keyboard (Return in the sidebar search): its composer takes the focus, so
     /// the next thing typed is the message rather than more of the search.
     var wantsComposerFocus = false

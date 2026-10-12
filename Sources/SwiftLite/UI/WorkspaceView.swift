@@ -44,6 +44,14 @@ struct WorkspaceView: View {
             NewChatSheet()
                 .environment(model)
         }
+        .sheet(isPresented: $model.showsCreateChat) {
+            CreateChatSheet()
+                .environment(model)
+        }
+        .sheet(isPresented: $model.showsDownloads) {
+            DownloadsSheet()
+                .environment(model)
+        }
     }
 }
 
@@ -59,6 +67,11 @@ struct ChatListView: View {
     @Environment(AccountHub.self) private var hub: AccountHub?
     /// Only chats with something unread, and the open one so it does not vanish from under the pointer.
     @State private var showsUnreadOnly = false
+    /// Only chats with something written and not sent.
+    @State private var showsDraftsOnly = false
+    /// Messages found in the accounts that are not in the window, for the words in the search field.
+    @State private var foundElsewhere: [(message: Message, owner: AppModel)] = []
+    @AppStorage(Preferences.adExemptChats) private var exemptChats = ""
 
     /// The chats of every account in one list: with more than one account, unless a search is on.
     private var showsAllAccounts: Bool {
@@ -69,9 +82,7 @@ struct ChatListView: View {
     var body: some View {
         @Bindable var model = model
         // Computed once per redraw: while searching it filters and sorts every known chat.
-        let visible = showsUnreadOnly && model.filter.isEmpty
-            ? model.visibleChats.filter { $0.unread > 0 || $0.isMarkedUnread || $0.unreadMentions > 0 || $0.id == model.selection }
-            : model.visibleChats
+        let visible = model.filter.isEmpty ? model.visibleChats.filter(passesFilter) : model.visibleChats
         // The order of what is on screen, for the animation below: a chat with a new message rises to the top
         // rather than the rows being swapped under the eye. Not while the list is still filling at launch,
         // when hundreds of rows arrive at once and would all be sent sliding.
@@ -111,6 +122,28 @@ struct ChatListView: View {
                         }
                     }
                 }
+                if !foundElsewhere.isEmpty, let hub {
+                    Section {
+                        ForEach(foundElsewhere, id: \.message.id) { item in
+                            FoundMessageRow(message: item.message, before: { hub.activate(item.owner.slot) })
+                                .environment(item.owner)
+                                .listRowSeparator(.hidden)
+                        }
+                    } header: {
+                        SectionHeading(title: L("Сообщения в других аккаунтах"), systemImage: "person.2")
+                    }
+                }
+                let kept = model.keptMessages(matching: model.filter)
+                if !kept.isEmpty {
+                    Section {
+                        ForEach(kept, id: \.id) { message in
+                            FoundMessageRow(message: message)
+                                .listRowSeparator(.hidden)
+                        }
+                    } header: {
+                        SectionHeading(title: L("Удалённые и изменённые"), systemImage: "clock.arrow.circlepath")
+                    }
+                }
                 if !model.foundMessages.isEmpty {
                     Section {
                         ForEach(model.foundMessages) { message in
@@ -136,6 +169,26 @@ struct ChatListView: View {
             }
         }
         .animation(.smooth(duration: 0.3), value: order)
+        // The quick filters fold the list rather than swap it.
+        .animation(.smooth(duration: 0.25), value: showsUnreadOnly)
+        .animation(.smooth(duration: 0.25), value: showsDraftsOnly)
+        // The other accounts are asked after a pause in typing, like the account in the window asks itself.
+        .task(id: model.filter) {
+            let query = model.filter.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard query.count >= 2, let hub, hub.accounts.count > 1 else {
+                foundElsewhere = []
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            var found: [(message: Message, owner: AppModel)] = []
+            for account in hub.accounts where account.id != model.slot {
+                guard let owner = hub.model(for: account.id) else { continue }
+                for message in await owner.messages(matching: query) { found.append((message, owner)) }
+            }
+            guard !Task.isCancelled else { return }
+            foundElsewhere = found.sorted { $0.message.date > $1.message.date }
+        }
         // One menu for the list, built when a row is right-clicked. A menu on every row was built with the
         // row, hundreds of them for a long list, whether or not anyone ever opened one.
         .contextMenu(forSelectionType: Int64.self) { ids in
@@ -145,6 +198,7 @@ struct ChatListView: View {
         }
         .overlay {
             if visible.isEmpty && model.foundMessages.isEmpty && model.foundPublicChats.isEmpty && !showsAllAccounts,
+               foundElsewhere.isEmpty, model.keptMessages(matching: model.filter).isEmpty,
                hub?.matches(model.filter, outside: model).isEmpty ?? true {
                 ContentUnavailableView(
                     L("Пусто"),
@@ -158,7 +212,7 @@ struct ChatListView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             // The header counts what is on screen, so it is handed the list the rows were built from rather
             // than recomputing it: while searching, `model.chats` is still the whole place.
-            SidebarHeader(shownChats: visible.count, showsUnreadOnly: $showsUnreadOnly)
+            SidebarHeader(shownChats: visible.count, showsUnreadOnly: $showsUnreadOnly, showsDraftsOnly: $showsDraftsOnly)
         }
         .toolbar {
             // Where Messages keeps "compose": a new chat with someone from your contacts.
@@ -192,6 +246,32 @@ struct ChatListView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 ErrorBanner()
+                if let release = Updates.shared.available {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text(L("Вышла версия \(release.version)"))
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        Button(L("Скачать")) { NSWorkspace.shared.open(release.page) }
+                            .buttonStyle(.plain)
+                            .fontWeight(.semibold)
+                        Button {
+                            Updates.shared.dismiss()
+                        } label: {
+                            Image(systemName: "xmark").font(.caption.weight(.bold))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .help(L("Пропустить эту версию"))
+                    }
+                    .font(.callout)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .glassSurface(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
                 // The account, like the user card at the bottom of Apple's sidebars.
                 HStack(spacing: 9) {
                     Button {
@@ -235,6 +315,7 @@ struct ChatListView: View {
                 .padding(.horizontal, 8)
                 .padding(.bottom, 8)
             }
+            .animation(.spring(duration: 0.35, bounce: 0.15), value: Updates.shared.available)
         }
         // The list's own ground and selection give way to the indigo and to the card drawn behind the open chat.
         .scrollContentBackground(.hidden)
@@ -276,6 +357,25 @@ struct ChatListView: View {
         }
         Button(chat.isArchived ? L("Вернуть из архива") : L("Архивировать"), systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
             Task { await model.toggleChatArchived(chat) }
+        }
+        Divider()
+        if chat.kind != .channel {
+            Button(L("Быстрый ответ…"), systemImage: "arrowshape.turn.up.left") {
+                guard let text = Dialogs.prompt(L("Ответ в «\(chat.title)»"), hint: L("Сообщение уйдёт сразу, чат не откроется.")), !text.isEmpty else { return }
+                Task { await model.quickReply(text, to: chat.id) }
+            }
+        } else {
+            let skipped = AdFilter.isExempt(chat.id)
+            Button(skipped ? L("Скрывать рекламу в этом канале") : L("Не скрывать рекламу в этом канале"), systemImage: skipped ? "eye.slash" : "eye") {
+                AdFilter.setExempt(!skipped, chatId: chat.id)
+            }
+        }
+        Button(L("Сохранить чат в Markdown…"), systemImage: "square.and.arrow.down") {
+            let panel = NSSavePanel()
+            panel.nameFieldStringValue = (chat.title.isEmpty ? "chat" : chat.title.replacingOccurrences(of: "/", with: "-")) + ".md"
+            panel.allowedContentTypes = [.init(filenameExtension: "md") ?? .plainText]
+            guard panel.runModal() == .OK, let file = panel.url else { return }
+            model.exportMarkdown(of: chat, to: file)
         }
         Divider()
         chatActions(chat, in: model)
@@ -334,14 +434,18 @@ struct ChatListView: View {
         }
     }
 
+    /// The sidebar's two quick filters; the open chat stays so it does not vanish from under the pointer.
+    private func passesFilter(_ chat: Chat) -> Bool {
+        if showsUnreadOnly, !(chat.unread > 0 || chat.isMarkedUnread || chat.unreadMentions > 0), chat.id != model.selection { return false }
+        if showsDraftsOnly, chat.draftText.isEmpty, chat.id != model.selection { return false }
+        return true
+    }
+
     /// Every account's chats together. A row of the account in the window is selected as usual; a row of
     /// another account brings that account into the window with its chat, so the answer goes from the
     /// account the message came to, without picking it first.
     private func allAccountsRows(_ hub: AccountHub) -> some View {
-        let all = showsUnreadOnly
-            ? hub.allChats.filter { $0.chat.unread > 0 || $0.chat.isMarkedUnread || $0.chat.unreadMentions > 0
-                || ($0.owner === model && $0.chat.id == model.selection) }
-            : hub.allChats
+        let all = hub.allChats.filter { passesFilter($0.chat) || ($0.owner === model && $0.chat.id == model.selection) }
         return ForEach(all) { item in
             let isOwn = item.owner === model
             let isOpen = isOwn && item.chat.id == model.selection
@@ -351,7 +455,8 @@ struct ChatListView: View {
                 .listRowBackground(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(isOpen ? Color.white.opacity(scheme == .light ? 0.92 : 0.16) : .clear)
-                        .padding(.horizontal, 8))
+                        .padding(.horizontal, 8)
+                        .animation(.smooth(duration: 0.18), value: isOpen))
             if isOwn {
                 row.tag(item.chat.id)
             } else {
@@ -373,7 +478,8 @@ struct ChatListView: View {
                 .listRowBackground(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(isOpen ? Color.white.opacity(scheme == .light ? 0.92 : 0.16) : .clear)
-                        .padding(.horizontal, 8))
+                        .padding(.horizontal, 8)
+                        .animation(.smooth(duration: 0.18), value: isOpen))
                 .modifier(HoverPrefetch(chatId: chat.id))
                 // A two-finger swipe does what the context menu's most common items do.
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -411,6 +517,9 @@ private struct ChatRow: View {
     var isCard = false
     /// In the list of all accounts: whose chat this is. Its photo sits on the corner of the chat's own.
     var owner: AppModel?
+
+    /// Under the pointer the row lifts a shade, so the list answers before it is clicked.
+    @State private var isHovered = false
 
     /// On the indigo anything drawn in that colour would vanish, so it turns white.
     private var isOnAccent: Bool { !isCard }
@@ -515,6 +624,15 @@ private struct ChatRow: View {
             }
         }
         .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(isHovered && !isCard ? 0.06 : 0))
+                .padding(.horizontal, -8)
+                .padding(.vertical, -1)
+        )
+        .onHover { inside in
+            withAnimation(.smooth(duration: 0.15)) { isHovered = inside }
+        }
         .environment(\.colorScheme, isCard ? .light : .dark)
         .accessibilityElement(children: .combine)
     }
@@ -596,6 +714,7 @@ private struct OtherAccountButton: View {
     let account: AccountSlot
     let model: AppModel
     let pick: () -> Void
+    @State private var isHovered = false
 
     var body: some View {
         Button(action: pick) {
@@ -614,8 +733,12 @@ private struct OtherAccountButton: View {
                     }
                 }
                 .contentShape(Circle())
+                .scaleEffect(isHovered ? 1.1 : 1)
         }
         .buttonStyle(PressDimStyle())
+        .onHover { inside in
+            withAnimation(.spring(duration: 0.25, bounce: 0.35)) { isHovered = inside }
+        }
         .help(account.name.isEmpty ? L("Новый аккаунт") : L("Перейти в \(account.name)"))
         .accessibilityLabel(L("Аккаунт \(account.name)"))
     }
@@ -625,10 +748,13 @@ private struct OtherAccountButton: View {
 private struct FoundMessageRow: View {
     @Environment(AppModel.self) private var model
     let message: Message
+    /// For a message of another account: what brings that account into the window first.
+    var before: (() -> Void)? = nil
 
     var body: some View {
         let chat = model.chat(withId: message.chatId)
         Button {
+            before?()
             model.open(message)
         } label: {
             HStack(alignment: .top, spacing: 10) {
@@ -734,6 +860,7 @@ private struct SidebarHeader: View {
     /// Chats the list is showing right now — the place's own, or the matches while searching.
     let shownChats: Int
     @Binding var showsUnreadOnly: Bool
+    @Binding var showsDraftsOnly: Bool
 
     var body: some View {
         @Bindable var model = model
@@ -763,6 +890,10 @@ private struct SidebarHeader: View {
                     Toggle(placeTitle(L("Архив"), model.archiveUnread), isOn: Binding(
                         get: { model.showsArchive },
                         set: { model.showsArchive = $0 }))
+                    Divider()
+                    Toggle(L("Только с черновиками"), isOn: $showsDraftsOnly)
+                    Button(L("Избранное"), systemImage: "bookmark") { Task { await model.openSavedMessages() } }
+                    Button(L("Загрузки…"), systemImage: "arrow.down.circle") { model.showsDownloads = true }
                     Divider()
                     Button(L("Прочитать всё здесь…"), systemImage: "checkmark.message") {
                         let waiting = model.unreadChatsOnScreen
@@ -960,6 +1091,14 @@ struct NewChatSheet: View {
                 Button(L("Избранное")) {
                     dismiss()
                     Task { await model.openSavedMessages() }
+                }
+                Button(L("Группа, канал или контакт…")) {
+                    dismiss()
+                    // A second sheet can only come up once this one has finished going away.
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(350))
+                        model.showsCreateChat = true
+                    }
                 }
                 Spacer()
                 Button(L("Отмена")) { dismiss() }

@@ -40,6 +40,8 @@ private struct GeneralSettings: View {
     @AppStorage(Loc.preference) private var language = "system"
     @AppStorage(Preferences.hideAds) private var hidesAds = true
     @AppStorage(Preferences.filterWords) private var filterWords = ""
+    @AppStorage(Preferences.adLearned) private var learnedAds = ""
+    @AppStorage(Preferences.checkUpdates) private var checksUpdates = true
 
     var body: some View {
         Form {
@@ -54,6 +56,8 @@ private struct GeneralSettings: View {
                     Text("English").tag("en")
                 }
                 .help(L("Меняется после перезапуска Easy"))
+                Toggle(L("Проверять обновления при запуске"), isOn: $checksUpdates)
+                    .help(L("Один запрос к GitHub при запуске: есть ли версия новее. Больше ничего не передаётся."))
                 Picker(L("Отправка сообщения"), selection: $sendsWithCommandReturn) {
                     Text("Return").tag(false)
                     Text(L("⌘Return (Return — новая строка)")).tag(true)
@@ -93,6 +97,11 @@ private struct GeneralSettings: View {
             Section {
                 Toggle(L("Скрывать рекламные посты в каналах"), isOn: $hidesAds)
                 TextField(L("Скрывать сообщения со словами"), text: $filterWords, prompt: Text(L("казино, ставки, розыгрыш")))
+                if !learnedAds.isEmpty {
+                    LabeledContent(L("Выучено признаков рекламы: \(AdFilter.learnedCount)")) {
+                        Button(L("Забыть")) { AdFilter.forgetLearned() }
+                    }
+                }
             } header: {
                 Text(L("Фильтр"))
             } footer: {

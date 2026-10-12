@@ -74,12 +74,14 @@ private final class ScrollBarsOffView: NSView {
     }
 }
 
-/// Plain buttons give no sign that they were hit. Apple's own icon buttons dim a little while pressed.
+/// Plain buttons give no sign that they were hit. Apple's own icon buttons dim a little while pressed, and
+/// give a little under the finger; released, they spring back.
 struct PressDimStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .opacity(configuration.isPressed ? 0.55 : 1)
-            .animation(.smooth(duration: 0.12), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(duration: 0.22, bounce: 0.3), value: configuration.isPressed)
     }
 }
 

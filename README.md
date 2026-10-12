@@ -122,8 +122,9 @@ lifecycle (including a second account), the interface, mini apps, and scrolling.
 
 ## Privacy
 
-Easy talks to Telegram's servers through TDLib; mini apps load their own pages, and nothing is sent anywhere
-else. It runs in the macOS App
+Easy talks to Telegram's servers through TDLib, and mini apps load their own pages. The one other request is
+a check for a newer release on GitHub at launch, which Settings → General turns off. Nothing else is sent
+anywhere. It runs in the macOS App
 Sandbox with network access, the microphone while a voice message records, files you pick or drop, and the
 Downloads folder.
 

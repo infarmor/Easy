@@ -791,6 +791,8 @@ struct MessageRow: View {
     // Read so the row is drawn again when either setting changes; `AdFilter` reads the values itself.
     @AppStorage(Preferences.hideAds) private var hidesAds = true
     @AppStorage(Preferences.filterWords) private var filterWords = ""
+    @AppStorage(Preferences.adLearned) private var learnedAds = ""
+    @AppStorage(Preferences.adExemptChats) private var exemptChats = ""
     /// A message the filter folded away, shown after all because it was asked for.
     @State private var isRevealed = false
 
@@ -807,8 +809,17 @@ struct MessageRow: View {
 
     private var message: Message { row.message }
 
+    /// The next time the clock shows this hour: today if it is still ahead, otherwise tomorrow.
+    private static func next(hour: Int) -> Date {
+        let calendar = Calendar.current
+        let today = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()
+        return today > Date() ? today : calendar.date(byAdding: .day, value: 1, to: today) ?? today
+    }
+
     private var hiddenReason: AdFilter.Reason? {
         guard hidesAds || !filterWords.isEmpty else { return nil }
+        // Named so the row is drawn again when what was learned, or which channels are skipped, changes.
+        _ = (learnedAds, exemptChats)
         return AdFilter.reason(for: message, in: chat.kind)
     }
 
@@ -826,6 +837,10 @@ struct MessageRow: View {
             // Folded, not removed: the post is one click away, and the transcript keeps its place.
             Button {
                 withAnimation(.smooth(duration: 0.2)) { isRevealed = true }
+                // The third post shown in one channel: its ads seem to be wanted, and the filter can skip it.
+                if reason == .advertisement, AdFilter.noteReveal(in: chat.id) {
+                    model.showToast(L("Рекламу этого канала можно не скрывать: правый клик по каналу в списке"))
+                }
             } label: {
                 HStack(spacing: 5) {
                     Image(systemName: "eye.slash")
@@ -1431,6 +1446,20 @@ struct MessageRow: View {
                 }
             }
         }
+        if !message.isDeleted, message.isSent, !message.isScheduled {
+            Menu(L("Напомнить"), systemImage: "bell") {
+                Button(L("Через час")) { Task { await model.remind(about: message, at: Date().addingTimeInterval(3600)) } }
+                Button(L("Сегодня в 20:00")) { Task { await model.remind(about: message, at: Self.next(hour: 20)) } }
+                Button(L("Завтра в 9:00")) { Task { await model.remind(about: message, at: Self.next(hour: 9)) } }
+            }
+        }
+        if chat.kind == .channel, !message.isOutgoing, hidesAds, !message.isDeleted {
+            Button(L("Скрыть как рекламу"), systemImage: "eye.slash") {
+                let learned = AdFilter.learn(from: message)
+                isRevealed = false
+                model.showToast(learned > 0 ? L("Запомнил: похожие посты будут скрыты") : L("В посте нет ссылок и упоминаний, по которым его можно узнать"))
+            }
+        }
         if showsCode, !message.isDeleted {
             Button(L("Код сообщения…"), systemImage: "curlybraces") { Task { await model.inspect(message) } }
         }
@@ -1876,6 +1905,9 @@ struct Composer: View {
                             if model.composerContext?.kind != .edit {
                                 Button(L("Отправить без звука")) { Task { await model.send(silently: true) } }
                                 Button(L("Отправить позже…")) { showsSchedule = true }
+                                if openChat?.kind == .personal, openChat?.isBot == false {
+                                    Button(L("Отправить, когда будет в сети")) { Task { await model.send(whenOnline: true) } }
+                                }
                             }
                         }
                         .popover(isPresented: $showsSchedule, arrowEdge: .top) {

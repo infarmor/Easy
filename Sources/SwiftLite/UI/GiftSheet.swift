@@ -134,6 +134,8 @@ struct GiftSheet: View {
             .background(Color.primary.opacity(isChosen ? 0.1 : 0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(isChosen ? Color.brand : .clear, lineWidth: 2))
             .opacity(gift.isSoldOut ? 0.45 : 1)
+            .scaleEffect(isChosen ? 1.03 : 1)
+            .animation(.spring(duration: 0.25, bounce: 0.3), value: isChosen)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressDimStyle())

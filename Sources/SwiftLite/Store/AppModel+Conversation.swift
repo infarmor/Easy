@@ -127,7 +127,7 @@ extension AppModel {
     }
 
     /// Return sends; the send button's menu sends without sound or at a set time.
-    func send(silently: Bool = false, at date: Date? = nil) async {
+    func send(silently: Bool = false, at date: Date? = nil, whenOnline: Bool = false) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         // An edit may legitimately empty a caption out, so only a fresh message needs text.
         guard let chatId = openChatId, !text.isEmpty || composerContext?.kind == .edit else { return }
@@ -147,7 +147,7 @@ extension AppModel {
         var payload: TDNode = [
             "@type": "sendMessage",
             "chat_id": chatId,
-            "options": Self.sendOptions(silently: silently, at: date),
+            "options": Self.sendOptions(silently: silently, at: date, whenOnline: whenOnline),
             "input_message_content": TD.inputText(text, clearDraft: true, markup: true),
         ]
         if let topic = openTopic { payload["topic_id"] = topic }
@@ -174,9 +174,12 @@ extension AppModel {
         }
     }
 
-    static func sendOptions(silently: Bool = false, at date: Date? = nil) -> TDNode {
+    static func sendOptions(silently: Bool = false, at date: Date? = nil, whenOnline: Bool = false) -> TDNode {
         var options: TDNode = ["@type": "messageSendOptions", "disable_notification": silently]
-        if let date {
+        if whenOnline {
+            // Telegram holds the message and sends it the moment the other person comes online.
+            options["scheduling_state"] = ["@type": "messageSchedulingStateSendWhenOnline"]
+        } else if let date {
             options["scheduling_state"] = ["@type": "messageSchedulingStateSendAtDate", "send_date": Int(date.timeIntervalSince1970)]
         }
         return options
