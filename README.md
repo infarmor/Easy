@@ -126,3 +126,9 @@ Easy talks to Telegram's servers through TDLib; mini apps load their own pages, 
 else. It runs in the macOS App
 Sandbox with network access, the microphone while a voice message records, files you pick or drop, and the
 Downloads folder.
+
+## License
+
+Easy is released under the [MIT License](LICENSE). It is built on [TDLib](https://github.com/tdlib/td)
+(Boost Software License 1.0) and [Lottie](https://github.com/airbnb/lottie-ios) (Apache License 2.0), which
+keep their own licenses.
