@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>ru</string>
 	<key>CFBundleDisplayName</key>
-	<string>iGram</string>
+	<string>Easy</string>
 	<key>CFBundleExecutable</key>
 	<string>SwiftLite</string>
 	<key>CFBundleIconFile</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>iGram</string>
+	<string>Easy</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -33,7 +33,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>iGram записывает голосовые сообщения, только пока идёт запись.</string>
+	<string>Easy записывает голосовые сообщения, только пока идёт запись.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<!-- NSSupportsAutomaticTermination and NSSupportsSuddenTermination stay out on purpose: either one lets the

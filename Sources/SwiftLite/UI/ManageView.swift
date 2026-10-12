@@ -89,22 +89,20 @@ struct ChatManageSheet: View {
     // MARK: - the chat itself
 
     private var infoCard: some View {
-        Section("О чате") {
-            VStack(alignment: .leading, spacing: 8) {
-                TextField("Название", text: $title)
-                    .textFieldStyle(.roundedBorder)
-                TextField("Описание", text: $about, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(2...4)
-                HStack {
-                    Button(saved ? "Сохранено" : "Сохранить") { save() }
-                        .disabled(title.isEmpty || title == chat.title && about == model.chatAccess.about)
-                    if saved {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                    }
-                    Spacer()
+        ManageCard("О чате") {
+            TextField("Название", text: $title)
+                .textFieldStyle(.roundedBorder)
+            TextField("Описание", text: $about, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(2...4)
+            HStack {
+                Button(saved ? "Сохранено" : "Сохранить") { save() }
+                    .disabled(title.isEmpty || title == chat.title && about == model.chatAccess.about)
+                if saved {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
                 }
+                Spacer()
             }
         }
     }
@@ -125,7 +123,7 @@ struct ChatManageSheet: View {
     // MARK: - members
 
     private var membersCard: some View {
-        Section {
+        ManageCard("Участники") {
             TextField("Поиск по имени", text: $query)
                 .textFieldStyle(.roundedBorder)
                 .focused($searchFocused)
@@ -146,22 +144,20 @@ struct ChatManageSheet: View {
                 MemberRow(member: member, chat: chat) {
                     Task { await model.loadMembers(of: chat, query: query) }
                 }
-                Divider()
+                if member.id != model.members.last?.id { Divider() }
             }
             if model.membersTotal > model.members.count {
                 Text("Показано \(model.members.count) из \(model.membersTotal)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-        } header: {
-            Text("Участники")
         }
     }
 
     // MARK: - invite links
 
     private var linksCard: some View {
-        Section("Ссылки-приглашения") {
+        ManageCard("Ссылки-приглашения") {
             if !model.chatAccess.primaryLink.isEmpty {
                 LinkRow(title: "Основная ссылка", url: model.chatAccess.primaryLink)
                 Button("Сменить и скопировать") {
@@ -190,7 +186,7 @@ struct ChatManageSheet: View {
     // MARK: - statistics
 
     private var statisticsCard: some View {
-        Section("Статистика канала") {
+        ManageCard("Статистика канала") {
             if let stats = model.statistics {
                 statRow("Период", "\(stats.from.shortDate) — \(stats.to.shortDate)")
                 statRow("Подписчиков", count(stats.members) + (stats.membersGrowth == 0 ? "" : "  (\(percent(stats.membersGrowth)))"))
@@ -229,6 +225,33 @@ struct ChatManageSheet: View {
     private func one(_ value: Double) -> String { value.formatted(.number.precision(.fractionLength(1))) }
     private func percent(_ value: Double) -> String {
         value.formatted(.number.sign(strategy: .always()).precision(.fractionLength(1))) + "%"
+    }
+}
+
+/// One block of the sheet: a quiet title over a card, the way the profile sheet groups its rows.
+private struct ManageCard<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    init(_ title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+            VStack(alignment: .leading, spacing: 8) {
+                content
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.separator.opacity(0.5)))
+        }
     }
 }
 
@@ -302,8 +325,8 @@ struct MemberRow: View {
 
     private var colour: AnyShapeStyle {
         switch member.rank {
-        case .owner: return AnyShapeStyle(Color.accentColor)
-        case .admin: return AnyShapeStyle(Color.accentColor.opacity(0.8))
+        case .owner: return AnyShapeStyle(Color.brandInk)
+        case .admin: return AnyShapeStyle(Color.brandInk.opacity(0.8))
         case .restricted, .banned: return AnyShapeStyle(.red)
         default: return AnyShapeStyle(.secondary)
         }
@@ -555,7 +578,7 @@ struct RightsSheet: View {
                     .font(.system(size: 12, weight: chosen ? .semibold : .regular))
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
-                    .background(chosen ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.thinMaterial), in: Capsule())
+                    .background(chosen ? AnyShapeStyle(Color.brand) : AnyShapeStyle(.thinMaterial), in: Capsule())
                     .foregroundStyle(chosen ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
             }
             Spacer()

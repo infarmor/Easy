@@ -1,6 +1,36 @@
 import AppKit
 import SwiftUI
 
+extension Color {
+    /// Easy's own colour, a deep indigo: what bubbles, badges and buttons are filled with. White reads on it
+    /// in either scheme; as ink on a dark ground it would not, which is what `brandInk` is for.
+    static let brand = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            ? Theme.hue.map { NSColor(hue: $0, saturation: 0.75 * Theme.strength, brightness: Theme.strength < 0.5 ? 0.36 : 0.68, alpha: 1) }
+                ?? NSColor(srgbRed: 0x3A / 255, green: 0x2D / 255, blue: 0xB5 / 255, alpha: 1)
+            : Theme.hue.map { NSColor(hue: $0, saturation: 0.80 * Theme.strength, brightness: Theme.strength < 0.5 ? 0.30 : 0.56, alpha: 1) }
+                ?? NSColor(srgbRed: 0x2A / 255, green: 0x1D / 255, blue: 0x96 / 255, alpha: 1)
+    })
+
+    /// The same indigo for text, glyphs and links: lifted in the dark so it reads on a dark ground.
+    static let brandInk = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            ? Theme.hue.map { NSColor(hue: $0, saturation: 0.45 * Theme.strength, brightness: Theme.strength < 0.5 ? 0.86 : 1, alpha: 1) }
+                ?? NSColor(srgbRed: 0x93 / 255, green: 0x8A / 255, blue: 1, alpha: 1)
+            : Theme.hue.map { NSColor(hue: $0, saturation: 0.80 * Theme.strength, brightness: Theme.strength < 0.5 ? 0.30 : 0.56, alpha: 1) }
+                ?? NSColor(srgbRed: 0x2A / 255, green: 0x1D / 255, blue: 0x96 / 255, alpha: 1)
+    })
+
+    /// The sidebar's ground: the icon's deeper indigo, darker still in the dark.
+    static func sidebarFill(_ scheme: ColorScheme) -> Color {
+        if let hue = Theme.hue {
+            return Color(hue: hue, saturation: 0.85 * Theme.strength, brightness: scheme == .dark ? 0.07 : 0.13)
+        }
+        return scheme == .dark ? Color(red: 0x03 / 255, green: 0x02 / 255, blue: 0x10 / 255)
+                        : Color(red: 0x07 / 255, green: 0x04 / 255, blue: 0x20 / 255)
+    }
+}
+
 enum Palette {
     private static let tints: [Color] = [.blue, .green, .orange, .pink, .purple, .teal, .indigo, .mint]
 
@@ -191,12 +221,12 @@ struct NameBadgeView: View {
                 if badge.customEmojiId == 0 {
                     Image(systemName: "star.fill")
                         .font(.system(size: size * 0.72, weight: .semibold))
-                        .foregroundStyle(isOnAccent ? AnyShapeStyle(.white) : AnyShapeStyle(Color.accentColor))
+                        .foregroundStyle(isOnAccent ? AnyShapeStyle(.white) : AnyShapeStyle(Color.brandInk))
                         .frame(width: size, height: size)
                 } else if round >= 0, let picture = CustomEmoji.image(badge.customEmojiId, side: size) {
                     Image(nsImage: picture)
                         // A template emoji takes the accent colour, as the official clients tint it.
-                        .foregroundStyle(isOnAccent ? AnyShapeStyle(.white) : AnyShapeStyle(Color.accentColor))
+                        .foregroundStyle(isOnAccent ? AnyShapeStyle(.white) : AnyShapeStyle(Color.brandInk))
                 } else {
                     // Its place is kept while the picture loads, so the name does not jump when it arrives.
                     Color.clear.frame(width: size, height: size)
@@ -238,10 +268,10 @@ struct UnreadBadge: View {
             // The digits roll to the new count, as the badges of Mail and Messages do.
             .contentTransition(.numericText(value: Double(count)))
             .animation(.snappy(duration: 0.25), value: count)
-            .foregroundStyle(isOnAccent ? Color.accentColor : Color.white)
+            .foregroundStyle(isOnAccent ? Color.brand : Color.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
-            .background(isOnAccent ? Color.white.opacity(isMuted ? 0.7 : 1) : isMuted ? Color.secondary : Color.accentColor,
+            .background(isOnAccent ? Color.white.opacity(isMuted ? 0.7 : 1) : isMuted ? Color.secondary : Color.brand,
                         in: Capsule())
     }
 }
@@ -464,7 +494,7 @@ extension String {
 /// so a link bar, a play button or a poll's progress drawn in that same colour would vanish into them: there
 /// they turn white.
 private struct BubbleAccentKey: EnvironmentKey {
-    static let defaultValue = Color.accentColor
+    static let defaultValue = Color.brandInk
 }
 
 extension EnvironmentValues {
@@ -497,7 +527,7 @@ enum ChatBackground: String, CaseIterable, Identifiable {
     case glass
     /// The window's own flat background, as in Messages.
     case plain
-    /// A wash of the accent colour over that background.
+    /// A wash of the app's indigo over that background.
     case tint
 
     var id: String { rawValue }
@@ -506,7 +536,7 @@ enum ChatBackground: String, CaseIterable, Identifiable {
         switch self {
         case .glass: "Стекло"
         case .plain: "Ровный"
-        case .tint: "Оттенок акцента"
+        case .tint: "Оттенок индиго"
         }
     }
 }
@@ -519,14 +549,37 @@ struct ChatWallpaper: View {
     var body: some View {
         switch ChatBackground(rawValue: choice) ?? .glass {
         case .glass:
+            // The glass takes a breath of the app's indigo, so the conversation belongs to the sidebar beside it.
             WindowGlass()
+                .overlay(Color.brand.opacity(colorScheme == .dark ? 0.10 : 0.07))
+                .overlay(AmbientGlow())
         case .plain:
             Color(nsColor: .textBackgroundColor)
         case .tint:
             // Faint on purpose: two solid bubble colours sit on it, and a saturated ground would fight both.
             Color(nsColor: .textBackgroundColor)
-                .overlay(Color.accentColor.opacity(colorScheme == .dark ? 0.14 : 0.08))
+                .overlay(Color.brand.opacity(colorScheme == .dark ? 0.14 : 0.08))
         }
+    }
+}
+
+/// Two soft lights of the app's colour in opposite corners of the conversation, so the ground has depth
+/// instead of one even tone from edge to edge. Drawn once behind everything; nothing in it moves.
+private struct AmbientGlow: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        GeometryReader { area in
+            let reach = max(area.size.width, area.size.height)
+            ZStack {
+                RadialGradient(colors: [Color.brandInk.opacity(colorScheme == .dark ? 0.22 : 0.16), .clear],
+                               center: .topLeading, startRadius: 0, endRadius: reach * 0.75)
+                RadialGradient(colors: [Color.brand.opacity(colorScheme == .dark ? 0.34 : 0.14), .clear],
+                               center: .bottomTrailing, startRadius: 0, endRadius: reach * 0.8)
+            }
+        }
+        .allowsHitTesting(false)
+        .ignoresSafeArea()
     }
 }
 
@@ -546,12 +599,37 @@ struct WindowGlass: View {
     }
 }
 
+/// The sidebar's ground: dark glass under a wash of deep indigo, thin enough that the desktop glows through.
+struct SidebarGlass: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            // The dark material in either scheme: the ink on it is white, and light glass would wash it out.
+            BehindWindowBlur(isDark: true)
+            // Enough of it that the pane stays dark over a bright desktop, little enough that it stays glass.
+            Color.sidebarFill(colorScheme).opacity(colorScheme == .dark ? 0.70 : 0.72)
+            // Light falling on the pane from above, as on the system's own glass.
+            LinearGradient(colors: [.white.opacity(0.07), .clear], startPoint: .top, endPoint: .center)
+        }
+        .overlay(alignment: .trailing) {
+            Rectangle().fill(.white.opacity(0.08)).frame(width: 0.5)
+        }
+        .ignoresSafeArea()
+    }
+}
+
 private struct BehindWindowBlur: NSViewRepresentable {
+    var isDark = false
+
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
-        view.material = .underWindowBackground
+        if isDark { view.appearance = NSAppearance(named: .darkAqua) }
+        // The sidebar's dark pane is the more see-through material, and it stays glass when the window is
+        // not the front one; the conversation's ground goes flat then, as a document window does.
+        view.material = isDark ? .hudWindow : .underWindowBackground
         view.blendingMode = .behindWindow
-        view.state = .followsWindowActiveState
+        view.state = isDark ? .active : .followsWindowActiveState
         return view
     }
 

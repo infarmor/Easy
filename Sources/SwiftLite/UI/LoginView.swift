@@ -16,7 +16,7 @@ struct LoginView: View {
                         .interpolation(.high)
                         .frame(width: 96, height: 96)
                     VStack(spacing: 4) {
-                        Text("iGram")
+                        Text("Easy")
                             .font(.system(size: 26, weight: .bold))
                         Text("Нативный клиент Telegram для Mac")
                             .font(.body)
@@ -26,6 +26,10 @@ struct LoginView: View {
                         .padding(18)
                         .background(.background.opacity(0.6), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.separator))
+                    if model.canLeaveSignIn {
+                        Button("Вернуться к своему аккаунту") { model.leaveSignIn() }
+                            .buttonStyle(.link)
+                    }
                 }
                 .padding(28)
                 .frame(maxWidth: 420)
@@ -94,9 +98,10 @@ private struct LoginStage: View {
             }
         case .code(let destination):
             Form {
-                Text("Код отправлен на \(destination)")
+                Text(destination)
                     .font(.callout)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 TextField("Код подтверждения", text: $model.codeField)
                     .textFieldStyle(.roundedBorder)
                 primaryButton("Подтвердить") { model.submitCode() }

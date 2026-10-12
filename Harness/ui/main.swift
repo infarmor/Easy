@@ -258,7 +258,7 @@ MainActor.assumeIsolated {
         person.userId = 700
         person.usernames = ["maria"]
         person.about = "Пишу редко, отвечаю быстро."
-        snapshot({ ProfileSheet(info: person).environment(model) }, size: CGSize(width: 420, height: 560),
+        snapshot({ ProfileSheet(info: person).environment(model) }, size: CGSize(width: 440, height: 640),
                  to: CommandLine.arguments[1] + ".profile.png")
     }
     snapshot({ ChatListView().environment(model).frame(width: 320, height: 700) },

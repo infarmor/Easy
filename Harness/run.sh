@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Test stands for iGram. They compile the app's own sources next to a test main.swift.
+# Test stands for Easy. They compile the app's own sources next to a test main.swift.
 #
 #   Harness/run.sh            logic + lifecycle + ui + webapp + scroll
 #   Harness/run.sh logic      one of them

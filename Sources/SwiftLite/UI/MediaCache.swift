@@ -7,18 +7,26 @@ import Lottie
 @MainActor
 enum MediaCache {
     /// Bounded so a long session with many photos and stickers does not keep all of them in memory;
-    /// the cost is the decoded bitmap size, the limit roughly 256 MB.
+    /// the cost is the decoded bitmap size, the limit roughly 96 MB. What falls out is decoded again from
+    /// the file on disk when its row comes back, a few milliseconds each.
     private static let images: NSCache<NSString, NSImage> = {
         let cache = NSCache<NSString, NSImage>()
-        cache.totalCostLimit = 256 * 1024 * 1024
-        cache.countLimit = 1500
+        cache.totalCostLimit = 96 * 1024 * 1024
+        cache.countLimit = 600
         return cache
     }()
     private static let animations: NSCache<NSString, LottieAnimation> = {
         let cache = NSCache<NSString, LottieAnimation>()
-        cache.countLimit = 80
+        cache.countLimit = 40
         return cache
     }()
+
+    /// Lets go of every decoded picture and animation: called when the app has been in the background for a
+    /// while, where none of them is on screen.
+    static func purge() {
+        images.removeAllObjects()
+        animations.removeAllObjects()
+    }
 
     static func cachedImage(atPath path: String, pixels: Int) -> NSImage? {
         images.object(forKey: key(path, pixels))
@@ -65,7 +73,8 @@ enum MediaCache {
 
     /// TDLib's inline 40-pixel JPEG shown, softly scaled, until the real photo arrives.
     static func minithumbnail(_ data: Data, id: Int) -> NSImage? {
-        let key = "mini:\(id)" as NSString
+        // File ids are numbered by each account's own session, so the picture's bytes are part of the key.
+        let key = "mini:\(id):\(data.hashValue)" as NSString
         if let cached = images.object(forKey: key) { return cached }
         guard let image = NSImage(data: data) else { return nil }
         images.setObject(image, forKey: key)

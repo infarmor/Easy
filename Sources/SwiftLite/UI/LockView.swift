@@ -1,7 +1,7 @@
 import LocalAuthentication
 import SwiftUI
 
-/// The cover over a locked iGram: the app's icon, a field for the passcode, and Touch ID once the passcode
+/// The cover over a locked Easy: the app's icon, a field for the passcode, and Touch ID once the passcode
 /// has been typed since launch.
 struct LockView: View {
     @Environment(AppModel.self) private var model
@@ -17,7 +17,7 @@ struct LockView: View {
                 .interpolation(.high)
                 .frame(width: 84, height: 84)
             VStack(spacing: 4) {
-                Text("iGram заблокирован")
+                Text("Easy заблокирован")
                     .font(.title3.weight(.semibold))
                 Text(isWrong ? "Неверный код-пароль" : "Введите код-пароль")
                     .font(.callout)
@@ -72,7 +72,7 @@ struct LockView: View {
     private func authenticate() {
         let context = LAContext()
         context.localizedCancelTitle = "Ввести код-пароль"
-        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "разблокировать iGram") { success, _ in
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "разблокировать Easy") { success, _ in
             guard success else { return }
             Task { @MainActor in model.unlockAfterSystemAuthentication() }
         }

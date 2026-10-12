@@ -9,6 +9,8 @@ enum Preferences {
     static let backgroundDim = "backgroundDim"
     /// A `ChatBackground` by its raw value.
     static let chatBackground = "chatBackground"
+    /// The accent and the sidebar take the desktop picture's colour instead of the app's indigo.
+    static let wallpaperColors = "wallpaperColors"
 
     static let notificationsEnabled = "notificationsEnabled"
     static let notificationSound = "notificationSound"

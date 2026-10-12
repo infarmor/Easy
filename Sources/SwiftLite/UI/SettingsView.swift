@@ -36,6 +36,7 @@ private struct GeneralSettings: View {
     @AppStorage(Preferences.backgroundDim) private var backgroundDim = 0.26
     @AppStorage(Preferences.chatBackground) private var chatBackground = ChatBackground.glass.rawValue
     @AppStorage(Preferences.translateToLanguage) private var translateTo = "ru"
+    @AppStorage(Preferences.wallpaperColors) private var followsWallpaper = true
 
     var body: some View {
         Form {
@@ -60,6 +61,9 @@ private struct GeneralSettings: View {
                 Text("Пункт «Перевести» в меню сообщения. Форматирование перевода Telegram сохраняет только с Premium.")
             }
             Section {
+                Toggle("Цвета по обоям рабочего стола", isOn: $followsWallpaper)
+                    .onChange(of: followsWallpaper) { _, _ in Theme.shared.refresh() }
+                    .help("Акцент и боковая панель берут основной цвет картинки рабочего стола; без неё — индиго")
                 Picker("Фон переписки", selection: $chatBackground) {
                     ForEach(ChatBackground.allCases) { Text($0.title).tag($0.rawValue) }
                 }
@@ -83,7 +87,7 @@ private struct GeneralSettings: View {
             } header: {
                 Text("Медиа")
             } footer: {
-                Text("Анимация останавливается, пока окно iGram не активно.")
+                Text("Анимация останавливается, пока окно Easy не активно.")
             }
         }
         .formStyle(.grouped)
@@ -128,7 +132,7 @@ private struct PrivacySettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Показывать, что я в сети, пока окно iGram активно", isOn: $showsOnline)
+                Toggle("Показывать, что я в сети, пока окно Easy активно", isOn: $showsOnline)
                 Toggle("Отправлять «печатает…»", isOn: $sendsTyping)
                 Toggle("Отмечать сообщения прочитанными при открытии чата", isOn: $marksRead)
             } footer: {
@@ -186,6 +190,9 @@ private struct SecuritySettings: View {
     @AppStorage(Preferences.securityTools) private var showsTools = true
     @State private var findings: [AppModel.SecurityFinding]?
     @State private var sessions: [AppModel.ActiveSession]?
+    @State private var websites: [AppModel.ConnectedWebsite]?
+    /// TDLib did not answer about the sites: said so, rather than shown as an endless wait or as "none".
+    @State private var websitesFailed = false
     @State private var isChecking = false
     @AppStorage(Preferences.autoLockMinutes) private var autoLockMinutes = 15
     @State private var passcode = ""
@@ -231,8 +238,8 @@ private struct SecuritySettings: View {
             Text("Код-пароль")
         } footer: {
             Text(model.hasPasscode
-                ? "iGram спрашивает код-пароль при запуске, после сна экрана и по таймеру. База Telegram и архив удалённых сообщений на этом Mac зашифрованы ключом из него. Touch ID работает после первого ввода с момента запуска."
-                : "Код-пароль закрывает iGram и шифрует базу Telegram и архив удалённых сообщений на этом Mac. Он нигде не хранится: забытый код-пароль восстановить нельзя — придётся войти в аккаунт заново, а секретные чаты на этом Mac пропадут.")
+                ? "Easy спрашивает код-пароль при запуске, после сна экрана и по таймеру. База Telegram и архив удалённых сообщений на этом Mac зашифрованы ключом из него. Touch ID работает после первого ввода с момента запуска."
+                : "Код-пароль закрывает Easy и шифрует базу Telegram и архив удалённых сообщений на этом Mac. Он нигде не хранится: забытый код-пароль восстановить нельзя — придётся войти в аккаунт заново, а секретные чаты на этом Mac пропадут.")
         }
     }
 
@@ -324,17 +331,81 @@ private struct SecuritySettings: View {
             } footer: {
                 Text("Незнакомое устройство, город или приложение — повод завершить сеанс и сменить облачный пароль. Оранжевым отмечены входы, которые ещё не подтверждены.")
             }
+            websitesSection
         }
         .formStyle(.grouped)
-        .task { sessions = await model.activeSessions() }
+        .task {
+            async let list = model.activeSessions()
+            async let sites = model.connectedWebsites()
+            sessions = await list
+            websites = await sites
+            websitesFailed = websites == nil
+        }
+    }
+
+    /// Sites entered with "Log in with Telegram": the other place, besides sessions, where access lingers.
+    @ViewBuilder
+    private var websitesSection: some View {
+        Section {
+            if let websites {
+                if websites.isEmpty {
+                    Text("Ни один сайт не подключён.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(websites) { site in
+                    HStack(alignment: .top) {
+                        Image(systemName: "globe")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 20)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(site.domain.isEmpty ? "Сайт" : site.domain)
+                            Text([site.browser, site.platform].filter { !$0.isEmpty }.joined(separator: " · "))
+                                .font(.caption).foregroundStyle(.secondary)
+                            Text([site.ipAddress, site.location,
+                                  "активен " + site.lastActive.formatted(.relative(presentation: .named).locale(Locale(identifier: "ru_RU")))]
+                                .filter { !$0.isEmpty }.joined(separator: " · "))
+                                .font(.caption).foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                        }
+                        Spacer()
+                        Button("Отключить", role: .destructive) {
+                            guard Dialogs.confirm("Отключить \(site.domain)?", message: "Сайт потеряет вход через ваш Telegram; войти туда можно будет заново.", action: "Отключить") else { return }
+                            Task {
+                                if await model.disconnectWebsite(site.id) { self.websites = await model.connectedWebsites() }
+                            }
+                        }
+                    }
+                }
+                if websites.count > 1 {
+                    Button("Отключить все сайты", role: .destructive) {
+                        guard Dialogs.confirm("Отключить все сайты?", message: "Все сайты потеряют вход через ваш Telegram.", action: "Отключить") else { return }
+                        Task {
+                            if await model.disconnectAllWebsites() { self.websites = await model.connectedWebsites() }
+                        }
+                    }
+                }
+            } else if websitesFailed {
+                Text("Telegram не отдал список сайтов.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ProgressView().controlSize(.small)
+            }
+        } header: {
+            Text("Сайты со входом через Telegram")
+        } footer: {
+            Text("Сайт, на который вы входили кнопкой «Войти через Telegram», видит ваше имя и фото и может писать вам через своего бота. Незнакомый домен — повод его отключить.")
+        }
     }
 
     private func refresh() async {
         isChecking = true
         async let audit = model.securityAudit()
         async let list = model.activeSessions()
+        async let sites = model.connectedWebsites()
         findings = await audit
         sessions = await list
+        websites = await sites
+        websitesFailed = websites == nil
         isChecking = false
     }
 
@@ -457,7 +528,7 @@ private struct AccountSettings: View {
             Section("Аккаунт") {
                 LabeledContent("Имя", value: model.accountName.isEmpty ? "—" : model.accountName)
                 LabeledContent("api_id", value: model.apiIdField.isEmpty ? "—" : model.apiIdField)
-                LabeledContent("База TDLib", value: ConfigStore.databaseDirectory.path)
+                LabeledContent("База TDLib", value: ConfigStore.databaseDirectory(for: model.slot).path)
                 Button("Выйти из аккаунта") {
                     if Dialogs.confirm("Выйти из аккаунта?", message: "Сессия на этом Mac завершится, локальная база TDLib будет удалена. Войти снова можно по номеру телефона.", action: "Выйти") {
                         model.logOut()

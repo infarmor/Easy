@@ -171,7 +171,7 @@ struct ScheduledList: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(message.date.formatted(.dateTime.day().month(.wide).hour().minute().locale(Locale(identifier: "ru_RU"))))
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(Color.brandInk)
                                 Text(TD.preview(of: message))
                                     .font(.callout)
                                     .lineLimit(3)

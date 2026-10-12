@@ -157,6 +157,14 @@ final class AppModel {
 
     var phase: Phase = .credentials
     var accountName = ""
+    /// Which of the accounts on this Mac this session belongs to; empty for the first one.
+    @ObservationIgnored let slot: String
+    /// The accounts together; nil for a model made on its own, as the test stands make it.
+    @ObservationIgnored weak var hub: AccountHub?
+    /// What the Dock would show for this account alone: the sidebar marks the other accounts with it.
+    private(set) var unreadBadge = 0
+    /// Telegram Stars on the account; nil until TDLib has said.
+    var ownedStars: Int?
     /// Your own id and photo, for the account card at the bottom of the sidebar.
     var myId: Int64 { myUserId }
     var myPhoto: ProfilePhoto? { senderPhotos["u\(myUserId)"] }
@@ -346,6 +354,10 @@ final class AppModel {
     }
     /// A message the transcript should scroll to (a clicked reply quote), and briefly highlight.
     var scrollTarget: Int64?
+    /// The next `scrollTarget` is where a chat opens, not a trip across it: the view is put there at once.
+    @ObservationIgnored var scrollsWithoutAnimation = false
+    /// Set while a chat with unread messages opens: what had been read before, until the divider is placed.
+    @ObservationIgnored var unreadOpenFrom: Int64?
     var highlightedMessageId: Int64?
     /// The first message that was unread when the chat opened: "Новые сообщения" goes above it.
     var unreadMarkerId: Int64?
@@ -369,7 +381,7 @@ final class AppModel {
     @ObservationIgnored private var transcriptRebuildPending = false
     @ObservationIgnored var loadingChatLists: Set<String> = []
 
-    @ObservationIgnored private let notifier = Notifier()
+    @ObservationIgnored private let notifier = Notifier.shared
     /// Raw `chatNotificationSettings` per chat: changing one field means sending the whole object back.
     @ObservationIgnored var chatNotificationSettings: [Int64: TDNode] = [:] {
         didSet { mutedCache = [:] }
@@ -439,7 +451,8 @@ final class AppModel {
     @ObservationIgnored private var reportedOnline: Bool?
     @ObservationIgnored private var appliedLogLevel: Int?
 
-    init() {
+    init(slot: String = ConfigStore.currentAccount) {
+        self.slot = slot
         Preferences.register()
         applyLogSettings()
         let center = NotificationCenter.default
@@ -654,6 +667,9 @@ final class AppModel {
         } else if authState == "authorizationStateWaitTdlibParameters" {
             // TDLib rejected the previous parameters (e.g. another copy holds the database); try again.
             Task { await configure(credentials) }
+        } else if phase == .credentials {
+            // The keys were asked for again in the middle of a sign-in: the session starts over with the new ones.
+            restartSession()
         }
     }
 
@@ -727,6 +743,13 @@ final class AppModel {
         Task {
             do {
                 _ = try await request(payload)
+            } catch let error as TDError where error.message.contains("API_ID_INVALID") {
+                // Telegram checks the keys only when a code is asked for, so an account already signed in
+                // keeps working on keys that a new sign-in is refused with. The form comes back for them.
+                apiIdField = ""
+                apiHashField = ""
+                phase = .credentials
+                fail("Telegram не принял сохранённые api_id и api_hash. Введите ключи своего приложения с my.telegram.org — уже подключённые аккаунты останутся в сети.")
             } catch {
                 fail(error)
             }
@@ -780,6 +803,13 @@ final class AppModel {
         start(with: saved)
     }
 
+    // MARK: - accounts
+
+    /// This account has not signed in yet and there is another one to go back to.
+    var canLeaveSignIn: Bool { hub?.canLeaveSignIn(self) ?? false }
+
+    func leaveSignIn() { hub?.leaveSignIn(self) }
+
     private func start(with credentials: Credentials) {
         guard bridge == nil else { return }
         let bridge = TDBridge()
@@ -809,8 +839,8 @@ final class AppModel {
                     _ = try await request([
                         "@type": "setTdlibParameters",
                         "use_test_dc": false,
-                        "database_directory": ConfigStore.databaseDirectory.path,
-                        "files_directory": ConfigStore.filesDirectory.path,
+                        "database_directory": ConfigStore.databaseDirectory(for: slot).path,
+                        "files_directory": ConfigStore.filesDirectory(for: slot).path,
                         "database_encryption_key": key,
                         "use_file_database": true,
                         "use_chat_info_database": true,
@@ -847,6 +877,7 @@ final class AppModel {
 
     private func onReady() async {
         notifier.activate(
+            account: slot,
             onOpen: { [weak self] chatId in self?.openFromNotification(chatId) },
             onReply: { [weak self] chatId, messageId, text in
                 Task { await self?.replyFromNotification(text, to: messageId, in: chatId) }
@@ -864,6 +895,8 @@ final class AppModel {
             let me = try await meRequest
             myUserId = me.tdInt64("id")
             accountName = TD.displayName(ofUser: me)
+            ConfigStore.describe(account: slot, name: accountName, userId: myUserId)
+            hub?.refresh()
             archive.open(accountId: myUserId, key: lockKeys?.archive)
         } catch {
             fail(error)
@@ -898,6 +931,8 @@ final class AppModel {
 
     private func openFromNotification(_ chatId: Int64) {
         guard knownChats[chatId] != nil else { return }
+        // A banner of an account that is not in the window brings that account forward first.
+        hub?.activate(slot)
         selection = chatId
     }
 
@@ -964,10 +999,12 @@ final class AppModel {
                 phase = .credentials
                 return
             }
+            // Signed out of one account of several: its slot goes, and the window moves to one that remains.
+            if intent == .logOut, hub?.signedOut(self) == true { return }
             if intent == .logOut { phase = .phone }
             start(with: saved)
         case nil:
-            phase = .failed("TDLib закрыл сессию. Перезапустите iGram.")
+            phase = .failed("TDLib закрыл сессию. Перезапустите Easy.")
         }
     }
 
@@ -982,7 +1019,7 @@ final class AppModel {
         showsArchive = false
         chatNotificationSettings = [:]
         scopeNotificationSettings = [:]
-        notifier.reset()
+        notifier.reset(account: slot)
         senderNames = [:]
         senderPhotos = [:]
         nameBadges = [:]
@@ -1026,6 +1063,7 @@ final class AppModel {
         reportedOnline = nil
         tdlibVersion = ""
         accountName = ""
+        ownedStars = nil
         myUserId = 0
         forwardingBatch = nil
         loadingChatLists = []
@@ -1114,7 +1152,7 @@ final class AppModel {
             unconfirmedLogin = summary
             if isNew {
                 notifier.postAlert(id: "login:\(session.tdInt("date"))", title: "Новый вход в аккаунт",
-                                   body: summary.isEmpty ? "Откройте iGram, чтобы проверить" : summary)
+                                   body: summary.isEmpty ? "Откройте Easy, чтобы проверить" : summary)
             }
             presentLoginAlert()
 
@@ -1249,7 +1287,10 @@ final class AppModel {
                 $0.unread = unread
                 $0.lastReadInboxId = lastRead
             }
-            notifier.withdraw(chatId: chatId, upTo: lastRead)
+            notifier.withdraw(account: slot, chatId: chatId, upTo: lastRead)
+
+        case "updateOwnedStarCount":
+            ownedStars = update.tdNode("star_amount")?.tdInt("star_count")
 
         case "updateChatReadOutbox":
             let marker = update.tdInt64("last_read_outbox_message_id")
@@ -1450,12 +1491,12 @@ final class AppModel {
             codeTarget = .email
             canResendCode = true
             let pattern = state.tdNode("code_info")?.tdString("email_address_pattern") ?? ""
-            phase = .code(destination: pattern.isEmpty ? "email" : pattern)
+            phase = .code(destination: "Код отправлен на почту" + (pattern.isEmpty ? "" : " " + pattern))
         case "authorizationStateWaitCode":
             let info = state.tdNode("code_info") ?? [:]
             codeTarget = .phone
             canResendCode = info.tdNode("next_type") != nil
-            phase = .code(destination: info.tdString("phone_number"))
+            phase = .code(destination: Self.describeCodeDelivery(info))
         case "authorizationStateWaitOtherDeviceConfirmation":
             phase = .qr(link: state.tdString("link"))
         case "authorizationStateWaitPassword":
@@ -1531,7 +1572,9 @@ final class AppModel {
         // Changed where it lies: taking the chat's dictionary out and putting it back made a second owner of
         // it, so every message cached copied all 150 of its neighbours first.
         recentMessages[message.chatId, default: [:]][message.id] = message
-        if let count = recentMessages[message.chatId]?.count, count > 150,
+        // Sixty per chat: enough to still have the text of a message deleted minutes after it came, without
+        // hundreds of busy channels each holding a hundred and fifty for the whole session.
+        if let count = recentMessages[message.chatId]?.count, count > 60,
            let oldest = recentMessages[message.chatId]?.keys.min() {
             recentMessages[message.chatId]?[oldest] = nil
         }
@@ -1614,7 +1657,8 @@ final class AppModel {
     }
 
     private func applyBadge() {
-        notifier.setBadge(Preferences.isOn(Preferences.dockBadge) ? unreadUnmutedCount : 0)
+        if unreadBadge != unreadUnmutedCount { unreadBadge = unreadUnmutedCount }
+        notifier.setBadge(Preferences.isOn(Preferences.dockBadge) ? unreadUnmutedCount : 0, account: slot)
     }
 
     /// `UserDefaults.didChangeNotification` also fires for unrelated writes, so TDLib is only told about
@@ -1827,7 +1871,7 @@ final class AppModel {
               let chat = knownChats[message.chatId] else { return }
         if case .service = message.body { return }
         // Already on screen.
-        if message.chatId == openChatId, NSApp?.isActive == true { return }
+        if message.chatId == openChatId, NSApp?.isActive == true, hub.map({ $0.active === self }) ?? true { return }
         // Catching up after being offline replays older messages as new ones; skip what is read or stale.
         guard message.id > chat.lastReadInboxId, Date().timeIntervalSince(message.date) < 5 * 60 else { return }
         let policy = notificationPolicy(for: chat)
@@ -1835,11 +1879,14 @@ final class AppModel {
 
         // A locked app does not read its messages out on a banner.
         let showsText = policy.showsPreview && Preferences.isOn(Preferences.notificationPreview) && !isLocked
+        // With several accounts the banner says which of them the message came to.
+        let recipient = (hub?.accounts.count ?? 1) > 1 && !accountName.isEmpty ? accountName : ""
         notifier.post(
+            account: slot,
             chatId: chat.id,
             messageId: message.id,
             title: chat.title,
-            subtitle: chat.kind == .group ? name(for: message) : "",
+            subtitle: [chat.kind == .group ? name(for: message) : "", recipient].filter { !$0.isEmpty }.joined(separator: " → "),
             body: showsText ? TD.preview(of: message) : "Новое сообщение",
             playsSound: Preferences.isOn(Preferences.notificationSound)
         )
@@ -1859,6 +1906,29 @@ final class AppModel {
         Task {
             try? await Task.sleep(for: .seconds(8))
             if errorText == message { errorText = "" }
+        }
+    }
+
+    /// Where Telegram says it sent the sign-in code. For an account that is signed in elsewhere it is usually
+    /// not the phone at all but a message in Telegram itself, and "sent to +7…" sends people waiting for an SMS.
+    static func describeCodeDelivery(_ info: TDNode) -> String {
+        let phone = info.tdString("phone_number")
+        let number = phone.isEmpty ? "ваш номер" : (phone.hasPrefix("+") ? phone : "+" + phone)
+        switch info.tdNode("type")?.tdType ?? "" {
+        case "authenticationCodeTypeTelegramMessage":
+            return "Код пришёл сообщением в Telegram на другом вашем устройстве — в чате «Telegram». SMS не будет."
+        case "authenticationCodeTypeSms", "authenticationCodeTypeSmsWord", "authenticationCodeTypeSmsPhrase":
+            return "Код отправлен по SMS на \(number)"
+        case "authenticationCodeTypeCall":
+            return "На \(number) позвонят и продиктуют код"
+        case "authenticationCodeTypeFlashCall", "authenticationCodeTypeMissedCall":
+            return "На \(number) поступит звонок: код — последние цифры номера, с которого звонят"
+        case "authenticationCodeTypeFragment":
+            return "Код ждёт на fragment.com, в аккаунте этого номера"
+        case "authenticationCodeTypeFirebaseAndroid", "authenticationCodeTypeFirebaseIos":
+            return "Telegram отправляет код на \(number) способом, доступным только официальным приложениям. Нажмите «Отправить другим способом» или войдите по QR-коду."
+        default:
+            return "Код отправлен на \(number)"
         }
     }
 

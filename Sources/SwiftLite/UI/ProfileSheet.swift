@@ -5,11 +5,13 @@ import SwiftUI
 struct ProfileSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openSettings) private var openSettings
     @AppStorage(Preferences.showMessageCode) private var showsCode = false
     @State private var copied: String?
     @State private var isBlocked = false
     /// nil for a chat this account does not have, which has no notifications to silence.
     @State private var isMuted: Bool?
+    @State private var showsGifts = false
     let info: ProfileInfo
 
     var body: some View {
@@ -17,17 +19,21 @@ struct ProfileSheet: View {
             ScrollView {
                 VStack(spacing: 16) {
                     header
-                    details
                     if !info.about.isEmpty {
+                        heading(info.userId != 0 ? (info.subtitle == "бот" ? "О боте" : "О себе") : "Описание")
                         card {
-                            Text(info.about)
+                            Text(Self.linked(info.about))
                                 .font(.body)
+                                .tint(Color.brandInk)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(12)
                         }
                     }
+                    heading("Сведения")
+                    details
                     if !info.facts.isEmpty {
+                        heading("Подробности")
                         card {
                             ForEach(info.facts.indices, id: \.self) { index in
                                 row(info.facts[index].0, info.facts[index].1)
@@ -46,7 +52,7 @@ struct ProfileSheet: View {
                                 Task { if await model.setBlocked(blocking, userId: info.userId) { isBlocked = blocking } }
                             } label: {
                                 Text(isBlocked ? "Разблокировать" : "Заблокировать")
-                                    .foregroundStyle(isBlocked ? Color.accentColor : Color.red)
+                                    .foregroundStyle(isBlocked ? Color.brandInk : Color.red)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 9)
                                     .contentShape(Rectangle())
@@ -55,7 +61,8 @@ struct ProfileSheet: View {
                         }
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
             Divider()
             HStack {
@@ -75,24 +82,40 @@ struct ProfileSheet: View {
                 Spacer()
                 Button("Готово") { dismiss() }
                     .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.brand)
             }
             .padding(12)
         }
-        .frame(width: 420, height: 560)
+        .frame(width: 440, height: 640)
         .onAppear {
             isBlocked = info.isBlocked
             isMuted = model.isChatMuted(info.chatId)
         }
         .background(.regularMaterial)
+        // A link in someone's bio is as much a stranger's link as one in a message: the same checks, and
+        // t.me stays in the app.
+        .environment(\.openURL, OpenURLAction { url in
+            Task { await model.openMessageLink(url) }
+            return .handled
+        })
+        .sheet(isPresented: $showsGifts) {
+            GiftSheet(userId: info.userId, name: info.title).environment(model)
+        }
     }
 
     private var header: some View {
         VStack(spacing: 8) {
-            Avatar(title: info.title, seed: info.seed, photo: info.photo, diameter: 88)
-                .shadow(color: .black.opacity(0.2), radius: 8, y: 3)
+            // A band of the profile's own colour behind the photo, as a contact's poster stands behind theirs.
+            Avatar(title: info.title, seed: info.seed, photo: info.photo, diameter: 104)
+                .overlay(Circle().strokeBorder(.white.opacity(0.85), lineWidth: 3))
+                .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
+                .padding(.top, 34)
+                .frame(maxWidth: .infinity)
+                .background(alignment: .top) { banner }
             HStack(spacing: 5) {
                 Text(info.title.isEmpty ? "Без имени" : info.title)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 21, weight: .bold))
                     .multilineTextAlignment(.center)
                     .textSelection(.enabled)
                 NameBadgeView(key: info.userId != 0 ? "u\(info.userId)" : "c\(info.telegramId)", size: 20)
@@ -100,44 +123,87 @@ struct ProfileSheet: View {
             if !info.subtitle.isEmpty {
                 Text(info.subtitle)
                     .font(.callout)
-                    .foregroundStyle(info.subtitle == "в сети" ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(info.subtitle == "в сети" ? AnyShapeStyle(Color.brandInk) : AnyShapeStyle(.secondary))
             }
             if isBlocked {
                 Label("Заблокирован", systemImage: "hand.raised.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.red)
             }
-            actions
-                .padding(.top, 6)
             if !info.badges.isEmpty {
                 HStack(spacing: 5) {
                     ForEach(info.badges, id: \.self) { badge in
+                        let isWarning = badge.hasPrefix("⚠︎"), isPremium = badge == "Premium"
                         Text(badge)
                             .font(.subheadline.weight(.semibold))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .foregroundStyle(badge.hasPrefix("⚠︎") ? .white : .primary)
-                            .background(badge.hasPrefix("⚠︎") ? AnyShapeStyle(Color.red.opacity(0.85)) : AnyShapeStyle(Color.primary.opacity(0.08)),
+                            .foregroundStyle(isWarning ? AnyShapeStyle(.white) : isPremium ? AnyShapeStyle(Color.brandInk) : AnyShapeStyle(.primary))
+                            .background(isWarning ? AnyShapeStyle(Color.red.opacity(0.85))
+                                            : isPremium ? AnyShapeStyle(Color.brand.opacity(0.16)) : AnyShapeStyle(Color.primary.opacity(0.08)),
                                         in: Capsule())
                     }
                 }
             }
+            actions
+                .padding(.top, 8)
         }
     }
 
-    /// The round buttons under the name, as on a contact's card in Messages: write, search, silence.
+    /// Behind the photo: the photo again, enlarged and blurred into a wash of its own colours, as a contact's
+    /// poster stands behind theirs. Without a photo, the colour of the monogram.
+    private var banner: some View {
+        Group {
+            if info.photo != nil {
+                Avatar(title: info.title, seed: info.seed, photo: info.photo, diameter: 520)
+                    .blur(radius: 46)
+                    .saturation(1.25)
+            } else {
+                Palette.gradient(for: info.seed)
+            }
+        }
+        .frame(width: 440, height: 96)
+        .clipped()
+        .overlay(LinearGradient(colors: [.black.opacity(0.05), .black.opacity(0.3)], startPoint: .top, endPoint: .bottom))
+        .padding(.horizontal, -20)
+    }
+
+    /// Addresses in a bio open in the browser, as they do in a message.
+    private static func linked(_ text: String) -> AttributedString {
+        var result = AttributedString(text)
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { return result }
+        for match in detector.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            guard let url = match.url, let range = Range(match.range, in: text),
+                  let lower = AttributedString.Index(range.lowerBound, within: result),
+                  let upper = AttributedString.Index(range.upperBound, within: result) else { continue }
+            result[lower..<upper].link = url
+        }
+        return result
+    }
+
+    /// The tiles under the name, as on a contact's card: write, search, silence.
     private var actions: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 8) {
             action(info.isSelf ? "Избранное" : info.userId != 0 ? "Написать" : "Открыть", "message.fill") {
                 Task { await model.openChat(fromProfile: info.chatId) }
             }
             action("Поиск", "magnifyingglass") {
                 Task { await model.openChat(fromProfile: info.chatId, searching: true) }
             }
+            if info.isSelf {
+                // Name, bio and username are edited in the settings' account pane.
+                action("Изменить", "pencil") {
+                    dismiss()
+                    openSettings()
+                }
+            }
             if info.userId != 0, !info.isSelf, info.subtitle != "бот" {
                 action("Секретный", "lock.fill") {
                     Task { await model.startSecretChat(with: info.userId) }
                 }
+            }
+            if info.userId != 0, !info.isSelf, info.subtitle != "бот" {
+                action("Подарок", "gift.fill") { showsGifts = true }
             }
             if !info.isSelf, let muted = isMuted {
                 action(muted ? "Со звуком" : "Без звука", muted ? "bell.fill" : "bell.slash.fill") {
@@ -152,15 +218,16 @@ struct ProfileSheet: View {
         Button(action: perform) {
             VStack(spacing: 5) {
                 Image(systemName: symbol)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.accentColor)
-                    .frame(width: 40, height: 40)
-                    .background(Color.accentColor.opacity(0.12), in: Circle())
+                    .font(.system(size: 17, weight: .medium))
+                    .frame(height: 20)
                 Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.caption.weight(.medium))
+                    .lineLimit(1)
             }
-            .frame(minWidth: 64)
+            .foregroundStyle(Color.brandInk)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .background(Color.brand.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(PressDimStyle())
@@ -189,6 +256,16 @@ struct ProfileSheet: View {
                 copyRow("Телефон", info.phone)
             }
         }
+    }
+
+    /// The quiet caption over a card, as over a group of rows in System Settings.
+    private func heading(_ title: String) -> some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 12)
+            .padding(.bottom, -10)
     }
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

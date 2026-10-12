@@ -77,7 +77,7 @@ struct DocumentView: View {
             Image(systemName: "arrow.down.circle.fill")
                 .font(.system(size: 18))
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, Color.accentColor)
+                .foregroundStyle(.white, Color.brand)
                 .background(Circle().fill(.white).padding(3))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .offset(x: 4, y: 4)

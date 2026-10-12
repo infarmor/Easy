@@ -4,15 +4,22 @@ import SwiftUI
 @main
 struct SwiftLiteApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @State private var model = AppModel()
+    @State private var hub = AccountHub()
+
+    /// The account in the window: the menus and the other windows act on it.
+    private var model: AppModel { hub.active }
 
     var body: some Scene {
-        WindowGroup("iGram") {
+        WindowGroup("Easy") {
             RootView()
                 .environment(model)
+                .environment(hub)
+                .tint(Color.brandInk)
+                // The colour follows the desktop picture; a new one means every view resolves its colours again.
+                .id(Theme.shared.revision)
                 .task {
-                    delegate.model = model
-                    model.boot()
+                    delegate.hub = hub
+                    hub.boot()
                 }
         }
         .defaultSize(width: 1160, height: 740)
@@ -79,7 +86,7 @@ struct SwiftLiteApp: App {
                 }
                 }
                 .disabled(!model.takesCommands)
-                Button("Заблокировать iGram") { model.lock() }
+                Button("Заблокировать Easy") { model.lock() }
                     .keyboardShortcut("l", modifiers: [.command, .option])
                     .disabled(!model.hasPasscode || model.isLocked)
                 Button("Режим призрака") {
@@ -91,6 +98,16 @@ struct SwiftLiteApp: App {
         }
 
         .commands {
+            CommandMenu("Аккаунты") {
+                ForEach(Array(hub.accounts.prefix(9).enumerated()), id: \.element.id) { index, account in
+                    Button(account.name.isEmpty ? "Новый аккаунт" : account.name) { hub.activate(account.id) }
+                        .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .control)
+                        .disabled(account.id == hub.activeId)
+                }
+                Divider()
+                Button("Добавить аккаунт…") { hub.addAccount() }
+                    .disabled(model.isLocked)
+            }
             CommandMenu("Формат") {
                 Group {
                 Button("Жирный") { model.format(.bold) }
@@ -111,11 +128,15 @@ struct SwiftLiteApp: App {
         Settings {
             SettingsView()
                 .environment(model)
+                .environment(hub)
+                .tint(Color.brandInk)
+                .id(hub.activeId)
         }
 
         Window("Мини-приложение", id: WebAppWindow.id) {
             WebAppWindow()
                 .environment(model)
+                .environment(hub)
         }
         .defaultSize(width: 420, height: 720)
         .windowResizability(.contentMinSize)
@@ -124,16 +145,33 @@ struct SwiftLiteApp: App {
 
 /// Holds the quit until the model has saved the draft, gone offline and closed TDLib.
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    @MainActor var model: AppModel?
+    @MainActor var hub: AccountHub?
     private var answered = false
+    @MainActor private var purge: DispatchWorkItem?
+
+    /// Five minutes in the background and the decoded pictures are let go: none of them is being scrolled
+    /// to there, and what a visible window shows is held by its own views.
+    @MainActor
+    func applicationDidResignActive(_ notification: Notification) {
+        purge?.cancel()
+        let work = DispatchWorkItem { MainActor.assumeIsolated { MediaCache.purge() } }
+        purge = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 300, execute: work)
+    }
+
+    @MainActor
+    func applicationDidBecomeActive(_ notification: Notification) {
+        purge?.cancel()
+        purge = nil
+    }
 
     @MainActor
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let model else { return .terminateNow }
+        guard let hub else { return .terminateNow }
         // Every reply after the first would kill the process while TDLib is still closing its databases.
         guard !answered else { return .terminateLater }
         Task { @MainActor in
-            await model.prepareForQuit()
+            await hub.prepareForQuit()
             answer(sender)
         }
         // A TDLib request that never comes back has no timeout, so the quit needs one of its own.

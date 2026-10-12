@@ -376,7 +376,7 @@ extension AppModel {
         [
             "@type": "webAppOpenParameters",
             "theme": WebAppTheme.parameters(dark: WebAppTheme.isDark),
-            "application_name": "iGram",
+            "application_name": "Easy",
             "mode": ["@type": "webAppOpenModeFullSize"],
         ]
     }

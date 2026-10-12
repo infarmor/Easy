@@ -12,7 +12,7 @@ if [[ -z "${TDLIB_PREFIX:-}" ]]; then
 fi
 export TDLIB_PREFIX
 # The bundle carries the new name; the identifier and the data folder stay, so the session survives.
-APP="build/iGram.app"
+APP="build/Easy.app"
 BIN="SwiftLite"
 
 swift build -c release --arch arm64
@@ -62,6 +62,6 @@ fi
 codesign --force --sign - "$APP/Contents/Frameworks/libtdjson.dylib"
 codesign --force --sign - "$APP/Contents/Frameworks/Lottie.framework"
 # Sandboxed: the entitlements go on the app itself; the bundled libraries inherit its sandbox.
-codesign --force --sign - --entitlements Resources/iGram.entitlements "$APP"
+codesign --force --sign - --entitlements Resources/Easy.entitlements "$APP"
 
 echo "Собрано: $APP (TDLib из $TDLIB_PREFIX)"

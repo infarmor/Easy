@@ -8,7 +8,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
-SOURCE = os.path.join(REPO, "build", "iGram.app")
+SOURCE = os.path.join(REPO, "build", "Easy.app")
 SCRATCH = "/tmp/check-bundle-selftest.app"
 MAIN = os.path.join("Contents", "MacOS", "SwiftLite")
 LOTTIE = os.path.join("Contents", "Frameworks", "Lottie.framework", "Versions", "A", "Lottie")
@@ -30,7 +30,7 @@ def run(*arguments):
 
 def main():
     if not os.path.isdir(SOURCE):
-        print("no build/iGram.app — run ./build.sh first", file=sys.stderr)
+        print("no build/Easy.app — run ./build.sh first", file=sys.stderr)
         return 1
     failures = 0
     for label, binary, old, new in MUTATIONS:

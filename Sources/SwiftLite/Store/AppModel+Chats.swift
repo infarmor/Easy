@@ -41,7 +41,9 @@ extension AppModel {
     /// the account it belonged to, and only while nothing else has been opened in the meantime.
     func reopenLastChat() {
         let parts = (UserDefaults.standard.string(forKey: Preferences.lastChat) ?? "").split(separator: ":")
-        guard parts.count == 2, Int64(parts[0]) == myUserId, let chatId = Int64(parts[1]) else { return }
+        // Only in the window: a chat opened in an account behind it would read what arrives there.
+        guard parts.count == 2, Int64(parts[0]) == myUserId, let chatId = Int64(parts[1]),
+              hub.map({ $0.active === self }) ?? true else { return }
         Task {
             // Chats arrive over the first seconds; a chat that never does (left, deleted) is simply not opened.
             for _ in 0..<60 {

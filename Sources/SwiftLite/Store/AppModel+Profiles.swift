@@ -130,10 +130,31 @@ extension AppModel {
                     let year = birthdate.tdInt("year")
                     info.facts.append(("День рождения", String(format: "%02d.%02d", birthdate.tdInt("day"), birthdate.tdInt("month")) + (year > 0 ? ".\(year)" : "")))
                 }
+                let personal = full.tdInt64("personal_chat_id")
+                if personal != 0, let channel = try? await request(["@type": "getChat", "chat_id": personal]) {
+                    info.facts.append(("Личный канал", channel.tdString("title")))
+                }
+                let gifts = full.tdInt("gift_count")
+                if gifts > 0 { info.facts.append(("Подарки", String(gifts))) }
+                if let address = full.tdNode("business_info")?.tdNode("location")?.tdString("address"), !address.isEmpty {
+                    info.facts.append(("Адрес", address))
+                }
+                if full.tdBool("has_restricted_voice_and_video_note_messages") { info.facts.append(("Голосовые", "не принимает")) }
                 if full.tdBool("has_private_forwards") { info.facts.append(("Пересылки", "скрывает профиль")) }
                 if full.tdBool("uses_unofficial_app") { info.facts.append(("Клиент", "неофициальное приложение")) }
             }
+            if type == "userTypeBot", let bot = user.tdNode("type") {
+                let users = bot.tdInt("active_user_count")
+                if users > 0 { info.facts.append(("Пользователей в месяц", users.formatted(.number.locale(Locale(identifier: "ru_RU"))))) }
+                info.facts.append(("В группы", bot.tdBool("can_join_groups") ? "можно добавить" : "не добавляется"))
+                if bot.tdBool("can_read_all_group_messages") { info.facts.append(("В группах", "читает все сообщения")) }
+                if bot.tdBool("is_inline") { info.facts.append(("Инлайн-режим", "есть")) }
+                if bot.tdBool("has_main_web_app") { info.facts.append(("Мини-приложение", "есть")) }
+            }
             if let badge = nameBadges["u\(userId)"], badge.isGift { info.facts.append(("Эмодзи-статус", badge.giftTitle)) }
+            if userId == myUserId, let stars = await starBalance() {
+                info.facts.insert(("Звёзды", stars.formatted(.number.locale(Locale(identifier: "ru_RU")))), at: 0)
+            }
             let language = user.tdString("language_code")
             if !language.isEmpty { info.facts.append(("Язык", language)) }
             info.raw = user
@@ -177,7 +198,20 @@ extension AppModel {
                     info.facts.append(("Создан или вступили", Date(timeIntervalSince1970: TimeInterval(date)).formatted(.dateTime.day().month(.wide).year().locale(Locale(identifier: "ru_RU")))))
                 }
                 if let admins = full?.tdInt("administrator_count"), admins > 0 { info.facts.append(("Администраторы", String(admins))) }
-                if let linked = full?.tdInt64("linked_chat_id"), linked != 0 { info.facts.append(("Связанный чат", String(linked))) }
+                if let restricted = full?.tdInt("restricted_count"), restricted > 0 { info.facts.append(("Ограничены", String(restricted))) }
+                if let banned = full?.tdInt("banned_count"), banned > 0 { info.facts.append(("Заблокированы", String(banned))) }
+                if let linked = full?.tdInt64("linked_chat_id"), linked != 0 {
+                    // The discussion group of a channel, or the channel a group discusses: by name when it is known.
+                    let title = (try? await request(["@type": "getChat", "chat_id": linked]))?.tdString("title") ?? ""
+                    info.facts.append((isChannel ? "Обсуждение" : "Канал", title.isEmpty ? String(linked) : title))
+                }
+                if let slow = full?.tdInt("slow_mode_delay"), slow > 0 {
+                    info.facts.append(("Медленный режим", slow >= 60 ? "\(slow / 60) мин" : "\(slow) с"))
+                }
+                if let level = group?.tdInt("boost_level"), level > 0 { info.facts.append(("Уровень бустов", String(level))) }
+                if group?.tdBool("join_by_request") == true { info.facts.append(("Вступление", "по заявке")) }
+                if let gifts = full?.tdInt("gift_count"), gifts > 0 { info.facts.append(("Подарки", String(gifts))) }
+                if let link = full?.tdNode("invite_link")?.tdString("invite_link"), !link.isEmpty { info.facts.append(("Ссылка", link)) }
             case "chatTypeBasicGroup":
                 let groupId = type.tdInt64("basic_group_id")
                 info.innerId = groupId
@@ -187,6 +221,11 @@ extension AppModel {
                 info.about = full?.tdString("description") ?? ""
             default:
                 info.subtitle = "чат"
+            }
+            if chat.tdBool("has_protected_content") { info.facts.append(("Копирование", "запрещено")) }
+            let autoDelete = chat.tdInt("message_auto_delete_time")
+            if autoDelete > 0 {
+                info.facts.append(("Автоудаление", autoDelete >= 86_400 ? "через \(autoDelete / 86_400) дн" : "через \(max(1, autoDelete / 3600)) ч"))
             }
             info.raw = chat
             guard generation == profileGeneration else { return }

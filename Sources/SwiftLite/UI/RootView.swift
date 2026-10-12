@@ -42,7 +42,7 @@ private struct ClosedSessionView: View {
             Text(message)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Перезапустить iGram") { model.restartSession() }
+            Button("Перезапустить Easy") { model.restartSession() }
         }
         .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

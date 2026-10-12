@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-/// The passcode: locking the window, and the keys it gives for what iGram keeps on disk.
+/// The passcode: locking the window, and the keys it gives for what Easy keeps on disk.
 extension AppModel {
     // MARK: - unlocking
 
@@ -24,6 +24,7 @@ extension AppModel {
         presentLoginAlert()
         // Does nothing once a session exists.
         boot()
+        hub?.shareLock(from: self)
         return true
     }
 
@@ -34,6 +35,7 @@ extension AppModel {
     func unlockAfterSystemAuthentication() {
         guard canUnlockWithoutPasscode else { return }
         isLocked = false
+        hub?.shareLock(from: self)
     }
 
     /// Whether the menus may act on the account: signed in, and not behind the passcode. A locked window with
@@ -53,6 +55,33 @@ extension AppModel {
         viewerMessage = nil
         closeWebApp()
         isLocked = true
+        // Another account one click away would be a way round the cover.
+        hub?.shareLock(from: self)
+    }
+
+    /// The passcode's state as another account of this Mac has it. Does not call back into the hub.
+    /// `rekeying`: the passcode was just set or removed, so this account's database and archive follow.
+    func adoptLock(from source: AppModel, rekeying: Bool = false) {
+        hasPasscode = source.hasPasscode
+        lockKeys = source.lockKeys
+        if source.isLocked, !isLocked {
+            profile = nil
+            inspectedCode = nil
+            forwardingBatch = nil
+            managedChat = nil
+            pendingFiles = nil
+            viewerMessage = nil
+        }
+        isLocked = source.isLocked
+        if rekeying {
+            archive.setKey(lockKeys?.archive)
+            if isReady {
+                let key = lockKeys?.database.base64EncodedString() ?? ""
+                Task { _ = try? await request(["@type": "setDatabaseEncryptionKey", "new_encryption_key": key]) }
+            }
+        }
+        // Does nothing once a session exists; at launch this is what lets a locked account start.
+        if !isLocked { boot() }
     }
 
     // MARK: - a new device on the account
@@ -115,6 +144,7 @@ extension AppModel {
         archive.setKey(made.keys.archive)
         hasPasscode = true
         startAutoLock()
+        hub?.shareLock(from: self, rekeying: true)
         return nil
     }
 
@@ -145,6 +175,7 @@ extension AppModel {
         hasPasscode = false
         lockTimer?.invalidate()
         lockTimer = nil
+        hub?.shareLock(from: self, rekeying: true)
         return nil
     }
 

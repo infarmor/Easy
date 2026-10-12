@@ -39,6 +39,16 @@ extension View {
 }
 
 extension View {
+    /// No pale veil where a list slides under the toolbar: for a list whose ground is a colour of its own.
+    @ViewBuilder
+    func hidingTopScrollEdge() -> some View {
+        if #available(macOS 26, *) {
+            scrollEdgeEffectHidden(true, for: .top)
+        } else {
+            self
+        }
+    }
+
     /// Put on the content of a scroll view to remove its scroll bars for good. `scrollIndicators(.hidden)` is
     /// ignored when the Mac is set to always show scroll bars, and a grey rail under a row of chips is the result.
     func hidingEnclosingScrollBars() -> some View {

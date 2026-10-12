@@ -379,7 +379,7 @@ private struct VideoNoteView: View {
                 let progress = duration > 0 ? player.currentTime().seconds / duration : 0
                 Circle()
                     .trim(from: 0, to: progress)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .stroke(Color.brand, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .padding(1.5)
             }
@@ -490,7 +490,7 @@ private struct VoiceNoteView: View {
     @Environment(\.bubbleAccent) private var accent
     /// The button is a disc of the accent with the glyph cut in the other colour; in your own bubble the two
     /// trade places.
-    private var glyph: Color { message.isOutgoing ? Color.accentColor : .white }
+    private var glyph: Color { message.isOutgoing ? Color.brand : .white }
     let message: Message
     let media: MediaInfo
     @State private var isLoading = false

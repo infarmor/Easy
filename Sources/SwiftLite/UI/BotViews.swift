@@ -63,7 +63,7 @@ struct BotButtonView: View {
     /// Colored buttons (Primary, Danger, Success) are tinted glass; ordinary ones clear glass.
     private var tint: Color? {
         switch button.style {
-        case .primary: Color.accentColor
+        case .primary: Color.brand
         case .danger: Color.red
         case .success: Color.green
         case .plain: nil
@@ -145,7 +145,7 @@ struct BotMenuButton: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 11)
             .frame(height: 30)
-            .background(Color.accentColor, in: Capsule())
+            .background(Color.brand, in: Capsule())
         }
         .buttonStyle(PressableStyle())
         .help(menu.appURL.isEmpty ? "Команды бота" : "Открыть мини-приложение")

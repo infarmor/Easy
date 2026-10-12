@@ -214,7 +214,7 @@ enum OggOpus {
         page([head], granule: 0, flags: 0x02)
 
         var tags = Data("OpusTags".utf8)
-        let vendor = Data("iGram".utf8)
+        let vendor = Data("Easy".utf8)
         withUnsafeBytes(of: UInt32(vendor.count).littleEndian) { tags.append(contentsOf: $0) }
         tags.append(vendor)
         tags.append(contentsOf: [0, 0, 0, 0])

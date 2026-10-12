@@ -116,7 +116,13 @@ struct ConversationView: View {
                 }
                 .onChange(of: model.scrollTarget) { _, target in
                     guard let target else { return }
-                    withAnimation(.smooth(duration: 0.25)) { proxy.scrollTo(model.viewId(ofMessage: target), anchor: .center) }
+                    if model.scrollsWithoutAnimation {
+                        // A chat opening on its unread messages is simply there, the divider a little under the top.
+                        model.scrollsWithoutAnimation = false
+                        proxy.scrollTo(model.viewId(ofMessage: target), anchor: UnitPoint(x: 0.5, y: 0.2))
+                    } else {
+                        withAnimation(.smooth(duration: 0.25)) { proxy.scrollTo(model.viewId(ofMessage: target), anchor: .center) }
+                    }
                     model.scrollTarget = nil
                 }
                 .overlay(alignment: .top) {
@@ -175,8 +181,8 @@ struct ConversationView: View {
         .overlay {
             if isDropTargeted {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [6]))
-                    .background(Color.accentColor.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .strokeBorder(Color.brand, style: StrokeStyle(lineWidth: 2, dash: [6]))
+                    .background(Color.brand.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(Text("Отпустите, чтобы прикрепить").font(.body.weight(.medium)))
                     .padding(8)
                     .allowsHitTesting(false)
@@ -240,7 +246,7 @@ struct ConversationView: View {
                             if !subtitle.isEmpty {
                                 Text(subtitle)
                                     .font(.caption)
-                                    .foregroundStyle(chat.activity.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.accentColor))
+                                    .foregroundStyle(chat.activity.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.brandInk))
                                     .lineLimit(1)
                             }
                         }
@@ -318,7 +324,7 @@ struct ConversationView: View {
                 Image(systemName: "hand.wave.fill")
                     .font(.system(size: 34))
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.brandInk)
                 Text("Здесь пока нет сообщений")
                     .font(.system(size: 14, weight: .semibold))
                 Text(chat.kind == .channel ? "Новые публикации появятся здесь" : "Напишите первым — начните с приветствия")
@@ -593,14 +599,14 @@ struct TopicBar: View {
                         .font(.system(size: 10, weight: .semibold).monospacedDigit())
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
-                        .background(chosen ? AnyShapeStyle(.white.opacity(0.25)) : AnyShapeStyle(Color.accentColor),
+                        .background(chosen ? AnyShapeStyle(.white.opacity(0.25)) : AnyShapeStyle(Color.brand),
                                     in: Capsule())
                         .foregroundStyle(.white)
                 }
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 5)
-            .background(chosen ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(0.1)), in: Capsule())
+            .background(chosen ? AnyShapeStyle(Color.brand) : AnyShapeStyle(Color.primary.opacity(0.1)), in: Capsule())
             .foregroundStyle(chosen ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
         }
         .buttonStyle(.plain)
@@ -642,12 +648,12 @@ private struct PinnedBar: View {
         } label: {
             HStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(Color.accentColor)
+                    .fill(Color.brand)
                     .frame(width: 2, height: 28)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Закреплённое сообщение")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.brandInk)
                     Text(TD.preview(of: message))
                         .font(.callout)
                         .foregroundStyle(.primary.opacity(0.85))
@@ -675,15 +681,15 @@ private struct PinnedBar: View {
 struct UnreadSeparator: View {
     var body: some View {
         HStack(spacing: 8) {
-            Rectangle().fill(Color.accentColor.opacity(0.3)).frame(height: 1)
+            Rectangle().fill(Color.brand.opacity(0.3)).frame(height: 1)
             Text("Новые сообщения")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.brandInk)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 3)
-                .background(Color.accentColor.opacity(0.12), in: Capsule())
+                .background(Color.brand.opacity(0.12), in: Capsule())
                 .fixedSize()
-            Rectangle().fill(Color.accentColor.opacity(0.3)).frame(height: 1)
+            Rectangle().fill(Color.brand.opacity(0.3)).frame(height: 1)
         }
         .padding(.vertical, 8)
     }
@@ -700,12 +706,13 @@ struct DayHeader: View {
             picked = date
             picksDate = true
         } label: {
-            // A caption on the ground, as Messages dates a stretch of conversation: no plate under it.
+            // A drop of glass on the ground: it floats over the bubbles that scroll under it.
             Text(date.daySeparator)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 11)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 4)
+                .glassSurface(in: Capsule())
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -776,6 +783,7 @@ struct MessageRow: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(Preferences.messageFontSize) private var messageFontSize = 14
+    @AppStorage(Preferences.chatBackground) private var chatBackground = ChatBackground.glass.rawValue
     @AppStorage(Preferences.showMessageCode) private var showsCode = false
     @AppStorage(Preferences.showIdentifiers) private var showsIdentifiers = false
     @AppStorage(Preferences.securityTools) private var securityTools = true
@@ -809,7 +817,7 @@ struct MessageRow: View {
                 if model.isSelectingMessages {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 18))
-                        .foregroundStyle(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
+                        .foregroundStyle(isSelected ? AnyShapeStyle(Color.brandInk) : AnyShapeStyle(.tertiary))
                         .padding(.bottom, 4)
                         .transition(.move(edge: .leading).combined(with: .opacity))
                 }
@@ -864,11 +872,11 @@ struct MessageRow: View {
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.1))
+                        .fill(Color.brand.opacity(0.1))
                         .padding(.horizontal, -8)
                 } else if model.highlightedMessageId == message.id {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.12))
+                        .fill(Color.brand.opacity(0.12))
                         .padding(.horizontal, -8)
                 }
             }
@@ -1096,7 +1104,7 @@ struct MessageRow: View {
             if message.isForwarded {
                 Label(forwardName.map { "Переслано от \($0)" } ?? "Переслано", systemImage: "arrowshape.turn.up.right")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(message.isOutgoing ? Color.white : Color.accentColor)
+                    .foregroundStyle(message.isOutgoing ? Color.white : Color.brandInk)
             }
             if let replied = row.reply {
                 ReplyQuote(
@@ -1113,7 +1121,7 @@ struct MessageRow: View {
                 ReplyQuote(
                     name: foreignName(foreign),
                     text: foreign.text,
-                    tint: message.isOutgoing ? .white : Color.accentColor,
+                    tint: message.isOutgoing ? .white : Color.brandInk,
                     textStyle: secondaryInk
                 ) {
                     model.open(foreign)
@@ -1240,10 +1248,10 @@ struct MessageRow: View {
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
                     .background(
-                        reaction.isChosen ? AnyShapeStyle(Color.accentColor.opacity(0.25)) : AnyShapeStyle(Color.primary.opacity(0.07)),
+                        reaction.isChosen ? AnyShapeStyle(Color.brand.opacity(0.25)) : AnyShapeStyle(Color.primary.opacity(0.07)),
                         in: Capsule()
                     )
-                    .overlay(Capsule().strokeBorder(reaction.isChosen ? Color.accentColor.opacity(0.6) : .clear))
+                    .overlay(Capsule().strokeBorder(reaction.isChosen ? Color.brand.opacity(0.6) : .clear))
                 }
                 .buttonStyle(.plain)
                 .help(reaction.isChosen ? "Убрать реакцию" : reaction.emoji.isEmpty ? "Поставить такую же" : "Поставить \(reaction.emoji)")
@@ -1414,14 +1422,17 @@ struct MessageRow: View {
     }
 
     /// The two bubbles of Messages: the accent colour for yours, lit from above the way Messages lights its
-    /// own; a quiet grey for theirs.
+    /// own; a quiet grey for theirs, or white where the ground is grey.
     private var bubbleColor: AnyShapeStyle {
         if message.isOutgoing {
             return AnyShapeStyle(LinearGradient(
-                colors: [Color.accentColor.mix(with: .white, by: 0.16), Color.accentColor.mix(with: .black, by: 0.04)],
+                colors: [Color.brand.mix(with: .white, by: 0.16), Color.brand.mix(with: .black, by: 0.04)],
                 startPoint: .top, endPoint: .bottom))
         }
-        return AnyShapeStyle(colorScheme == .dark ? Color(white: 0.23) : Color(white: 0.915))
+        if colorScheme == .dark { return AnyShapeStyle(Color(white: 0.23)) }
+        // The glass and the indigo wash are grounds with a tone of their own, and a grey bubble sinks into
+        // them; there theirs are white. Only the flat white ground keeps the grey.
+        return AnyShapeStyle(chatBackground == ChatBackground.plain.rawValue ? Color(white: 0.915) : Color.white)
     }
 
     private var senderName: String {
@@ -1566,6 +1577,7 @@ private struct ReplyQuote: View {
 
 struct Composer: View {
     @Environment(AppModel.self) private var model
+    @Environment(AccountHub.self) private var hub: AccountHub?
     @FocusState private var focused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var recorder = VoiceRecorder()
@@ -1599,7 +1611,7 @@ struct Composer: View {
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 32)
                         .foregroundStyle(.white)
-                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(Color.brand, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.defaultAction)
@@ -1710,7 +1722,10 @@ struct Composer: View {
         default: break
         }
         let hint = model.replyKeyboard?.placeholder ?? ""
-        return hint.isEmpty ? "Сообщение" : hint
+        if !hint.isEmpty { return hint }
+        // With several accounts the field says which of them the message goes from.
+        if let hub, hub.accounts.count > 1, !model.accountName.isEmpty { return "Сообщение от \(model.accountName)" }
+        return "Сообщение"
     }
 
     private var inputRow: some View {
@@ -1820,7 +1835,7 @@ struct Composer: View {
                             Image(systemName: model.composerContext?.kind == .edit ? "checkmark.circle.fill" : "arrow.up.circle.fill")
                                 .font(.system(size: 26))
                                 .symbolRenderingMode(.palette)
-                                .foregroundStyle(.white, Color.accentColor)
+                                .foregroundStyle(.white, Color.brand)
                         }
                         .buttonStyle(PressDimStyle())
                         .padding(.bottom, 2)
@@ -1902,7 +1917,7 @@ struct Composer: View {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 26))
                     .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, Color.accentColor)
+                    .foregroundStyle(.white, Color.brand)
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.return, modifiers: [])
@@ -1997,11 +2012,11 @@ private struct ComposerContextBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: context.kind == .edit ? "pencil" : "arrowshape.turn.up.left")
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.brandInk)
             VStack(alignment: .leading, spacing: 1) {
                 Text(context.title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.brandInk)
                 Text(context.preview)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)

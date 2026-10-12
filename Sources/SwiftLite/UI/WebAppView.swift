@@ -128,7 +128,7 @@ private struct WebAppContent: View {
             }
             .frame(maxWidth: .infinity, minHeight: 40)
             .foregroundStyle(state.textColor ?? .white)
-            .background(state.color ?? .accentColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(state.color ?? .brand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .opacity(state.isActive ? 1 : 0.5)
         }
         .buttonStyle(.plain)

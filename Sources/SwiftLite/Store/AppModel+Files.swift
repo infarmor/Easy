@@ -141,7 +141,7 @@ extension AppModel {
         let stamp = Date().formatted(.iso8601.year().month().day().dateSeparator(.dash)) + " " +
             Date().formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(Locale(identifier: "ru_RU")))
                 .replacingOccurrences(of: ":", with: "-")
-        let root = folder.appendingPathComponent("iGram — экспорт \(stamp)", isDirectory: true)
+        let root = folder.appendingPathComponent("Easy — экспорт \(stamp)", isDirectory: true)
         let files = FileManager.default
         do {
             try files.createDirectory(at: root, withIntermediateDirectories: true)
@@ -427,8 +427,42 @@ extension AppModel {
                 findings.append(.init(level: .risk, title: "Двухэтапная проверка выключена",
                                       detail: "Любой, кто получит код из SMS, войдёт в аккаунт. Включите облачный пароль в официальном приложении: Настройки → Конфиденциальность."))
             }
+            // Asked for by whoever holds a code from SMS: in a week the password is gone unless it is cancelled.
+            let reset = password.tdInt("pending_reset_date")
+            if reset > 0 {
+                let day = Date(timeIntervalSince1970: TimeInterval(reset)).formatted(.dateTime.day().month(.wide).locale(Locale(identifier: "ru_RU")))
+                findings.append(.init(level: .risk, title: "Запрошен сброс облачного пароля",
+                                      detail: "Пароль будет снят \(day). Если это не вы — отмените сброс в официальном приложении и завершите чужие сеансы."))
+            }
+            if password.tdString("login_email_address_pattern").isEmpty {
+                findings.append(.init(level: .advice, title: "Почта для входа не задана",
+                                      detail: "С ней коды входа приходят на почту, а не по SMS: перехват SMS и перевыпуск SIM перестают давать доступ."))
+            }
         } else {
             incomplete = true
+        }
+        if !hasPasscode {
+            findings.append(.init(level: .advice, title: "Easy открывается без код-пароля",
+                                  detail: "Любой, кто сел за этот Mac, читает переписку. Код-пароль задаётся выше; он же шифрует базу на диске."))
+        }
+        // Sessions nobody has used for a month, and apps that are not Telegram's own, are where a stolen
+        // session hides.
+        let sessions = await activeSessions().filter { !$0.isCurrent }
+        let stale = sessions.filter { Date().timeIntervalSince($0.lastActive) > 30 * 86_400 }
+        if !stale.isEmpty {
+            findings.append(.init(level: .advice, title: "Сеансы без активности больше месяца: \(stale.count)",
+                                  detail: stale.prefix(3).map { [$0.application, $0.device].filter { !$0.isEmpty }.joined(separator: " · ") }.joined(separator: "; ")
+                                      + ". Ненужные стоит завершить в списке ниже."))
+        }
+        let unofficial = sessions.filter { !$0.isOfficial }
+        if !unofficial.isEmpty {
+            findings.append(.init(level: .advice, title: "Сеансы в сторонних приложениях: \(unofficial.count)",
+                                  detail: unofficial.prefix(3).map(\.application).joined(separator: "; ")
+                                      + ". Стороннее приложение видит всю переписку; оставьте только те, что ставили сами."))
+        }
+        if let ttl = try? await request(["@type": "getAccountTtl"]), ttl.tdInt("days") > 0 {
+            findings.append(.init(level: .good, title: "Аккаунт удалится после \(TD.count(ttl.tdInt("days"), "дня", "дней", "дней")) без входов",
+                                  detail: "Так задано в настройках Telegram: заброшенный аккаунт не остаётся висеть с вашими данными."))
         }
         let checks: [(String, String, SecurityFinding.Level)] = [
             ("userPrivacySettingShowPhoneNumber", "Номер телефона виден всем", .risk),

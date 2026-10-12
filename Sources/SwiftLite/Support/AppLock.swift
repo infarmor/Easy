@@ -2,7 +2,7 @@ import CommonCrypto
 import CryptoKit
 import Foundation
 
-/// The passcode that locks iGram and encrypts what it keeps on this Mac.
+/// The passcode that locks Easy and encrypts what it keeps on this Mac.
 ///
 /// Nothing derived from the passcode is stored except a check value: the keys exist only in memory while the
 /// app is unlocked, and are worked out again from what is typed at the next launch. That is why no keychain

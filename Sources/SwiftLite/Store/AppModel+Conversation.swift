@@ -26,6 +26,7 @@ extension AppModel {
         // Taken before reading: afterwards the chat no longer knows what was new.
         let lastRead = knownChats[chatId]?.lastReadInboxId ?? 0
         let hadUnread = (knownChats[chatId]?.unread ?? 0) > 0
+        unreadOpenFrom = hadUnread ? lastRead : nil
         // Opening the chat in TDLib and reading its history run side by side: the first page does not wait.
         Task { _ = try? await request(["@type": "openChat", "chat_id": chatId]) }
         Task { await loadMemberCount(of: chatId) }
@@ -45,11 +46,33 @@ extension AppModel {
             await jump(to: target.messageId)
             return
         }
-        guard openChatId == chatId, hadUnread,
-              let firstUnread = messages.first(where: { !$0.isOutgoing && $0.id > lastRead })?.id else { return }
+        guard openChatId == chatId, hadUnread else { return }
+        // A long unread stretch begins before the first page; a few more pages bring its beginning, so the
+        // divider stands where reading really stopped and not at the top of whatever happened to be loaded.
+        var pages = 0
+        while unreadMarkerId == nil, openChatId == chatId, pages < 4, canLoadOlder, lastRead != 0,
+              let oldest = messages.first(where: { !$0.isDeleted })?.id, oldest > lastRead {
+            await loadOlder()
+            pages += 1
+        }
+        guard openChatId == chatId else { return }
+        unreadOpenFrom = nil
+        placeOnFirstUnread(after: lastRead, evenWithoutBoundary: true)
+    }
+
+    /// Puts the unread divider above the first message that came since the chat was last read, and the view
+    /// on it, without a scroll to watch. Until the last read message itself is loaded the first unread one in
+    /// hand may not be the first there is, so nothing is placed unless told to settle for it.
+    @discardableResult
+    func placeOnFirstUnread(after lastRead: Int64, evenWithoutBoundary: Bool = false) -> Bool {
+        guard unreadMarkerId == nil,
+              let firstUnread = messages.first(where: { !$0.isOutgoing && $0.id > lastRead })?.id,
+              evenWithoutBoundary || (messages.first?.id ?? .max) <= lastRead else { return false }
         let row = rowIdByMessage[firstUnread] ?? firstUnread
         unreadMarkerId = row
+        scrollsWithoutAnimation = true
         scrollTarget = row
+        return true
     }
 
     /// ⌥⌘↑ and ⌥⌘↓ walk through the chat list.
@@ -760,6 +783,9 @@ extension AppModel {
         if messages.isEmpty, openTopicId == nil, let local = try? await history(chatId: chatId, from: 0, onlyLocal: true),
            generation == historyGeneration, !local.isEmpty {
             merge(local.map { TD.message($0) })
+            // What is on disk usually holds the place where reading stopped: the chat opens on it at once
+            // instead of showing its end first and moving when the server answers.
+            if let from = unreadOpenFrom, placeOnFirstUnread(after: from) { unreadOpenFrom = nil }
         }
         do {
             let page = try await loadHistory(chatId: chatId, from: 0, generation: generation)
@@ -894,6 +920,8 @@ extension AppModel {
         quietDraft = nil
         replyPreviews = [:]
         scrollTarget = nil
+        scrollsWithoutAnimation = false
+        unreadOpenFrom = nil
         highlightedMessageId = nil
         unreadMarkerId = nil
         pinnedMessage = nil

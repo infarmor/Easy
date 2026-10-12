@@ -16,7 +16,8 @@ func check(_ condition: @autoclosure () -> Bool, _ label: String) {
 }
 
 MainActor.assumeIsolated {
-    let model = AppModel()
+    let hub = AccountHub()
+    let model = hub.active
     let file = { (path: String) in FileManager.default.fileExists(atPath: path) }
     let credentials = "\(CommandLine.arguments[1])/root/credentials.json"
 
@@ -45,6 +46,24 @@ MainActor.assumeIsolated {
     model.logOut()
     check(wait("log out") { model.sessionsStarted == before + 2 && model.phase == .phone && !model.busy }, "log out closes TDLib and starts a clean session")
     check(model.errorText.isEmpty, "log out without errors: '\(model.errorText)'")
+
+    // A second account: a session of its own beside the first one's, which stays connected; and a way back
+    // that takes the slot with it.
+    let root = "\(CommandLine.arguments[1])/root"
+    let started = model.sessionsStarted
+    hub.addAccount()
+    let second = hub.active
+    check(hub.accounts.count == 2 && second !== model && !second.slot.isEmpty, "adding an account makes a second one and shows it")
+    check(wait("second account reaches phone step") { second.phase == .phone && !second.busy }, "the new account opens a session of its own")
+    check(model.hasSession && model.sessionsStarted == started, "the first account's session was not touched")
+    check(file("\(root)/accounts/\(second.slot)/tdlib/database") && file("\(root)/tdlib/database"),
+          "each account has its own database folder")
+    check(second.canLeaveSignIn, "an account that never signed in offers the way back")
+    second.leaveSignIn()
+    check(hub.active === model, "leaving the sign-in shows the first account again")
+    check(wait("abandoned account closed") { hub.accounts.count == 1 && !file("\(root)/accounts/\(second.slot)") },
+          "the abandoned slot and its folder are gone")
+    check(model.hasSession && model.phase == .phone, "the first account is still connected")
 
     // The app died between writing the passcode's record and TDLib confirming the new key: the record says
     // "encrypted", the database on disk is not. The next launch has to get in anyway, and set the record right.

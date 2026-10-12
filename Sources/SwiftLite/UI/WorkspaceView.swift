@@ -14,7 +14,8 @@ struct WorkspaceView: View {
                 Group {
                     if let chat = model.selectedChat {
                         ConversationView(chat: chat)
-                            .id(chat.id)
+                            // The same person is the same chat id in two accounts; the account is part of it.
+                            .id(model.slot + ":" + String(chat.id))
                             .transition(.opacity)
                     } else {
                         // The wallpaper belongs to a conversation; with none open the window shows its glass.
@@ -27,7 +28,7 @@ struct WorkspaceView: View {
                 if model.showsMembersColumn, let chat = model.selectedChat {
                     Divider()
                     MembersPanel(chat: chat)
-                        .id(chat.id)
+                        .id(model.slot + ":" + String(chat.id))
                 }
             }
         })
@@ -53,6 +54,15 @@ struct ChatListView: View {
     @AppStorage(Preferences.showMessageCode) private var showsCode = false
     @AppStorage(Preferences.showIdentifiers) private var showsIdentifiers = false
     @AppStorage(Preferences.ghostMode) private var isGhost = false
+    /// The window's own scheme. Everything below is told it is dark, so its ink is white on the indigo.
+    @Environment(\.colorScheme) private var scheme
+    @Environment(AccountHub.self) private var hub: AccountHub?
+
+    /// The chats of every account in one list: with more than one account, unless a search is on.
+    private var showsAllAccounts: Bool {
+        guard let hub else { return false }
+        return hub.showsAllAccounts && hub.accounts.count > 1 && model.filter.isEmpty && !model.showsArchive
+    }
 
     var body: some View {
         @Bindable var model = model
@@ -63,7 +73,9 @@ struct ChatListView: View {
         // when hundreds of rows arrive at once and would all be sent sliding.
         let order = model.animatesChatList ? visible.prefix(40).map(\.id) : []
         return List(selection: $model.selection) {
-            if !model.filter.isEmpty {
+            if showsAllAccounts, let hub {
+                allAccountsRows(hub)
+            } else if !model.filter.isEmpty {
                 if !visible.isEmpty {
                     Section { rows(visible) } header: { SectionHeading(title: "Чаты") }
                 }
@@ -104,8 +116,15 @@ struct ChatListView: View {
             }
         }
         .animation(.smooth(duration: 0.3), value: order)
+        // One menu for the list, built when a row is right-clicked. A menu on every row was built with the
+        // row, hundreds of them for a long list, whether or not anyone ever opened one.
+        .contextMenu(forSelectionType: Int64.self) { ids in
+            if let id = ids.first, let chat = model.chat(withId: id) {
+                chatMenu(chat, in: model)
+            }
+        }
         .overlay {
-            if visible.isEmpty && model.foundMessages.isEmpty && model.foundPublicChats.isEmpty {
+            if visible.isEmpty && model.foundMessages.isEmpty && model.foundPublicChats.isEmpty && !showsAllAccounts {
                 ContentUnavailableView(
                     "Пусто",
                     systemImage: "text.bubble",
@@ -168,7 +187,7 @@ struct ChatListView: View {
                                 }
                                 Text(isGhost ? "призрак · не в сети" : TD.count(model.chats.count, "чат", "чата", "чатов"))
                                     .font(.subheadline)
-                                    .foregroundStyle(isGhost ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+                                    .foregroundStyle(isGhost ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
                                     .lineLimit(1)
                             }
                         }
@@ -177,6 +196,7 @@ struct ChatListView: View {
                     .buttonStyle(.plain)
                     .help("Мой профиль")
                     Spacer(minLength: 4)
+                    AccountSwitcher()
                     SettingsLink {
                         Image(systemName: "gearshape")
                             .font(.body)
@@ -195,11 +215,69 @@ struct ChatListView: View {
                 .padding(.bottom, 8)
             }
         }
+        // The list's own ground and selection give way to the indigo and to the card drawn behind the open chat.
+        .scrollContentBackground(.hidden)
+        // The indigo runs up behind the toolbar's buttons instead of stopping at a pale band under them.
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .hidingTopScrollEdge()
+        .background(PlainSelection())
+        .environment(\.colorScheme, .dark)
+        .background(SidebarGlass())
+    }
+
+    /// What a right click on a chat offers. `model` is the account the chat belongs to: in the list of all
+    /// accounts that is not always the one in the window, and anything that opens a sheet brings it there first.
+    @ViewBuilder
+    private func chatMenu(_ chat: Chat, in model: AppModel) -> some View {
+        Button("Профиль", systemImage: "person.crop.circle") {
+            hub?.activate(model.slot)
+            Task { await model.showProfile(of: chat) }
+        }
+        Divider()
+        Button(chat.isPinned ? "Открепить" : "Закрепить", systemImage: chat.isPinned ? "pin.slash" : "pin") {
+            Task { await model.toggleChatPinned(chat) }
+        }
+        if chat.unread > 0 || chat.isMarkedUnread {
+            Button("Отметить прочитанным", systemImage: "checkmark.message") { Task { await model.markChatRead(chat) } }
+        } else {
+            Button("Отметить непрочитанным", systemImage: "message.badge") { Task { await model.markChatUnread(chat) } }
+        }
+        if chat.isMuted {
+            Button("Включить уведомления", systemImage: "bell") { Task { await model.toggleChatMuted(chat) } }
+        } else {
+            Menu("Выключить уведомления", systemImage: "bell.slash") {
+                Button("На час") { Task { await model.muteChat(chat, forSeconds: 3600) } }
+                Button("На 8 часов") { Task { await model.muteChat(chat, forSeconds: 8 * 3600) } }
+                Button("На 2 дня") { Task { await model.muteChat(chat, forSeconds: 2 * 86_400) } }
+                Divider()
+                Button("Навсегда") { Task { await model.toggleChatMuted(chat) } }
+            }
+        }
+        Button(chat.isArchived ? "Вернуть из архива" : "Архивировать", systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
+            Task { await model.toggleChatArchived(chat) }
+        }
+        Divider()
+        chatActions(chat, in: model)
+        if showsCode || showsIdentifiers {
+            Divider()
+        }
+        if showsCode {
+            Button("Код чата…", systemImage: "curlybraces") {
+                hub?.activate(model.slot)
+                Task { await model.inspect(chat) }
+            }
+        }
+        if showsIdentifiers {
+            Button("Скопировать ID чата", systemImage: "number.square") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(String(chat.id), forType: .string)
+            }
+        }
     }
 
     /// Clear, block, delete or leave: the things you do to a whole chat.
     @ViewBuilder
-    private func chatActions(_ chat: Chat) -> some View {
+    private func chatActions(_ chat: Chat, in model: AppModel) -> some View {
         let isPrivate = chat.kind == .personal || chat.kind == .secret
         Button("Очистить историю…", systemImage: "eraser") {
             let canRevoke = isPrivate && chat.userId != 0 && !chat.isBot
@@ -223,6 +301,7 @@ struct ChatListView: View {
                 Button("Управление чатом…", systemImage: "person.2.circle") {
                     // Managing opens the chat as well: rights, members and links are one slot of state, and
                     // the topic strip of the open chat reads the same rights.
+                    hub?.activate(model.slot)
                     model.selection = chat.id
                     model.managedChat = chat
                 }
@@ -234,12 +313,42 @@ struct ChatListView: View {
         }
     }
 
+    /// Every account's chats together. A row of the account in the window is selected as usual; a row of
+    /// another account brings that account into the window with its chat, so the answer goes from the
+    /// account the message came to, without picking it first.
+    private func allAccountsRows(_ hub: AccountHub) -> some View {
+        ForEach(hub.allChats) { item in
+            let isOwn = item.owner === model
+            let isOpen = isOwn && item.chat.id == model.selection
+            let row = ChatRow(chat: item.chat, showsDraft: !isOpen, isCard: isOpen && scheme == .light, owner: item.owner)
+                .environment(item.owner)
+                .listRowSeparator(.hidden)
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(isOpen ? Color.white.opacity(scheme == .light ? 0.92 : 0.16) : .clear)
+                        .padding(.horizontal, 8))
+            if isOwn {
+                row.tag(item.chat.id)
+            } else {
+                row.contentShape(Rectangle())
+                    .onTapGesture { hub.open(item.chat.id, in: item.owner.slot) }
+                    .contextMenu { chatMenu(item.chat, in: item.owner) }
+            }
+        }
+    }
+
     private func rows(_ visible: [Chat]) -> some View {
         ForEach(visible) { chat in
             // The open chat's draft is in the composer, not in the list.
-            ChatRow(chat: chat, showsDraft: chat.id != model.selection)
+            let isOpen = chat.id == model.selection
+            ChatRow(chat: chat, showsDraft: !isOpen, isCard: isOpen && scheme == .light)
                 .tag(chat.id)
                 .listRowSeparator(.hidden)
+                // The open chat is a white card on the indigo; in the dark, a lighter patch of it.
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(isOpen ? Color.white.opacity(scheme == .light ? 0.92 : 0.16) : .clear)
+                        .padding(.horizontal, 8))
                 .modifier(HoverPrefetch(chatId: chat.id))
                 // A two-finger swipe does what the context menu's most common items do.
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -265,60 +374,22 @@ struct ChatListView: View {
                     }
                     .tint(.gray)
                 }
-                .contextMenu {
-                    Button("Профиль", systemImage: "person.crop.circle") { Task { await model.showProfile(of: chat) } }
-                    Divider()
-                    Button(chat.isPinned ? "Открепить" : "Закрепить", systemImage: chat.isPinned ? "pin.slash" : "pin") {
-                        Task { await model.toggleChatPinned(chat) }
-                    }
-                    if chat.unread > 0 || chat.isMarkedUnread {
-                        Button("Отметить прочитанным", systemImage: "checkmark.message") { Task { await model.markChatRead(chat) } }
-                    } else {
-                        Button("Отметить непрочитанным", systemImage: "message.badge") { Task { await model.markChatUnread(chat) } }
-                    }
-                    if chat.isMuted {
-                        Button("Включить уведомления", systemImage: "bell") { Task { await model.toggleChatMuted(chat) } }
-                    } else {
-                        Menu("Выключить уведомления", systemImage: "bell.slash") {
-                            Button("На час") { Task { await model.muteChat(chat, forSeconds: 3600) } }
-                            Button("На 8 часов") { Task { await model.muteChat(chat, forSeconds: 8 * 3600) } }
-                            Button("На 2 дня") { Task { await model.muteChat(chat, forSeconds: 2 * 86_400) } }
-                            Divider()
-                            Button("Навсегда") { Task { await model.toggleChatMuted(chat) } }
-                        }
-                    }
-                    Button(chat.isArchived ? "Вернуть из архива" : "Архивировать", systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
-                        Task { await model.toggleChatArchived(chat) }
-                    }
-                    Divider()
-                    chatActions(chat)
-                    if showsCode || showsIdentifiers {
-                        Divider()
-                    }
-                    if showsCode {
-                        Button("Код чата…", systemImage: "curlybraces") { Task { await model.inspect(chat) } }
-                    }
-                    if showsIdentifiers {
-                        Button("Скопировать ID чата", systemImage: "number.square") {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(String(chat.id), forType: .string)
-                        }
-                    }
-                }
         }
     }
 }
 
 private struct ChatRow: View {
     @Environment(AppModel.self) private var model
-    /// Raised on the selected row of a key window, which the list fills with the accent colour: anything
-    /// drawn in that colour would vanish there, so it turns white.
-    @Environment(\.backgroundProminence) private var prominence
     let chat: Chat
-
-    private var isOnAccent: Bool { prominence == .increased }
-    private var accent: Color { isOnAccent ? .white : .accentColor }
     let showsDraft: Bool
+    /// The open chat in a light window: a white card with dark ink. Every other row lies on the indigo.
+    var isCard = false
+    /// In the list of all accounts: whose chat this is. Its photo sits on the corner of the chat's own.
+    var owner: AppModel?
+
+    /// On the indigo anything drawn in that colour would vanish, so it turns white.
+    private var isOnAccent: Bool { !isCard }
+    private var accent: Color { isOnAccent ? .white : .brand }
 
     private var hasNews: Bool { chat.unread > 0 || chat.isMarkedUnread || chat.unreadMentions > 0 }
 
@@ -328,6 +399,14 @@ private struct ChatRow: View {
                 .overlay(alignment: .bottomTrailing) {
                     if chat.presence == .online, !chat.isBot {
                         OnlineDot()
+                    }
+                }
+                .overlay(alignment: .bottomLeading) {
+                    if let owner {
+                        Avatar(title: owner.accountName, seed: owner.myId, photo: owner.myPhoto, diameter: 20)
+                            .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 1.5))
+                            .offset(x: -4, y: 4)
+                            .help("Аккаунт: \(owner.accountName)")
                     }
                 }
                 // Hovering the avatar tells when a private contact was last seen.
@@ -389,7 +468,7 @@ private struct ChatRow: View {
                         // Someone mentioned you: Telegram's "@" before the count, never grey even when muted.
                         Text("@")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(isOnAccent ? Color.accentColor : Color.white)
+                            .foregroundStyle(isOnAccent ? Color.brand : Color.white)
                             .frame(width: 18, height: 18)
                             .background(accent, in: Circle())
                             .help("Вас упомянули")
@@ -411,7 +490,109 @@ private struct ChatRow: View {
             }
         }
         .padding(.vertical, 7)
+        .environment(\.colorScheme, isCard ? .light : .dark)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Takes the table's own highlight off the chat list: the open chat is marked by the card behind its row, and
+/// the system's accent-coloured bar would be drawn over the indigo. SwiftUI sets the style again on its own
+/// schedule, so it is put back whenever this view is laid out.
+private struct PlainSelection: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { Probe() }
+    func updateNSView(_ view: NSView, context: Context) { (view as? Probe)?.apply() }
+
+    private final class Probe: NSView {
+        override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); DispatchQueue.main.async { [weak self] in self?.apply() } }
+        override func layout() { super.layout(); apply() }
+
+        func apply() {
+            guard let table = Self.table(in: superview?.superview ?? superview) else { return }
+            if table.selectionHighlightStyle != .none { table.selectionHighlightStyle = .none }
+        }
+
+        private static func table(in view: NSView?) -> NSTableView? {
+            guard let view else { return nil }
+            if let table = view as? NSTableView { return table }
+            for child in view.subviews {
+                if let found = table(in: child) { return found }
+            }
+            return nil
+        }
+    }
+}
+
+/// The other accounts of this Mac, one click away: their photos with what is unread on them, and a menu of all
+/// of them with "add". Every account stays connected, so picking one only changes what the window shows.
+private struct AccountSwitcher: View {
+    @Environment(AccountHub.self) private var hub: AccountHub?
+
+    var body: some View {
+        if let hub {
+            let others = hub.accounts.filter { $0.id != hub.activeId }
+            ForEach(others.prefix(3)) { account in
+                if let other = hub.model(for: account.id) {
+                    OtherAccountButton(account: account, model: other) { hub.activate(account.id) }
+                }
+            }
+            Menu {
+                ForEach(Array(hub.accounts.enumerated()), id: \.element.id) { index, account in
+                    Toggle(title(of: account, number: index + 1), isOn: Binding(
+                        get: { account.id == hub.activeId },
+                        set: { _ in hub.activate(account.id) }))
+                }
+                Divider()
+                Button("Добавить аккаунт…", systemImage: "plus") { hub.addAccount() }
+            } label: {
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Аккаунты (⌃1…⌃9)")
+            .accessibilityLabel("Аккаунты")
+        }
+    }
+
+    private func title(of account: AccountSlot, number: Int) -> String {
+        let name = account.name.isEmpty ? "Новый аккаунт" : account.name
+        let unread = hub?.model(for: account.id)?.unreadBadge ?? 0
+        return unread > 0 ? "\(name) — \(unread > 999 ? "999+" : String(unread))" : name
+    }
+}
+
+/// Another account's photo in the sidebar's foot; a dot's worth of badge when something is unread there.
+private struct OtherAccountButton: View {
+    let account: AccountSlot
+    let model: AppModel
+    let pick: () -> Void
+
+    var body: some View {
+        Button(action: pick) {
+            // The photo is a file of that account's own session, so its model draws it.
+            Avatar(title: account.name, seed: account.userId, photo: model.myPhoto, diameter: 26)
+                .environment(model)
+                .overlay(alignment: .topTrailing) {
+                    if model.unreadBadge > 0 {
+                        Text(model.unreadBadge > 99 ? "99+" : String(model.unreadBadge))
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color(red: 0x0B / 255, green: 0x07 / 255, blue: 0x30 / 255))
+                            .padding(.horizontal, 3.5)
+                            .frame(minWidth: 14, minHeight: 14)
+                            .background(.white, in: Capsule())
+                            .offset(x: 6, y: -5)
+                    }
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressDimStyle())
+        .help(account.name.isEmpty ? "Новый аккаунт" : "Перейти в \(account.name)")
+        .accessibilityLabel("Аккаунт \(account.name)")
     }
 }
 
@@ -458,7 +639,7 @@ private struct EmptyDetailView: View {
                 .foregroundStyle(.secondary)
                 .symbolRenderingMode(.hierarchical)
             VStack(spacing: 4) {
-                Text("iGram")
+                Text("Easy")
                     .font(.system(size: 22, weight: .semibold))
                 Text("Выберите чат слева")
                     .font(.body)
@@ -517,7 +698,13 @@ private struct HoverPrefetch: ViewModifier {
 /// The place the list shows, with the folders behind its name, and the search field.
 private struct SidebarHeader: View {
     @Environment(AppModel.self) private var model
+    @Environment(AccountHub.self) private var hub: AccountHub?
     @FocusState private var isSearchFocused: Bool
+
+    private var showsAllAccounts: Bool {
+        guard let hub else { return false }
+        return hub.showsAllAccounts && hub.accounts.count > 1 && !model.showsArchive
+    }
 
     /// Chats the list is showing right now — the place's own, or the matches while searching.
     let shownChats: Int
@@ -530,6 +717,16 @@ private struct SidebarHeader: View {
             // this menu, as the mailboxes of Messages and Mail sit behind their own title.
             HStack(spacing: 6) {
                 Menu {
+                    if let hub, hub.accounts.count > 1 {
+                        Toggle("Все аккаунты", isOn: Binding(
+                            get: { showsAllAccounts },
+                            set: { _ in
+                                model.showsArchive = false
+                                model.selectedFolder = nil
+                                hub.showsAllAccounts = true
+                            }))
+                        Divider()
+                    }
                     Toggle(placeTitle("Все чаты", model.mainUnread), isOn: chosen(folder: nil))
                     ForEach(model.chatFolders) { folder in
                         Toggle(placeTitle(folder.title.isEmpty ? "Без названия" : folder.title,
@@ -597,7 +794,7 @@ private struct SidebarHeader: View {
             }
             .padding(.horizontal, 8)
             .frame(height: 28)
-            .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             .help("Чаты, люди и сообщения (⌘K)")
         }
         .padding(.horizontal, 10)
@@ -615,8 +812,10 @@ private struct SidebarHeader: View {
     /// A folder's row is ticked while it is the one on screen; picking it leaves the archive.
     private func chosen(folder: Int?) -> Binding<Bool> {
         Binding(
-            get: { !model.showsArchive && model.selectedFolder == folder },
+            get: { !model.showsArchive && model.selectedFolder == folder && !showsAllAccounts },
             set: { _ in
+                // A folder is one account's: picking it leaves the list of all accounts.
+                hub?.showsAllAccounts = false
                 model.showsArchive = false
                 model.selectedFolder = folder
             })
@@ -625,6 +824,7 @@ private struct SidebarHeader: View {
     /// Which place the list is showing.
     private var place: String {
         if model.showsArchive { return "Архив" }
+        if showsAllAccounts { return "Все аккаунты" }
         guard let id = model.selectedFolder else { return "Все чаты" }
         return model.chatFolders.first { $0.id == id }?.title ?? "Папка"
     }
@@ -634,6 +834,10 @@ private struct SidebarHeader: View {
     /// the matches come from everywhere, so a count of the place would be a different number than the rows.
     private var placeFootnote: String {
         guard model.filter.isEmpty else { return "" }
+        if showsAllAccounts, let hub {
+            let unread = hub.unreadTotal
+            return unread > 0 ? TD.count(unread, "новое", "новых", "новых") : TD.count(hub.accounts.count, "аккаунт", "аккаунта", "аккаунтов")
+        }
         let tally: UnreadTally
         if model.showsArchive {
             tally = model.archiveUnread
