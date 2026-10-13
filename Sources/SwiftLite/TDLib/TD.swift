@@ -51,6 +51,7 @@ enum TD {
         )
         chat.replyMarkupMessageId = node.tdInt64("reply_markup_message_id")
         chat.secretChatId = type.tdType == "chatTypeSecret" ? type.tdInt("secret_chat_id") : 0
+        chat.autoDeleteTime = node.tdInt("message_auto_delete_time")
         applyPositions(node.tdNodes("positions"), to: &chat)
         return chat
     }

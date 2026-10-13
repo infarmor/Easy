@@ -85,6 +85,8 @@ struct Chat: Identifiable, Equatable {
     var secretChatId: Int = 0
     /// Where that session stands; nil until TDLib has said, and for every other kind of chat.
     var secretState: SecretChatState?
+    /// Seconds after which new messages delete themselves (self-destruct in a secret chat); 0 for never.
+    var autoDeleteTime = 0
 
     var isArchived: Bool { archiveOrder != 0 }
     /// Only a supergroup or a channel has a member list TDLib can page through; a basic group and a private

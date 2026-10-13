@@ -1268,6 +1268,10 @@ final class AppModel {
             unreadUnmutedCount = update.tdInt("unread_unmuted_count")
             applyBadge()
 
+        case "updateChatMessageAutoDeleteTime":
+            let time = update.tdInt("message_auto_delete_time")
+            updateChat(update.tdInt64("chat_id")) { $0.autoDeleteTime = time }
+
         case "updateChatTitle":
             let chatId = update.tdInt64("chat_id")
             let title = update.tdString("title")

@@ -304,6 +304,15 @@ struct ChatListView: View {
         Button(chat.isArchived ? L("Вернуть из архива") : L("Архивировать"), systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
             Task { await model.toggleChatArchived(chat) }
         }
+        if model.canSetAutoDelete(chat) {
+            Menu(L("Автоудаление"), systemImage: "timer") {
+                ForEach(AppModel.autoDeleteChoices(for: chat), id: \.seconds) { choice in
+                    Toggle(choice.title, isOn: Binding(
+                        get: { chat.autoDeleteTime == choice.seconds },
+                        set: { _ in Task { await model.setAutoDelete(chat, seconds: choice.seconds) } }))
+                }
+            }
+        }
         if !model.chatFolders.isEmpty {
             Menu(L("Папки"), systemImage: "folder") {
                 ForEach(model.chatFolders) { folder in

@@ -120,6 +120,29 @@ extension AppModel {
         ])
     }
 
+    /// Choices for the auto-delete timer. Outside secret chats Telegram takes whole days only, up to a year;
+    /// a secret chat's self-destruct timer counts from when the message is read, so seconds make sense there.
+    static func autoDeleteChoices(for chat: Chat) -> [(seconds: Int, title: String)] {
+        if chat.kind == .secret {
+            return [(0, L("Выключено")), (5, L("5 секунд")), (30, L("30 секунд")), (60, L("1 минута")),
+                    (3600, L("1 час")), (86_400, L("1 день")), (7 * 86_400, L("1 неделя"))]
+        }
+        return [(0, L("Выключено")), (86_400, L("1 день")), (7 * 86_400, L("1 неделя")), (31 * 86_400, L("1 месяц"))]
+    }
+
+    /// Whether this chat can have the timer at all: not Saved Messages and not the Telegram service chat.
+    /// In groups and channels it also takes the right to change the chat's info, which TDLib checks.
+    func canSetAutoDelete(_ chat: Chat) -> Bool {
+        chat.id != myUserId && chat.userId != 777_000
+    }
+
+    func setAutoDelete(_ chat: Chat, seconds: Int) async {
+        guard await perform(["@type": "setChatMessageAutoDeleteTime", "chat_id": chat.id, "message_auto_delete_time": seconds])
+        else { return }
+        let title = Self.autoDeleteChoices(for: chat).first { $0.seconds == seconds }?.title ?? ""
+        showToast(seconds == 0 ? L("Автоудаление выключено") : L("Новые сообщения удалятся через \(title.lowercased())"))
+    }
+
     func toggleChatMuted(_ chat: Chat) async {
         // Only the mute fields change; sound, previews and the rest are sent back as they were.
         var settings = chatNotificationSettings[chat.id] ?? [
