@@ -1046,8 +1046,16 @@ extension AppModel {
         draftBaseline = text
         draftSaveRound += 1
         let round = draftSaveRound
+        // A topic's or a comment thread's draft is its own, not the chat's: written into the chat it would
+        // show as the chat's "Черновик:" and come back in the chat's composer the next time it opens.
+        let topic = openTopicId
+        let isChatDraft = openTopic == nil
         // The chat list shows "Черновик:" right away instead of waiting for TDLib's echo.
-        updateChat(chatId) { $0.draftText = text }
+        if isChatDraft {
+            updateChat(chatId) { $0.draftText = text }
+        } else if let topic, let index = topics.firstIndex(where: { $0.id == topic }) {
+            topics[index].draft = text
+        }
         let payload = draftRequest(for: chatId, text: text)
         Task {
             guard await !self.draftAccepted(payload) else { return }
@@ -1057,7 +1065,7 @@ extension AppModel {
             // been typed again, or accepted, in the same chat.
             guard round == draftSaveRound, openChatId == chatId, chatDraftText == text else { return }
             draftBaseline = saved
-            updateChat(chatId) { $0.draftText = saved }
+            if isChatDraft { updateChat(chatId) { $0.draftText = saved } }
         }
     }
 

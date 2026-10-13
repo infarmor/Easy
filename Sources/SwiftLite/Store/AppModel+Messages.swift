@@ -415,6 +415,8 @@ extension AppModel {
               let node = found.tdNodes("messages").last else { return }
         let id = node.tdInt64("id")
         await jump(to: id)
+        // Viewing the mention reads the chat up to it, which ghost mode promises not to do.
+        guard Preferences.readsAutomatically else { return }
         _ = try? await request(["@type": "viewMessages", "chat_id": chatId, "message_ids": [id], "force_read": true])
     }
 
