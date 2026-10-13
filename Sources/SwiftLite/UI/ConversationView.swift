@@ -1121,11 +1121,11 @@ struct MessageRow: View {
         HStack(spacing: 3) {
             Text(message.date.timeStamp)
             if message.isOutgoing, message.isSent {
-                HStack(spacing: -1) {
+                HStack(spacing: -2) {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 8, weight: .bold))
                     Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 8, weight: .bold))
                 }
                 .foregroundStyle(isRead ? Color.brandInk : .white)
             }
@@ -1172,11 +1172,11 @@ struct MessageRow: View {
                 .font(.system(size: 10, weight: .medium))
                 .monospacedDigit()
             if message.isOutgoing, message.isSent {
-                HStack(spacing: -1) {
+                HStack(spacing: -2) {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 8, weight: .bold))
                     Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 8, weight: .bold))
                 }
                 .foregroundStyle(isRead ? Color.brandInk : .white.opacity(0.72))
             }
