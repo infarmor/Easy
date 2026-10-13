@@ -18,6 +18,11 @@ final class AccountHub {
     init() {
         for account in accounts { adopt(AppModel(slot: account.id)) }
         if models[activeId] == nil { adopt(AppModel(slot: activeId)) }
+        // The proxy is the app's, not an account's: a change reaches every session at once.
+        ProxyStore.shared.onChange = { [weak self] in
+            guard let self else { return }
+            for model in models.values { model.applyProxy() }
+        }
     }
 
     /// The account in the window.

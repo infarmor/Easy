@@ -20,11 +20,12 @@ struct SettingsView: View {
             Tab(L("Конфиденциальность"), systemImage: "hand.raised") { PrivacySettings() }
             Tab(L("Призрак"), systemImage: "eye.slash") { GhostSettings() }
             Tab(L("Безопасность"), systemImage: "lock.shield") { SecuritySettings() }
+            Tab(L("Прокси"), systemImage: "network") { ProxyPane() }
             Tab(L("Хранилище"), systemImage: "internaldrive") { StorageSettings() }
             Tab(L("Аккаунт"), systemImage: "person.crop.circle") { AccountSettings() }
             Tab(L("Для разработчиков"), systemImage: "hammer") { DeveloperSettings() }
         }
-        // Eight panes do not fit a toolbar of tabs: they went behind a "»". A sidebar holds them all, as in
+        // Nine panes do not fit a toolbar of tabs: they went behind a "»". A sidebar holds them all, as in
         // System Settings.
         .tabViewStyle(.sidebarAdaptable)
         .frame(width: 800, height: 540)

@@ -353,6 +353,8 @@ final class AppModel {
     @ObservationIgnored var trackedFiles: Set<Int> = []
     /// Start parameters of links whose bot chat is still opening.
     @ObservationIgnored var startParameters: [Int64: String] = [:]
+    /// The latest hand-over of the proxy settings to TDLib; each one waits for the one before. See `applyProxy`.
+    @ObservationIgnored var proxySync: Task<Void, Never>?
     /// Raw TDLib object shown by "Код сообщения…" / "Код чата…".
     var inspectedCode: InspectedCode?
     /// The group or channel whose "Управление чатом…" sheet is open.
@@ -874,6 +876,8 @@ final class AppModel {
                     continue
                 }
             }
+            // Before the sign-in screens: where Telegram is blocked, they cannot reach it without the proxy.
+            applyProxy()
             applyAuthorization(try await request(["@type": "getAuthorizationState"]))
         } catch let error as TDError where error.isSessionClosed {
             // Closed while starting; `sessionClosed` has already decided what comes next.

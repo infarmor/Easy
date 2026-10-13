@@ -4,6 +4,7 @@ import SwiftUI
 
 struct LoginView: View {
     @Environment(AppModel.self) private var model
+    @State private var showsProxy = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,6 +31,9 @@ struct LoginView: View {
                         Button(L("Вернуться к своему аккаунту")) { model.leaveSignIn() }
                             .buttonStyle(.link)
                     }
+                    // Where Telegram is blocked the code never arrives without one.
+                    Button(ProxyStore.shared.enabled.map { L("Прокси: \($0.title)") } ?? L("Прокси…")) { showsProxy = true }
+                        .buttonStyle(.link)
                 }
                 .padding(28)
                 .frame(maxWidth: 420)
@@ -39,6 +43,18 @@ struct LoginView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.regularMaterial)
+        .sheet(isPresented: $showsProxy) {
+            VStack(spacing: 0) {
+                ProxyPane()
+                HStack {
+                    Spacer()
+                    Button(L("Готово")) { showsProxy = false }
+                        .keyboardShortcut(.defaultAction)
+                }
+                .padding([.horizontal, .bottom], 20)
+            }
+            .frame(width: 520, height: 460)
+        }
     }
 }
 

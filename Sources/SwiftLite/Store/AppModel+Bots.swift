@@ -322,6 +322,11 @@ extension AppModel {
             open(TD.message(node))
             return true
 
+        case "internalLinkTypeProxy":
+            guard let proxy = type.tdNode("proxy") else { return false }
+            offerProxy(proxy)
+            return true
+
         default:
             return false
         }

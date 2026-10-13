@@ -24,6 +24,8 @@ enum ConfigStore {
     private static let file = root.appendingPathComponent("credentials.json")
     /// The passcode's check value and salt; see `AppLock`.
     static let lockFile = root.appendingPathComponent("lock.json")
+    /// The proxy servers and the one that is on; see `ProxyStore`.
+    static let proxyFile = root.appendingPathComponent("proxies.json")
 
     static func load() -> Credentials? {
         guard let data = try? Data(contentsOf: file) else { return nil }
