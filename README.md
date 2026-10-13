@@ -38,6 +38,7 @@ connected and how long the app has been open. What keeps Easy low:
 **Accounts**
 
 - Every account you sign in to stays connected: messages, banners and unread counts arrive for all of them.
+- A SOCKS5, HTTP or MTProto proxy for every account at once, reachable from the sign-in screen too.
 - One list can hold the chats of all accounts. A chat opens in the account it belongs to, so the answer goes
   from the right one without switching first.
 - The other accounts sit at the foot of the sidebar with their unread counts, one click or `⌃1`…`⌃9` away.
@@ -47,6 +48,10 @@ connected and how long the app has been open. What keeps Easy low:
 - Messages-style bubbles, albums, stickers (static, animated and video), voice messages, polls, locations,
   forum topics, pinned messages, scheduled messages, reactions, translation.
 - A chat with unread messages opens on the first of them.
+- Comments under channel posts open in the channel's discussion group, on that post's thread.
+- Chat folders are made, edited, ordered and deleted in the app; a chat's menu puts it in a folder.
+- An auto-delete timer for any chat, and the self-destruct timer of a secret chat.
+- Chats can be found with Spotlight, by name only.
 - Mini apps open in their own window.
 - Gifts for Telegram Stars from a person's profile, and your Stars balance.
 
@@ -124,7 +129,7 @@ lifecycle (including a second account), the interface, mini apps, and scrolling.
 
 Easy talks to Telegram's servers through TDLib, and mini apps load their own pages. The one other request is
 a check for a newer release on GitHub at launch, which Settings → General turns off. Nothing else is sent
-anywhere. It runs in the macOS App
+anywhere. Spotlight, when it is on, holds chat names only, and nothing while a passcode is set. It runs in the macOS App
 Sandbox with network access, the microphone while a voice message records, files you pick or drop, and the
 Downloads folder.
 

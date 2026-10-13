@@ -5,8 +5,8 @@ import Foundation
 enum Translations {
     static let english: [String: String] = {
         var table: [String: String] = [:]
-        table.reserveCapacity(1061)
-        for part in [part1, part2, part3, part4, part5, part6] { table.merge(part) { first, _ in first } }
+        table.reserveCapacity(1200)
+        for part in [part1, part2, part3, part4, part5, part6, part7] { table.merge(part) { first, _ in first } }
         return table
     }()
 
@@ -1161,5 +1161,75 @@ enum Translations {
         "Пока режим включён, вы не в сети, не видно «печатает…», сообщения и кружки остаются непрочитанными для собеседников. «Отметить прочитанным» по-прежнему работает. Переключается и кнопкой с глазом над списком чатов.": "While the mode is on, you are offline, \"typing…\" isn't shown, and messages and video messages stay unread for others. \"Mark as read\" still works. It can also be toggled with the eye button above the chat list.",
         "Код-пароль закрывает Easy и шифрует базу Telegram и архив удалённых сообщений на этом Mac. Он нигде не хранится: забытый код-пароль восстановить нельзя — придётся войти в аккаунт заново, а секретные чаты на этом Mac пропадут.": "The passcode locks Easy and encrypts the Telegram database and the archive of deleted messages on this Mac. It isn't stored anywhere: a forgotten passcode can't be recovered — you will have to sign in again, and secret chats on this Mac will be lost.",
         "Ссылки: punycode и смешанные алфавиты, IP вместо домена, сокращатели, «имя@» в адресе, http. Файлы: .app, .pkg, .command, .exe, двойные расширения и скрытые символы направления текста. В меню сообщения — индикаторы (IOC) с обезвреживанием и SHA-256 вложений.": "Links: punycode and mixed alphabets, an IP instead of a domain, shorteners, \"name@\" in the address, http. Files: .app, .pkg, .command, .exe, double extensions and hidden text-direction characters. In a message's menu — indicators (IOC) with defanging and SHA-256 of attachments.",
+    ]
+
+    /// Proxy, channel comments, folder editing, the auto-delete timer and Spotlight.
+    private static let part7: [String: String] = [
+        "Выключено": "Off",
+        "5 секунд": "5 seconds",
+        "30 секунд": "30 seconds",
+        "1 минута": "1 minute",
+        "1 час": "1 hour",
+        "1 день": "1 day",
+        "1 неделя": "1 week",
+        "1 месяц": "1 month",
+        "Автоудаление выключено": "Auto-delete is off",
+        "Новые сообщения удалятся через {0}": "New messages will be deleted after {0}",
+        "У этого поста нет комментариев": "This post has no comments",
+        "Подключаться через прокси {0}?": "Connect through the proxy {0}?",
+        "Тип: {0}. Через него будут подключаться все аккаунты; выключить его можно в Настройках → Прокси.": "Type: {0}. Every account will connect through it; it can be turned off in Settings → Proxy.",
+        "Подключить": "Connect",
+        "Прокси включён": "Proxy is on",
+        "Папки": "Folders",
+        "Изменить папки…": "Edit Folders…",
+        "К каналу": "Back to Channel",
+        "Вернуться к посту (⌘[)": "Back to the post (⌘[)",
+        "Комментарии": "Comments",
+        "Удалить папку": "Delete Folder",
+        "Порядок меняется перетаскиванием. Папки — общие для всех устройств этого аккаунта.": "Drag to change the order. Folders are shared by every device of this account.",
+        "Папок пока нет": "No folders yet",
+        "Новая папка…": "New Folder…",
+        "Удалить папку «{0}»?": "Delete the folder \"{0}\"?",
+        "Чаты из неё останутся в списке, удалится только папка.": "Its chats stay in the list; only the folder is deleted.",
+        "до 12 символов": "up to 12 characters",
+        "Значок": "Icon",
+        "Не контакты": "Non-Contacts",
+        "Группы": "Groups",
+        "Каналы": "Channels",
+        "Боты": "Bots",
+        "Включать все": "Include All",
+        "Без уведомлений": "Muted",
+        "Прочитанные": "Read",
+        "Из архива": "Archived",
+        "Не показывать": "Leave Out",
+        "Добавленные чаты": "Included Chats",
+        "Исключённые чаты": "Excluded Chats",
+        "Нужны название и хотя бы один чат или тип чатов": "A name and at least one chat or kind of chats are needed",
+        "Выбрать чаты…": "Choose Chats…",
+        "Прокси: {0}": "Proxy: {0}",
+        "Прокси…": "Proxy…",
+        "Прокомментировать": "Comment",
+        "комментарий": "comment",
+        "комментария": "comments",
+        "комментариев": "comments",
+        "Открыть комментарии": "Open comments",
+        "Подключаться": "Connect",
+        "Напрямую": "Directly",
+        "Подключение": "Connection",
+        "Через выбранный прокси подключаются все аккаунты. Ссылки tg://proxy и t.me/socks, открытые в Easy, добавляют сервер сюда.": "Every account connects through the chosen proxy. tg://proxy and t.me/socks links opened in Easy add their server here.",
+        "Добавить прокси…": "Add Proxy…",
+        "Серверы": "Servers",
+        "{0} мс": "{0} ms",
+        "нет ответа": "no answer",
+        "Тип": "Type",
+        "Сервер": "Server",
+        "Порт": "Port",
+        "Секрет": "Secret",
+        "необязательно": "optional",
+        "Пароль": "Password",
+        "Прокси": "Proxy",
+        "Находить чаты через Spotlight": "Find chats with Spotlight",
+        "Пока задан код-пароль, чатов в Spotlight нет: их названия было бы видно на заблокированном Mac.": "While a passcode is set, chats are kept out of Spotlight: their names would be visible on a locked Mac.",
+        "В Spotlight попадают только названия чатов, без сообщений и без секретных чатов.": "Only chat names go to Spotlight: no messages, and no secret chats.",
     ]
 }
