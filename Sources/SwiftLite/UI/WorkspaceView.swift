@@ -3,6 +3,7 @@ import SwiftUI
 
 struct WorkspaceView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var model = model
@@ -16,15 +17,16 @@ struct WorkspaceView: View {
                         ConversationView(chat: chat)
                             // The same person is the same chat id in two accounts; the account is part of it.
                             .id(model.slot + ":" + String(chat.id))
-                            .transition(.opacity)
+                            .transition(.chatSwap(direction: model.chatSwapDirection, reduceMotion: reduceMotion))
                     } else {
                         // The wallpaper belongs to a conversation; with none open the window shows its glass.
                         EmptyDetailView().background(WindowGlass())
                             .transition(.opacity)
                     }
                 }
-                // One conversation gives way to the next instead of being cut to it.
-                .motion(.easeOut(duration: 0.16), value: model.selectedChat?.id)
+                // One conversation gives way to the next instead of being cut to it. Short and without
+                // overshoot: two transcripts are on screen while it runs, and the reader is waiting for the new one.
+                .motion(.spring(duration: 0.28, bounce: 0), value: model.selectedChat?.id)
                 if model.showsMembersColumn, let chat = model.selectedChat {
                     Divider()
                     MembersPanel(chat: chat)

@@ -420,11 +420,7 @@ struct ChatListView: View {
             let row = ChatRow(chat: item.chat, showsDraft: !isOpen, isCard: isOpen && scheme == .light, owner: item.owner)
                 .environment(item.owner)
                 .listRowSeparator(.hidden)
-                .listRowBackground(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(isOpen ? Color.white.opacity(scheme == .light ? 0.92 : 0.16) : .clear)
-                        .padding(.horizontal, 8)
-                        .motion(.smooth(duration: 0.18), value: isOpen))
+                .listRowBackground(SelectionCard(isOpen: isOpen, scheme: scheme))
             if isOwn {
                 row.tag(item.chat.id)
             } else {
@@ -443,11 +439,7 @@ struct ChatListView: View {
                 .tag(chat.id)
                 .listRowSeparator(.hidden)
                 // The open chat is a white card on the indigo; in the dark, a lighter patch of it.
-                .listRowBackground(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(isOpen ? Color.white.opacity(scheme == .light ? 0.92 : 0.16) : .clear)
-                        .padding(.horizontal, 8)
-                        .motion(.smooth(duration: 0.18), value: isOpen))
+                .listRowBackground(SelectionCard(isOpen: isOpen, scheme: scheme))
                 .modifier(HoverPrefetch(chatId: chat.id))
                 // A two-finger swipe does what the context menu's most common items do.
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -620,6 +612,24 @@ private struct ChatRow: View {
         }
         .environment(\.colorScheme, isCard ? .light : .dark)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// The open chat's card behind its row: white on the indigo, in the dark a lighter patch of it. Switching
+/// chats, the old card shrinks a little as it fades and the new one grows into place with a touch of spring,
+/// so the eye follows the selection from row to row instead of seeing it blink.
+private struct SelectionCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let isOpen: Bool
+    let scheme: ColorScheme
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Color.white.opacity(scheme == .light ? 0.92 : 0.16))
+            .padding(.horizontal, 8)
+            .scaleEffect(isOpen || reduceMotion ? 1 : 0.94)
+            .opacity(isOpen ? 1 : 0)
+            .animation(isOpen ? (reduceMotion ? Motion.reduced : Motion.lively) : Motion.quick, value: isOpen)
     }
 }
 

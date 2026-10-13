@@ -43,3 +43,17 @@ extension AnyTransition {
     /// Small things arriving in place: a badge, a mark, a count.
     static var pop: AnyTransition { .scale(scale: 0.6).combined(with: .opacity) }
 }
+
+extension AnyTransition {
+    /// One conversation giving way to another. The new one arrives from the side the list moved to — from
+    /// below when going down the list, from above when going up — and settles; the old one only recedes, so
+    /// whichever way the next switch goes it never seems to leave against it. Reduce Motion keeps the fade.
+    static func chatSwap(direction: Int, reduceMotion: Bool) -> AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        let insertion = AnyTransition.opacity
+            .combined(with: .offset(y: CGFloat(direction) * 22))
+            .combined(with: .scale(scale: 0.985, anchor: direction < 0 ? .top : .bottom))
+        let removal = AnyTransition.opacity.combined(with: .scale(scale: 0.99))
+        return .asymmetric(insertion: insertion, removal: removal)
+    }
+}

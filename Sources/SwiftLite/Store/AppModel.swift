@@ -248,6 +248,7 @@ final class AppModel {
     var selection: Int64? {
         didSet {
             if selection != openChatId { leaveOpenChat() }
+            if selection != oldValue { chatSwapDirection = Self.swapDirection(from: oldValue, to: selection, in: chats) }
             refreshSelectedChat()
             if let selection, selection != oldValue, myUserId != 0 {
                 UserDefaults.standard.set("\(myUserId):\(selection)", forKey: Preferences.lastChat)
@@ -256,6 +257,17 @@ final class AppModel {
     }
     var messages: [Message] = [] {
         didSet { applyTranscriptChange() }
+    }
+    /// Which way the list moved for the last chat switch: 1 down, -1 up, 0 from outside the list (a banner,
+    /// a link, Spotlight). The incoming conversation arrives from that side. Read in the same pass that shows
+    /// the new chat, so it needs no observation of its own.
+    @ObservationIgnored private(set) var chatSwapDirection = 0
+
+    private static func swapDirection(from old: Int64?, to new: Int64?, in list: [Chat]) -> Int {
+        guard let old, let new,
+              let from = list.firstIndex(where: { $0.id == old }),
+              let to = list.firstIndex(where: { $0.id == new }) else { return 0 }
+        return to > from ? 1 : to < from ? -1 : 0
     }
     /// The transcript shows an older stretch of history (after a jump), not the latest messages.
     var isViewingHistory = false
