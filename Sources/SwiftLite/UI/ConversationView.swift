@@ -1124,11 +1124,10 @@ struct MessageRow: View {
                 HStack(spacing: -1) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 9, weight: .bold))
-                    if isRead {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 9, weight: .bold))
-                    }
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
                 }
+                .foregroundStyle(isRead ? Color.brandInk : .white)
             }
         }
         .font(.subheadline.weight(.semibold))
@@ -1176,11 +1175,10 @@ struct MessageRow: View {
                 HStack(spacing: -1) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 9, weight: .bold))
-                    if isRead {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 9, weight: .bold))
-                    }
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
                 }
+                .foregroundStyle(isRead ? Color.brandInk : .white.opacity(0.72))
             }
         }
         .foregroundStyle(message.isOutgoing ? AnyShapeStyle(.white.opacity(0.72)) : AnyShapeStyle(.secondary))
