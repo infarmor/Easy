@@ -67,7 +67,7 @@ struct DocumentView: View {
                     .trim(from: 0, to: max(0.03, fraction))
                     .stroke(.white, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 0.2), value: fraction)
+                    .motion(.linear(duration: 0.2), value: fraction)
                 Image(systemName: "xmark")
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(.white)

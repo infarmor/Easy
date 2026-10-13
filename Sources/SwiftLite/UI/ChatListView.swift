@@ -114,10 +114,10 @@ struct ChatListView: View {
                 rows(visible)
             }
         }
-        .animation(.smooth(duration: 0.3), value: order)
+        .motion(.smooth(duration: 0.3), value: order)
         // The quick filters fold the list rather than swap it.
-        .animation(.smooth(duration: 0.25), value: showsUnreadOnly)
-        .animation(.smooth(duration: 0.25), value: showsDraftsOnly)
+        .motion(.smooth(duration: 0.25), value: showsUnreadOnly)
+        .motion(.smooth(duration: 0.25), value: showsDraftsOnly)
         // The other accounts are asked after a pause in typing, like the account in the window asks itself.
         .task(id: model.filter) {
             let query = model.filter.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -261,7 +261,7 @@ struct ChatListView: View {
                 .padding(.horizontal, 8)
                 .padding(.bottom, 8)
             }
-            .animation(.spring(duration: 0.35, bounce: 0.15), value: Updates.shared.available)
+            .motion(.spring(duration: 0.35, bounce: 0.15), value: Updates.shared.available)
         }
         // The list's own ground and selection give way to the indigo and to the card drawn behind the open chat.
         .scrollContentBackground(.hidden)
@@ -424,7 +424,7 @@ struct ChatListView: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(isOpen ? Color.white.opacity(scheme == .light ? 0.92 : 0.16) : .clear)
                         .padding(.horizontal, 8)
-                        .animation(.smooth(duration: 0.18), value: isOpen))
+                        .motion(.smooth(duration: 0.18), value: isOpen))
             if isOwn {
                 row.tag(item.chat.id)
             } else {
@@ -447,7 +447,7 @@ struct ChatListView: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(isOpen ? Color.white.opacity(scheme == .light ? 0.92 : 0.16) : .clear)
                         .padding(.horizontal, 8)
-                        .animation(.smooth(duration: 0.18), value: isOpen))
+                        .motion(.smooth(duration: 0.18), value: isOpen))
                 .modifier(HoverPrefetch(chatId: chat.id))
                 // A two-finger swipe does what the context menu's most common items do.
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -531,6 +531,7 @@ private struct ChatRow: View {
                         Image(systemName: "speaker.slash.fill")
                             .font(.system(size: 10))
                             .foregroundStyle(.tertiary)
+                            .transition(.pop)
                     }
                     Spacer(minLength: 6)
                     if let date = chat.snippetDate {
@@ -544,6 +545,7 @@ private struct ChatRow: View {
                         (Text(L("Черновик: ")).foregroundStyle(isOnAccent ? Color.white : Color.red) + Text(chat.draftText).foregroundStyle(.secondary))
                             .font(.callout)
                             .lineLimit(2)
+                            .transition(.opacity)
                     } else if chat.activity.isEmpty {
                         Group {
                             if chat.snippetSender.isEmpty || chat.snippet.isEmpty {
@@ -556,6 +558,7 @@ private struct ChatRow: View {
                         }
                         .font(.callout)
                         .lineLimit(2)
+                        .transition(.opacity)
                     } else {
                         HStack(spacing: 5) {
                             TypingDots()
@@ -564,6 +567,8 @@ private struct ChatRow: View {
                                 .lineLimit(2)
                         }
                         .foregroundStyle(accent)
+                        // "печатает…" slides in from where the text starts, and gives the line back the same way.
+                        .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                     Spacer(minLength: 6)
                     if chat.unreadMentions > 0 {
@@ -574,23 +579,35 @@ private struct ChatRow: View {
                             .frame(width: 18, height: 18)
                             .background(accent, in: Circle())
                             .help(L("Вас упомянули"))
+                            .transition(.pop)
                     }
                     if chat.unread > 0 {
                         UnreadBadge(count: chat.unread, isMuted: chat.isMuted, isOnAccent: isOnAccent)
+                            .transition(.pop)
                     } else if chat.isMarkedUnread {
                         Circle()
                             .fill(.secondary)
                             .frame(width: 8, height: 8)
+                            .transition(.pop)
                     } else if chat.isPinned {
                         // Messages keeps the pin where the badge would be: a pinned chat with news shows the news.
                         Image(systemName: "pin.fill")
                             .font(.footnote)
                             .foregroundStyle(.tertiary)
                             .rotationEffect(.degrees(45))
+                            .transition(.pop)
                     }
                 }
             }
         }
+        // News landing in a row has a little weight; the rest of the row's changes settle without bounce.
+        .motion(Motion.lively, value: chat.unread > 0)
+        .motion(Motion.lively, value: chat.unreadMentions > 0)
+        .motion(Motion.standard, value: chat.isMarkedUnread)
+        .motion(Motion.standard, value: chat.isPinned)
+        .motion(Motion.standard, value: chat.isMuted)
+        .motion(Motion.standard, value: chat.activity.isEmpty)
+        .motion(Motion.standard, value: chat.draftText.isEmpty)
         .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -599,7 +616,7 @@ private struct ChatRow: View {
                 .padding(.vertical, -1)
         )
         .onHover { inside in
-            withAnimation(.smooth(duration: 0.15)) { isHovered = inside }
+            withAnimation(Motion.respecting(.smooth(duration: 0.15))) { isHovered = inside }
         }
         .environment(\.colorScheme, isCard ? .light : .dark)
         .accessibilityElement(children: .combine)
@@ -705,7 +722,7 @@ private struct OtherAccountButton: View {
         }
         .buttonStyle(PressDimStyle())
         .onHover { inside in
-            withAnimation(.spring(duration: 0.25, bounce: 0.35)) { isHovered = inside }
+            withAnimation(Motion.respecting(.spring(duration: 0.25, bounce: 0.35))) { isHovered = inside }
         }
         .help(account.name.isEmpty ? L("Новый аккаунт") : L("Перейти в \(account.name)"))
         .accessibilityLabel(L("Аккаунт \(account.name)"))
@@ -899,7 +916,7 @@ private struct SidebarHeader: View {
         .padding(.horizontal, 10)
         .padding(.top, 6)
         .padding(.bottom, 6)
-        .animation(.smooth(duration: 0.15), value: model.filter.isEmpty)
+        .motion(.smooth(duration: 0.15), value: model.filter.isEmpty)
         .onChange(of: model.searchChatsRequest) { _, _ in isSearchFocused = true }
     }
 

@@ -92,7 +92,7 @@ struct ProfileSheet: View {
         }
         .frame(width: 440, height: 640)
         .onAppear {
-            withAnimation(.spring(duration: 0.45, bounce: 0.3).delay(0.08)) { hasAppeared = true }
+            withAnimation(Motion.respecting(.spring(duration: 0.45, bounce: 0.3)).delay(0.08)) { hasAppeared = true }
             isBlocked = info.isBlocked
             isMuted = model.isChatMuted(info.chatId)
         }

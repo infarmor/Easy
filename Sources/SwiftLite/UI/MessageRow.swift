@@ -72,7 +72,7 @@ struct MessageRow: View {
         } else if !isRevealed, !model.isSelectingMessages, let reason = hiddenReason {
             // Folded, not removed: the post is one click away, and the transcript keeps its place.
             Button {
-                withAnimation(.smooth(duration: 0.2)) { isRevealed = true }
+                withAnimation(Motion.respecting(.smooth(duration: 0.2))) { isRevealed = true }
                 // The third post shown in one channel: its ads seem to be wanted, and the filter can skip it.
                 if reason == .advertisement, AdFilter.noteReveal(in: chat.id) {
                     model.showToast(L("Рекламу этого канала можно не скрывать: правый клик по каналу в списке"))
@@ -127,7 +127,7 @@ struct MessageRow: View {
             .onAppear {
                 guard !hasSettled else { return }
                 if arrives {
-                    withAnimation(.spring(duration: 0.34, bounce: 0.3)) { hasSettled = true }
+                    withAnimation(Motion.respecting(.spring(duration: 0.34, bounce: 0.3))) { hasSettled = true }
                 } else {
                     hasSettled = true
                 }
@@ -136,7 +136,7 @@ struct MessageRow: View {
             // buttons the pointer crosses the gap between them, and without this the buttons faded first.
             .contentShape(Rectangle())
             .onHover { inside in
-                withAnimation(.smooth(duration: 0.12)) { isHovered = inside }
+                withAnimation(Motion.respecting(.smooth(duration: 0.12))) { isHovered = inside }
             }
             // While picking messages a click anywhere on the row picks it, instead of opening media or links.
             .overlay {
@@ -146,7 +146,7 @@ struct MessageRow: View {
                         .onTapGesture { model.toggleSelection(of: message) }
                 }
             }
-            .animation(.smooth(duration: 0.15), value: model.isSelectingMessages)
+            .motion(.smooth(duration: 0.15), value: model.isSelectingMessages)
             // Messages of one run sit close together; runs are set apart.
             .padding(.top, row.showsSender ? 8 : 1.5)
             .padding(.bottom, row.endsGroup ? 6 : 1.5)
@@ -161,7 +161,7 @@ struct MessageRow: View {
                         .padding(.horizontal, -8)
                 }
             }
-            .animation(.smooth(duration: 0.3), value: model.highlightedMessageId == message.id)
+            .motion(.smooth(duration: 0.3), value: model.highlightedMessageId == message.id)
         }
     }
 
@@ -189,7 +189,7 @@ struct MessageRow: View {
             } label: {
                 Text(AppModel.quickReactions[0]).font(.body).frame(width: 26, height: 26)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressDimStyle())
             .help(L("Поставить \(AppModel.quickReactions[0])"))
             .accessibilityLabel(L("Поставить реакцию"))
             hoverButton("arrowshape.turn.up.right", help: L("Переслать")) {
@@ -309,6 +309,7 @@ struct MessageRow: View {
             }
             if let comments = message.commentCount, !message.isDeleted {
                 commentsButton(comments)
+                    .transition(.opacity)
             }
             // Under the bubble rather than in it: "Доставлено 14:32" is about the bubble, not part of what
             // was said.
@@ -591,13 +592,13 @@ struct MessageRow: View {
                     )
                     .overlay(Capsule().strokeBorder(reaction.isChosen ? Color.brand.opacity(0.6) : .clear))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressDimStyle())
                 .help(reaction.isChosen ? L("Убрать реакцию") : reaction.emoji.isEmpty ? L("Поставить такую же") : L("Поставить \(reaction.emoji)"))
                 .transition(.scale(scale: 0.4).combined(with: .opacity))
             }
         }
         // A reaction lands with a little bounce, and the others make room for it.
-        .animation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.38), value: message.reactions)
+        .motion(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.38), value: message.reactions)
     }
 
     /// Under a channel post with a discussion group: the count, and the way into the comments.
@@ -608,12 +609,15 @@ struct MessageRow: View {
             Label(count == 0 ? L("Прокомментировать")
                              : TD.count(count, L("комментарий"), L("комментария"), L("комментариев")),
                   systemImage: "bubble.left.and.bubble.right")
+                // New comments roll the count up, the way unread badges do.
+                .contentTransition(.numericText(value: Double(count)))
+                .motion(Motion.standard, value: count)
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 9)
                 .padding(.vertical, 3)
                 .background(Color.primary.opacity(0.07), in: Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressDimStyle())
         .foregroundStyle(Color.brand)
         .help(L("Открыть комментарии"))
     }
@@ -656,6 +660,7 @@ struct MessageRow: View {
             if !hasInlineMeta {
                 if message.viewCount > 0 {
                     Label(message.viewCount.formatted(.number.notation(.compactName)), systemImage: "eye")
+                        .contentTransition(.numericText(value: Double(message.viewCount)))
                         .help(L("Просмотры"))
                 }
                 Text(message.date.timeStamp)
@@ -668,18 +673,28 @@ struct MessageRow: View {
         }
         .font(.system(size: 10, weight: .medium))
         .foregroundStyle(.secondary)
+        .motion(Motion.standard, value: message.viewCount)
+        .motion(Motion.standard, value: message.isPinned)
     }
 
+    /// "Отправка" gives way to "Доставлено" and that to "Прочитано" by a cross-fade, not a jump: the line
+    /// changes under the reader's eye while they wait for exactly that.
     @ViewBuilder
     private var delivery: some View {
-        if message.isPending {
-            Label(L("Отправка"), systemImage: "clock")
-        } else if message.isFailed {
-            Label(L("Не отправлено"), systemImage: "exclamationmark.circle.fill")
-                .foregroundStyle(.red)
-        } else if !message.isDeleted {
-            Text(isRead ? L("Прочитано") : L("Доставлено"))
+        Group {
+            if message.isPending {
+                Label(L("Отправка"), systemImage: "clock")
+            } else if message.isFailed {
+                Label(L("Не отправлено"), systemImage: "exclamationmark.circle.fill")
+                    .foregroundStyle(.red)
+            } else if !message.isDeleted {
+                Text(isRead ? L("Прочитано") : L("Доставлено"))
+                    .contentTransition(.opacity)
+            }
         }
+        .transition(.opacity)
+        .motion(Motion.standard, value: message.isPending)
+        .motion(Motion.standard, value: isRead)
     }
 
     @ViewBuilder
@@ -942,7 +957,7 @@ private struct ReplyQuote: View {
             .fixedSize(horizontal: false, vertical: true)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressDimStyle())
         .help(L("Перейти к сообщению"))
     }
 }

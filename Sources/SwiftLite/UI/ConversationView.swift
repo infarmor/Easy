@@ -47,10 +47,10 @@ struct ConversationView: View {
                 }
             }
             // The bars above the transcript slide in from under the toolbar instead of appearing in place.
-            .animation(.smooth(duration: 0.22), value: model.isSearching)
-            .animation(.smooth(duration: 0.22), value: model.pinnedMessage?.id)
-            .animation(.smooth(duration: 0.22), value: model.openChatIsForum)
-            .animation(.smooth(duration: 0.22), value: model.commentThread?.threadId)
+            .motion(.smooth(duration: 0.22), value: model.isSearching)
+            .motion(.smooth(duration: 0.22), value: model.pinnedMessage?.id)
+            .motion(.smooth(duration: 0.22), value: model.openChatIsForum)
+            .motion(.smooth(duration: 0.22), value: model.commentThread?.threadId)
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -110,7 +110,7 @@ struct ConversationView: View {
                     guard newest != nil, model.scrollTarget == nil, !model.isViewingHistory,
                           isNearBottom || model.messages.last?.isOutgoing == true else { return }
                     followsEndUntil = Date().addingTimeInterval(0.8)
-                    withAnimation(.smooth(duration: 0.2)) { position.scrollTo(edge: .bottom) }
+                    withAnimation(Motion.respecting(.smooth(duration: 0.2))) { position.scrollTo(edge: .bottom) }
                 }
                 // The content grew or shrank while the end is being followed: stay at the end.
                 .onScrollGeometryChange(for: CGFloat.self) { geometry in
@@ -125,7 +125,7 @@ struct ConversationView: View {
                         model.scrollsWithoutAnimation = false
                         proxy.scrollTo(model.viewId(ofMessage: target), anchor: UnitPoint(x: 0.5, y: 0.2))
                     } else {
-                        withAnimation(.smooth(duration: 0.25)) { proxy.scrollTo(model.viewId(ofMessage: target), anchor: .center) }
+                        withAnimation(Motion.respecting(.smooth(duration: 0.25))) { proxy.scrollTo(model.viewId(ofMessage: target), anchor: .center) }
                     }
                     model.scrollTarget = nil
                 }
@@ -148,7 +148,7 @@ struct ConversationView: View {
                                 Task { await model.showLatest() }
                             } else {
                                 followsEndUntil = Date().addingTimeInterval(0.5)
-                                withAnimation(.smooth(duration: 0.2)) { position.scrollTo(edge: .bottom) }
+                                withAnimation(Motion.respecting(.smooth(duration: 0.2))) { position.scrollTo(edge: .bottom) }
                             }
                         } label: {
                             GlassCircleLabel {
@@ -170,7 +170,7 @@ struct ConversationView: View {
                     }
                     .glassGroup(spacing: 14)
                     .padding(14)
-                    .animation(.spring(duration: 0.28, bounce: 0.25), value: isNearBottom)
+                    .motion(.spring(duration: 0.28, bounce: 0.25), value: isNearBottom)
                 }
                 // The composer floats over the transcript, which scrolls on under its translucent bar.
                 .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -197,15 +197,15 @@ struct ConversationView: View {
                 PhotoViewer(message: photo)
             }
         }
-        .animation(.smooth(duration: 0.2), value: model.toast)
-        .animation(.spring(duration: 0.3, bounce: 0.12), value: model.viewerMessage?.id)
+        .motion(.smooth(duration: 0.2), value: model.toast)
+        .motion(.spring(duration: 0.3, bounce: 0.12), value: model.viewerMessage?.id)
         // Links in messages: t.me stays in the app, suspicious addresses are explained before they open.
         .environment(\.openURL, OpenURLAction { url in
             Task { await model.openMessageLink(url) }
             return .handled
         })
         .background {
-            Button("") { withAnimation(.smooth(duration: 0.15)) { model.escape() } }
+            Button("") { withAnimation(Motion.respecting(.smooth(duration: 0.15))) { model.escape() } }
                 .keyboardShortcut(.cancelAction)
                 // Invisible but still in the hierarchy: a `.hidden()` button may lose its shortcut.
                 .opacity(0)
@@ -352,7 +352,7 @@ struct ConversationView: View {
                 Text(L("Загрузить более ранние"))
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressDimStyle())
         .font(.subheadline)
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity)
@@ -431,7 +431,7 @@ private struct CommentsBar: View {
                 Label(thread.channelTitle.isEmpty ? L("К каналу") : thread.channelTitle, systemImage: "chevron.backward")
                     .lineLimit(1)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressDimStyle())
             .foregroundStyle(Color.brand)
             .keyboardShortcut("[", modifiers: .command)
             .help(L("Вернуться к посту (⌘[)"))
@@ -518,7 +518,7 @@ struct TopicBar: View {
                             .frame(width: 26, height: 26)
                             .background(.thinMaterial, in: Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressDimStyle())
                     .help(L("Новая тема"))
                 }
             }
@@ -562,7 +562,7 @@ struct TopicBar: View {
             .background(chosen ? AnyShapeStyle(Color.brand) : AnyShapeStyle(Color.primary.opacity(0.1)), in: Capsule())
             .foregroundStyle(chosen ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressDimStyle())
         .help(note.isEmpty ? L("Показать только «\(title)»") : "«\(title)»: \(note)")
         .contextMenu {
             if let id, let topic = model.topics.first(where: { $0.id == id }) {
@@ -621,7 +621,7 @@ private struct PinnedBar: View {
             .padding(.vertical, 6)
             .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressDimStyle())
         // A card, not a capsule: it carries two lines of text, and a capsule cuts their descenders at the ends.
         .glassSurface(in: RoundedRectangle(cornerRadius: 14, style: .continuous), interactive: true)
         .padding(.horizontal, 12)
@@ -668,7 +668,7 @@ struct DayHeader: View {
                 .glassSurface(in: Capsule())
                 .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressDimStyle())
         .help(L("Перейти к дате"))
         // Like Telegram: the date opens a calendar, and a chosen day brings its messages.
         .popover(isPresented: $picksDate, arrowEdge: .bottom) {

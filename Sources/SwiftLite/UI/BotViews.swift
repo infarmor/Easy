@@ -91,7 +91,7 @@ private struct PressableStyle: ButtonStyle {
         configuration.label
             .opacity(configuration.isPressed ? 0.6 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.smooth(duration: 0.1), value: configuration.isPressed)
+            .motion(.smooth(duration: 0.1), value: configuration.isPressed)
     }
 }
 

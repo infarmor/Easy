@@ -48,10 +48,10 @@ struct Composer: View {
                 ReplyKeyboardPanel(markup: keyboard)
             }
         }
-        .animation(.smooth(duration: 0.18), value: model.isReplyKeyboardShown)
-        .animation(.smooth(duration: 0.18), value: model.replyKeyboard)
-        .animation(.smooth(duration: 0.15), value: model.suggestions)
-        .animation(.smooth(duration: 0.2), value: model.composerContext)
+        .motion(.smooth(duration: 0.18), value: model.isReplyKeyboardShown)
+        .motion(.smooth(duration: 0.18), value: model.replyKeyboard)
+        .motion(.smooth(duration: 0.15), value: model.suggestions)
+        .motion(.smooth(duration: 0.2), value: model.composerContext)
         .padding(.horizontal, 12)
         .padding(.top, 6)
         .padding(.bottom, 12)
@@ -302,7 +302,7 @@ struct Composer: View {
                 .padding(.vertical, 2)
                 .frame(minHeight: 36)
                 .glassSurface(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .animation(.smooth(duration: 0.15), value: canSend)
+                .motion(.smooth(duration: 0.15), value: canSend)
             }
         }
     }
@@ -327,7 +327,7 @@ struct Composer: View {
                 .fill(.red)
                 .frame(width: 10, height: 10)
                 .scaleEffect(reduceMotion ? 1 : 1 + CGFloat(recorder.level) * 0.6)
-                .animation(reduceMotion ? nil : .smooth(duration: 0.08), value: recorder.level)
+                .motion(reduceMotion ? nil : .smooth(duration: 0.08), value: recorder.level)
             Text(Duration.seconds(recorder.elapsed).formatted(.time(pattern: .minuteSecond)))
                 .font(.body.weight(.medium).monospacedDigit())
             Text(L("Запись…"))

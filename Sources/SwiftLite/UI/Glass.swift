@@ -81,7 +81,7 @@ struct PressDimStyle: ButtonStyle {
         configuration.label
             .opacity(configuration.isPressed ? 0.55 : 1)
             .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.spring(duration: 0.22, bounce: 0.3), value: configuration.isPressed)
+            .motion(.spring(duration: 0.22, bounce: 0.3), value: configuration.isPressed)
     }
 }
 

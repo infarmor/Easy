@@ -267,7 +267,7 @@ struct UnreadBadge: View {
             .font(.subheadline.weight(.semibold))
             // The digits roll to the new count, as the badges of Mail and Messages do.
             .contentTransition(.numericText(value: Double(count)))
-            .animation(.snappy(duration: 0.25), value: count)
+            .motion(.snappy(duration: 0.25), value: count)
             .foregroundStyle(isOnAccent ? Color.brand : Color.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 1)

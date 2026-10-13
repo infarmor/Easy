@@ -240,7 +240,7 @@ struct StoryViewer: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.smooth(duration: 0.25), value: image)
+            .motion(.smooth(duration: 0.25), value: image)
             if let story, !story.caption.isEmpty {
                 Text(story.caption)
                     .font(.callout)

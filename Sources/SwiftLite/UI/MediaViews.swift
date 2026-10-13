@@ -67,7 +67,7 @@ struct Poster: View {
         }
         .frame(width: size.width, height: size.height)
         .clipped()
-        .animation(.smooth(duration: 0.2), value: image != nil)
+        .motion(.smooth(duration: 0.2), value: image != nil)
         .task(id: fileId) {
             guard let fileId, cached == nil else { return }
             if let previewFileId, let path = await model.localFile(id: previewFileId, priority: 12) {
@@ -106,7 +106,7 @@ private struct PhotoView: View {
             .onTapGesture {
                 // A spoiler is revealed by the first click; after that a click opens the viewer.
                 if hidden {
-                    withAnimation(.smooth(duration: 0.25)) { model.revealSpoiler(of: message) }
+                    withAnimation(Motion.respecting(.smooth(duration: 0.25))) { model.revealSpoiler(of: message) }
                 } else {
                     model.viewerMessage = message
                 }
@@ -144,7 +144,7 @@ struct PhotoViewer: View {
                 .scaleEffect(zoom * pinch)
                 .gesture(MagnifyGesture().updating($pinch) { value, state, _ in state = value.magnification }
                     .onEnded { value in zoom = min(max(zoom * value.magnification, 1), 5) })
-                .onTapGesture(count: 2) { withAnimation(.smooth(duration: 0.2)) { zoom = zoom > 1 ? 1 : 2.5 } }
+                .onTapGesture(count: 2) { withAnimation(Motion.respecting(.smooth(duration: 0.2))) { zoom = zoom > 1 ? 1 : 2.5 } }
                 .padding(40)
             }
             VStack {
@@ -220,7 +220,7 @@ struct PhotoViewer: View {
     }
 
     private func close() {
-        withAnimation(.smooth(duration: 0.15)) { model.viewerMessage = nil }
+        withAnimation(Motion.respecting(.smooth(duration: 0.15))) { model.viewerMessage = nil }
     }
 
     private func copy() {

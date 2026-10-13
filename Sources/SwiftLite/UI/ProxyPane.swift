@@ -27,6 +27,7 @@ struct ProxyPane: View {
             Section {
                 ForEach(store.servers) { server in
                     row(server)
+                        .transition(.opacity)
                 }
                 Button(L("Добавить прокси…")) { editing = ProxyServer() }
             } header: {
@@ -34,6 +35,8 @@ struct ProxyPane: View {
             }
         }
         .formStyle(.grouped)
+        .motion(Motion.standard, value: store.servers)
+        .motion(Motion.standard, value: store.enabledId)
         .sheet(item: $editing) { server in
             ProxyEditor(server: server, isNew: !store.servers.contains { $0.id == server.id }) { saved, isNew in
                 if isNew {
@@ -60,6 +63,8 @@ struct ProxyPane: View {
                 Text(ping)
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
+                    .contentTransition(.opacity)
+                    .transition(.opacity)
             }
             Button(L("Проверить")) { check(server) }
                 .disabled(pings[server.id] == "…")
@@ -72,6 +77,8 @@ struct ProxyPane: View {
             }
             .help(L("Удалить"))
         }
+        // The answer of a check replaces its "…" in place, without a jump of the buttons beside it.
+        .motion(Motion.standard, value: pings[server.id])
     }
 
     private func check(_ server: ProxyServer) {

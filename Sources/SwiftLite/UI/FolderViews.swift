@@ -48,8 +48,10 @@ struct FoldersSheet: View {
                 if model.chatFolders.isEmpty {
                     Text(L("Папок пока нет"))
                         .foregroundStyle(.secondary)
+                        .transition(.opacity)
                 }
             }
+            .motion(Motion.standard, value: model.chatFolders)
             HStack {
                 Button(L("Новая папка…")) { editing = EditedFolder(folderId: nil, draft: FolderDraft()) }
                 Spacer()
@@ -131,11 +133,14 @@ private struct FolderEditor: View {
                 chatSection(L("Исключённые чаты"), ids: draft.excluded, list: .excluded)
             }
             .formStyle(.grouped)
+            .motion(Motion.standard, value: draft.chosenChats)
+            .motion(Motion.standard, value: draft.excluded)
             HStack {
                 if !draft.isValid {
                     Text(L("Нужны название и хотя бы один чат или тип чатов"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .transition(.opacity)
                 }
                 Spacer()
                 Button(L("Отмена")) { dismiss() }
@@ -145,6 +150,7 @@ private struct FolderEditor: View {
                     .disabled(!draft.isValid || isSaving)
             }
             .padding(16)
+            .motion(Motion.standard, value: draft.isValid)
         }
         .frame(width: 480, height: 600)
         .sheet(item: $picking) { list in
@@ -228,9 +234,11 @@ private struct ChatPicker: View {
                         if chosen.contains(chat.id) {
                             Image(systemName: "checkmark")
                                 .foregroundStyle(Color.brand)
+                                .transition(.pop)
                         }
                     }
                     .contentShape(Rectangle())
+                    .motion(Motion.lively, value: chosen.contains(chat.id))
                 }
                 .buttonStyle(.plain)
             }

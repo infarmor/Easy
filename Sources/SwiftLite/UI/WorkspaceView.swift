@@ -24,7 +24,7 @@ struct WorkspaceView: View {
                     }
                 }
                 // One conversation gives way to the next instead of being cut to it.
-                .animation(.easeOut(duration: 0.16), value: model.selectedChat?.id)
+                .motion(.easeOut(duration: 0.16), value: model.selectedChat?.id)
                 if model.showsMembersColumn, let chat = model.selectedChat {
                     Divider()
                     MembersPanel(chat: chat)
@@ -127,7 +127,7 @@ struct TypingDots: View {
                         .opacity(index == phase ? 1 : 0.35)
                 }
             }
-            .animation(.smooth(duration: 0.25), value: phase)
+            .motion(.smooth(duration: 0.25), value: phase)
         }
         .accessibilityHidden(true)
     }

@@ -60,7 +60,7 @@ struct StoriesRow: View {
             }
             Spacer(minLength: 0)
         }
-        .animation(.smooth(duration: 0.25), value: model.storyChats)
+        .motion(.smooth(duration: 0.25), value: model.storyChats)
     }
 
     private func pickStory() {
