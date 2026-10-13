@@ -1121,7 +1121,14 @@ struct MessageRow: View {
         HStack(spacing: 3) {
             Text(message.date.timeStamp)
             if message.isOutgoing, message.isSent {
-                Text(isRead ? "✓✓" : "✓")
+                HStack(spacing: -1) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                    if isRead {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                }
             }
         }
         .font(.subheadline.weight(.semibold))
@@ -1156,19 +1163,30 @@ struct MessageRow: View {
         if message.viewCount > 0 { parts.append("◉ " + message.viewCount.formatted(.number.notation(.compactName).locale(Loc.locale))) }
         if message.isEdited || message.hasEditHistory { parts.append(L("изм.")) }
         parts.append(message.date.timeStamp)
-        if message.isOutgoing, message.isSent { parts.append(isRead ? "✓✓" : "✓") }
         return parts.joined(separator: " ")
     }
 
     /// In the bubble's lower right corner, where every messenger keeps it.
     private var metaLabel: some View {
-        Text(verbatim: metaText)
-            .font(.system(size: 10, weight: .medium))
-            .monospacedDigit()
-            .foregroundStyle(message.isOutgoing ? AnyShapeStyle(.white.opacity(0.72)) : AnyShapeStyle(.secondary))
-            .lineLimit(1)
-            .fixedSize()
-            .help(message.isOutgoing ? (isRead ? L("Прочитано") : L("Доставлено")) : "")
+        HStack(spacing: 2) {
+            Text(verbatim: metaText)
+                .font(.system(size: 10, weight: .medium))
+                .monospacedDigit()
+            if message.isOutgoing, message.isSent {
+                HStack(spacing: -1) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                    if isRead {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                }
+            }
+        }
+        .foregroundStyle(message.isOutgoing ? AnyShapeStyle(.white.opacity(0.72)) : AnyShapeStyle(.secondary))
+        .lineLimit(1)
+        .fixedSize()
+        .help(message.isOutgoing ? (isRead ? L("Прочитано") : L("Доставлено")) : "")
     }
 
     /// The bubble ends in words, so the time shares their last line; otherwise it gets a strip of its own.
@@ -1312,9 +1330,11 @@ struct MessageRow: View {
             ? CustomEmoji.text(shown, entities, fontSize: Double(messageFontSize)) : nil
         var words: Text = pictured ?? (entities.isEmpty ? Text(verbatim: shown) : Text(formattedText(shown, entities)))
         if hasInlineMeta, endsWithText {
-            // Unbreakable blanks as wide as the time: the last line keeps that much free for it, and when it
-            // has no room they wrap, which makes a line for the time to sit on.
-            let room = String(repeating: "\u{2007}", count: metaText.count + 2)
+            // Blanks as wide as the time: the last line keeps that much free for it, and when it has no room
+            // they wrap, which makes a line for the time to sit on. Braille blanks, not spaces: a line is
+            // allowed to end in spaces that hang past its edge, so spaces reserved nothing on a full line and
+            // the time landed on the words.
+            let room = String(repeating: "\u{2800}", count: metaText.count + 2)
             words = words + Text(verbatim: " " + room).font(.system(size: 10, weight: .medium))
         }
         return words
