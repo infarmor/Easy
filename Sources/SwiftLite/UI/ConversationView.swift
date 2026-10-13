@@ -34,7 +34,10 @@ struct ConversationView: View {
                     SearchBar()
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                if model.openChatIsForum {
+                if let thread = model.commentThread {
+                    CommentsBar(thread: thread)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                } else if model.openChatIsForum {
                     TopicBar(chat: chat)
                         .transition(.opacity)
                 }
@@ -47,6 +50,7 @@ struct ConversationView: View {
             .animation(.smooth(duration: 0.22), value: model.isSearching)
             .animation(.smooth(duration: 0.22), value: model.pinnedMessage?.id)
             .animation(.smooth(duration: 0.22), value: model.openChatIsForum)
+            .animation(.smooth(duration: 0.22), value: model.commentThread?.threadId)
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -411,6 +415,35 @@ private struct SearchBar: View {
         .padding(.horizontal, 12)
         .padding(.top, 6)
         .onAppear { focused = true }
+    }
+}
+
+/// Above the comments of a channel post: what they are under, and the way back to the channel.
+private struct CommentsBar: View {
+    @Environment(AppModel.self) private var model
+    let thread: CommentThread
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button {
+                model.closeComments()
+            } label: {
+                Label(thread.channelTitle.isEmpty ? L("К каналу") : thread.channelTitle, systemImage: "chevron.backward")
+                    .lineLimit(1)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.brand)
+            .keyboardShortcut("[", modifiers: .command)
+            .help(L("Вернуться к посту (⌘[)"))
+            Spacer(minLength: 8)
+            Label(L("Комментарии"), systemImage: "bubble.left.and.bubble.right")
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(.thinMaterial, in: Capsule())
+        .padding(.horizontal, 14)
     }
 }
 

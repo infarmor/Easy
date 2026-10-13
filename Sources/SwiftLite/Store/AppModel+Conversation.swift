@@ -17,6 +17,8 @@ extension AppModel {
         pendingBotStart = startParameters.removeValue(forKey: chatId)
         draft = knownChats[chatId]?.draftText ?? ""
         draftBaseline = draft
+        // Comments of a channel post open the group on their thread, with the thread's own draft.
+        adoptPendingThread(for: chatId)
         // Set after the baseline, so it counts as a change and is saved as the chat's draft.
         if let pending = pendingDrafts.removeValue(forKey: chatId) {
             quietDraft = pending
@@ -25,7 +27,8 @@ extension AppModel {
         lastTypingAt = nil
         // Taken before reading: afterwards the chat no longer knows what was new.
         let lastRead = knownChats[chatId]?.lastReadInboxId ?? 0
-        let hadUnread = (knownChats[chatId]?.unread ?? 0) > 0
+        // The group's unread count says nothing about a thread in it.
+        let hadUnread = commentThread == nil && (knownChats[chatId]?.unread ?? 0) > 0
         unreadOpenFrom = hadUnread ? lastRead : nil
         // Opening the chat in TDLib and reading its history run side by side: the first page does not wait.
         Task { _ = try? await request(["@type": "openChat", "chat_id": chatId]) }
@@ -783,7 +786,7 @@ extension AppModel {
         defer { endHistoryLoad(generation) }
 
         // What TDLib has on disk is on screen at once; the page from the server follows and fills in.
-        if messages.isEmpty, openTopicId == nil, let local = try? await history(chatId: chatId, from: 0, onlyLocal: true),
+        if messages.isEmpty, openTopic == nil, let local = try? await history(chatId: chatId, from: 0, onlyLocal: true),
            generation == historyGeneration, !local.isEmpty {
             merge(local.map { TD.message($0) })
             // What is on disk usually holds the place where reading stopped: the chat opens on it at once
@@ -850,7 +853,10 @@ extension AppModel {
     /// With offset 0 the page starts right below `from_message_id` (the message itself is excluded),
     /// so an empty page means the beginning of the chat was reached.
     private func history(chatId: Int64, from messageId: Int64, offset: Int = 0, onlyLocal: Bool = false) async throws -> [TDNode] {
-        // A topic's history has its own request, and that one has no local-only mode.
+        // A topic's and a thread's history have requests of their own, and those have no local-only mode.
+        if let thread = commentThread {
+            return try await threadHistory(thread, from: messageId, offset: offset, limit: Self.historyPageSize)
+        }
         if let topic = openTopicId {
             return try await request([
                 "@type": "getForumTopicHistory",
@@ -937,6 +943,7 @@ extension AppModel {
         scheduledMessages = []
         topics = []
         openTopicId = nil
+        commentThread = nil
         openChatIsForum = false
         // Rights and statistics belong to one chat; left over, they would gate the next chat's controls.
         chatAccess = ChatAccess()
@@ -959,7 +966,11 @@ extension AppModel {
         let isOpen = chatId == openChatId
         var newest = chat.lastMessageId
         if isOpen, let loaded = messages.last(where: \.isSent)?.id {
-            newest = max(newest, loaded)
+            // In a topic or a thread only what is on screen has been seen: the chat's latest message may be
+            // anywhere else in it, and reading it would mark the whole chat read.
+            newest = openTopic == nil ? max(newest, loaded) : loaded
+        } else if isOpen, openTopic != nil {
+            newest = 0
         }
 
         if newest != 0 {
@@ -974,10 +985,10 @@ extension AppModel {
         if chat.isMarkedUnread {
             _ = try? await request(["@type": "toggleChatIsMarkedAsUnread", "chat_id": chatId, "is_marked_as_unread": false])
         }
-        if chat.unreadMentions > 0 {
+        if chat.unreadMentions > 0, !isOpen || openTopic == nil {
             _ = try? await request(["@type": "readAllChatMentions", "chat_id": chatId])
         }
-        if chat.unreadReactions > 0 {
+        if chat.unreadReactions > 0, !isOpen || openTopic == nil {
             _ = try? await request(["@type": "readAllChatReactions", "chat_id": chatId])
         }
         // A topic's counter is the client's own, so reading has to clear it here: the open topic when one is

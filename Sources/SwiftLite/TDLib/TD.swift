@@ -184,6 +184,7 @@ enum TD {
             entities: entities(of: content),
             isEdited: node.tdInt("edit_date") > 0
         )
+        message.isChannelPost = node.tdBool("is_channel_post")
         applyInteraction(node.tdNode("interaction_info"), to: &message)
         message.linkPreview = linkPreview(content.tdNode("link_preview"))
         message.markup = replyMarkup(node.tdNode("reply_markup"))
@@ -202,8 +203,12 @@ enum TD {
                 message.foreignReply = foreignReply(reply)
             }
         }
-        if let topic = node.tdNode("topic_id"), topic.tdType == "messageTopicForum" {
-            message.topicId = Int32(topic.tdInt("forum_topic_id"))
+        if let topic = node.tdNode("topic_id") {
+            switch topic.tdType {
+            case "messageTopicForum": message.topicId = Int32(topic.tdInt("forum_topic_id"))
+            case "messageTopicThread": message.threadId = topic.tdInt64("message_thread_id")
+            default: break
+            }
         }
         if let origin = node.tdNode("forward_info")?.tdNode("origin") {
             switch origin.tdType {
@@ -399,9 +404,11 @@ enum TD {
         }
     }
 
-    /// Reactions (emoji and custom emoji; paid stars are left out) and channel view counts.
+    /// Reactions (emoji and custom emoji; paid stars are left out), and channel view and comment counts.
     static func applyInteraction(_ info: TDNode?, to message: inout Message) {
         message.viewCount = info?.tdInt("view_count") ?? 0
+        // Groups have reply info too, for threads started by replies; only a post's is a comment section.
+        message.commentCount = message.isChannelPost ? info?.tdNode("reply_info").map { $0.tdInt("reply_count") } : nil
         message.reactions = (info?.tdNode("reactions")?.tdNodes("reactions") ?? []).compactMap { reaction in
             guard let type = reaction.tdNode("type") else { return nil }
             switch type.tdType {

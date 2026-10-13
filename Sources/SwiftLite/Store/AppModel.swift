@@ -634,6 +634,11 @@ final class AppModel {
     /// nil shows the whole chat, which is how a forum reads until a topic is picked. Only `open(topic:)`
     /// changes it: a bare assignment would leave the transcript of the previous topic on screen.
     var openTopicId: Int32?
+    /// The comments of a channel post, shown in its discussion group instead of the group's whole history.
+    /// Only `openComments` and `closeComments` (through a chat switch) change it.
+    var commentThread: CommentThread?
+    /// A thread whose group is still opening: the chat switch clears what was open, so it waits here.
+    @ObservationIgnored var pendingThread: CommentThread?
 
     // MARK: - sign-in
 
@@ -1297,7 +1302,8 @@ final class AppModel {
                 chat.draftText = text
                 TD.applyPositions(positions, to: &chat)
             }
-            if chatId == openChatId { adoptRemoteDraft(text) }
+            // The chat's own draft; a topic or a comment thread on screen has a draft of its own.
+            if chatId == openChatId, openTopic == nil { adoptRemoteDraft(text) }
 
         case "updateChatReadInbox":
             let chatId = update.tdInt64("chat_id")
@@ -1347,7 +1353,7 @@ final class AppModel {
                 noteTopic(of: message)
             }
             // An older stretch of history on screen would get a gap; the message shows with the latest ones.
-            guard message.chatId == openChatId, !isViewingHistory else { return }
+            guard belongsOnScreen(message), !isViewingHistory else { return }
             merge([message])
             if !message.isOutgoing { scheduleMarkRead() }
 
@@ -1356,7 +1362,7 @@ final class AppModel {
             guard let node = update.tdNode("message") else { return }
             var message = TD.message(node)
             cache(message)
-            guard message.chatId == openChatId, !isViewingHistory else { return }
+            guard belongsOnScreen(message), !isViewingHistory else { return }
             let oldId = update.tdInt64("old_message_id")
             // The bubble on screen stays the bubble it was: see `Message.viewId`.
             if let index = messageIndex[oldId] { message.firstShownId = messages[index].viewId }

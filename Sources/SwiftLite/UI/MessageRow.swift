@@ -307,6 +307,9 @@ struct MessageRow: View {
             if !message.reactions.isEmpty {
                 reactionsRow
             }
+            if let comments = message.commentCount, !message.isDeleted {
+                commentsButton(comments)
+            }
             // Under the bubble rather than in it: "Доставлено 14:32" is about the bubble, not part of what
             // was said.
             if showsStatus {
@@ -595,6 +598,24 @@ struct MessageRow: View {
         }
         // A reaction lands with a little bounce, and the others make room for it.
         .animation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.38), value: message.reactions)
+    }
+
+    /// Under a channel post with a discussion group: the count, and the way into the comments.
+    private func commentsButton(_ count: Int) -> some View {
+        Button {
+            Task { await model.openComments(of: message) }
+        } label: {
+            Label(count == 0 ? L("Прокомментировать")
+                             : TD.count(count, L("комментарий"), L("комментария"), L("комментариев")),
+                  systemImage: "bubble.left.and.bubble.right")
+                .font(.subheadline.weight(.medium))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 3)
+                .background(Color.primary.opacity(0.07), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.brand)
+        .help(L("Открыть комментарии"))
     }
 
     /// The author's name in their own colour: inside the bubble where there is one, above the surface where

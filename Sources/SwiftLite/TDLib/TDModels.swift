@@ -698,6 +698,13 @@ struct Message: Identifiable, Equatable {
     /// The topic of a forum supergroup this message belongs to; 0 outside a forum, where the whole chat is
     /// one stream.
     var topicId: Int32 = 0
+    /// A channel post whose channel has a discussion group: how many comments it has. nil where there is
+    /// nowhere to comment.
+    var commentCount: Int?
+    /// A post of a channel, as opposed to a message in a group.
+    var isChannelPost = false
+    /// The comment thread a message of a discussion group belongs to; 0 outside one.
+    var threadId: Int64 = 0
 
     /// The id this message was first shown under, when that was another one. A message being sent has a
     /// temporary id and gets its real one when the server takes it; to the eye it is the same bubble, so the

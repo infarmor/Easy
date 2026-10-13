@@ -517,9 +517,10 @@ extension AppModel {
         ["@type": "messageTopicForum", "forum_topic_id": Int(id)]
     }
 
-    /// The topic the composer works in, as TDLib wants it.
+    /// The topic the composer works in, as TDLib wants it: a forum topic, or the comments of a channel post.
     var openTopic: TDNode? {
-        openTopicId.map { Self.topicNode($0) }
+        if let thread = commentThread { return ["@type": "messageTopicThread", "message_thread_id": thread.threadId] }
+        return openTopicId.map { Self.topicNode($0) }
     }
 
     /// The topic list of a forum. `query` searches on the server, by topic name.
