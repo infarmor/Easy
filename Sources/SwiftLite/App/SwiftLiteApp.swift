@@ -146,7 +146,15 @@ struct SwiftLiteApp: App {
 
 /// Holds the quit until the model has saved the draft, gone offline and closed TDLib.
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    @MainActor var hub: AccountHub?
+    @MainActor var hub: AccountHub? {
+        didSet {
+            guard let hub, let target = spotlightTarget else { return }
+            spotlightTarget = nil
+            hub.open(target.chatId, in: target.account)
+        }
+    }
+    /// A Spotlight result that launched the app before the window had its accounts.
+    @MainActor private var spotlightTarget: (account: String, chatId: Int64)?
     private var answered = false
     @MainActor private var purge: DispatchWorkItem?
 
@@ -164,6 +172,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidBecomeActive(_ notification: Notification) {
         purge?.cancel()
         purge = nil
+    }
+
+    /// A chat picked in Spotlight: its account comes into the window with it.
+    @MainActor
+    func application(_ application: NSApplication, continue userActivity: NSUserActivity,
+                     restorationHandler: @escaping ([any NSUserActivityRestoring]) -> Void) -> Bool {
+        guard let target = Spotlight.target(of: userActivity) else { return false }
+        NSApp.activate()
+        if let hub {
+            hub.open(target.chatId, in: target.account)
+        } else {
+            spotlightTarget = target
+        }
+        return true
     }
 
     @MainActor

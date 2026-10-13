@@ -143,6 +143,8 @@ extension AppModel {
         lockKeys = made.keys
         archive.setKey(made.keys.archive)
         hasPasscode = true
+        // Chat names in Spotlight would be readable on a locked Mac; with a passcode they go.
+        Spotlight.forgetAll()
         startAutoLock()
         hub?.shareLock(from: self, rekeying: true)
         return nil
@@ -173,6 +175,7 @@ extension AppModel {
         lockKeys = nil
         archive.setKey(nil)
         hasPasscode = false
+        scheduleSpotlight()
         lockTimer?.invalidate()
         lockTimer = nil
         hub?.shareLock(from: self, rekeying: true)

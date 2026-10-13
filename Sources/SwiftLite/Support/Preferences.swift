@@ -62,6 +62,8 @@ enum Preferences {
     static let showMessageCode = "showMessageCode"
     static let showIdentifiers = "showIdentifiers"
     static let tdlibLogLevel = "tdlibLogLevel"
+    /// Chat names in Spotlight; see `Spotlight`.
+    static let spotlight = "spotlight"
 
     static func register() {
         UserDefaults.standard.register(defaults: [
@@ -93,6 +95,7 @@ enum Preferences {
             showMessageCode: false,
             showIdentifiers: false,
             tdlibLogLevel: 1,
+            spotlight: true,
         ])
     }
 

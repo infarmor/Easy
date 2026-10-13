@@ -158,6 +158,8 @@ private struct NotificationSettings: View {
 }
 
 private struct PrivacySettings: View {
+    @Environment(AppModel.self) private var model
+    @AppStorage(Preferences.spotlight) private var usesSpotlight = true
     @AppStorage(Preferences.showOnline) private var showsOnline = true
     @AppStorage(Preferences.sendTyping) private var sendsTyping = true
     @AppStorage(Preferences.markReadOnOpen) private var marksRead = true
@@ -170,6 +172,17 @@ private struct PrivacySettings: View {
                 Toggle(L("Отмечать сообщения прочитанными при открытии чата"), isOn: $marksRead)
             } footer: {
                 Text(L("Без автоматической отметки сообщения читаются только кнопкой «Отметить прочитанным» (⌘⇧E). Кому видно время вашего последнего захода, решают настройки конфиденциальности Telegram."))
+            }
+            Section {
+                Toggle(L("Находить чаты через Spotlight"), isOn: $usesSpotlight)
+                    .disabled(model.hasPasscode)
+                    .onChange(of: usesSpotlight) { _, isOn in
+                        if isOn { model.scheduleSpotlight() } else { Spotlight.forgetAll() }
+                    }
+            } footer: {
+                Text(model.hasPasscode
+                     ? L("Пока задан код-пароль, чатов в Spotlight нет: их названия было бы видно на заблокированном Mac.")
+                     : L("В Spotlight попадают только названия чатов, без сообщений и без секретных чатов."))
             }
         }
         .formStyle(.grouped)

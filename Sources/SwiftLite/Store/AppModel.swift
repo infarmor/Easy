@@ -1025,6 +1025,7 @@ final class AppModel {
                 return
             }
             // Signed out of one account of several: its slot goes, and the window moves to one that remains.
+            if intent == .logOut { Spotlight.forget(account: slot) }
             if intent == .logOut, hub?.signedOut(self) == true { return }
             if intent == .logOut { phase = .phone }
             start(with: saved)
@@ -1800,6 +1801,7 @@ final class AppModel {
         if changed.count != 1 || differs { chats = list }
         refreshUnreadBadges()
         refreshSelectedChat()
+        scheduleSpotlight()
     }
 
     private func rebuildChatList() {
@@ -1811,6 +1813,15 @@ final class AppModel {
         if list != chats { chats = list }
         refreshUnreadBadges()
         refreshSelectedChat()
+        scheduleSpotlight()
+    }
+
+    /// Every chat of the account, in or out of a folder or the archive, goes to Spotlight by name.
+    func scheduleSpotlight() {
+        Spotlight.schedule(account: slot) { [weak self] in
+            guard let self, isReady else { return [] }
+            return listableChats.sorted(by: TD.precedes)
+        }
     }
 
     /// The badges of the sidebar rail: unread of every place a tap can open. Walked by id like the list,
