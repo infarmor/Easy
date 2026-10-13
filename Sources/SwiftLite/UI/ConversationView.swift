@@ -1123,9 +1123,9 @@ struct MessageRow: View {
             if message.isOutgoing, message.isSent {
                 HStack(spacing: -2) {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 5, weight: .bold))
+                        .font(.system(size: 6, weight: .bold))
                     Image(systemName: "checkmark")
-                        .font(.system(size: 5, weight: .bold))
+                        .font(.system(size: 6, weight: .bold))
                 }
                 .foregroundStyle(isRead ? Color.brandInk : .white)
             }
@@ -1174,9 +1174,9 @@ struct MessageRow: View {
             if message.isOutgoing, message.isSent {
                 HStack(spacing: -2) {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 5, weight: .bold))
+                        .font(.system(size: 6, weight: .bold))
                     Image(systemName: "checkmark")
-                        .font(.system(size: 5, weight: .bold))
+                        .font(.system(size: 6, weight: .bold))
                 }
                 .foregroundStyle(isRead ? Color.brandInk : .white.opacity(0.72))
             }
