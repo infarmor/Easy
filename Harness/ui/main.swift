@@ -107,6 +107,10 @@ MainActor.assumeIsolated {
     model.apply(msg(74, #"{"@type":"messageLocation","location":{"@type":"location","latitude":55.7558,"longitude":37.6173,"horizontal_accuracy":0}}"#, outgoing: true))
     model.apply(msg(75, #"{"@type":"messageText","text":{"@type":"formattedText","text":"короткое","entities":[]}}"#))
     model.apply(msg(76, #"{"@type":"messageText","text":{"@type":"formattedText","text":"ответ на пост канала","entities":[]}}"#, extra: #","reply_to":{"@type":"messageReplyToMessage","chat_id":-100777,"message_id":9,"origin":{"@type":"messageOriginHiddenUser","sender_name":"Вестник"},"content":{"@type":"messageText","text":{"@type":"formattedText","text":"Новый выпуск уже на сайте","entities":[]}}}"#))
+    // A line that fills the bubble to its full width: the time must get a line of its own, not land on the words.
+    model.apply(msg(77, #"{"@type":"messageText","text":{"@type":"formattedText","text":"у него чисто физически не может нормально быть подписан драйвер","entities":[]}}"#, outgoing: true))
+    model.apply(msg(78, #"{"@type":"messageText","text":{"@type":"formattedText","text":"у него чисто физически не может нормально быть подписан драйвер, и ещё","entities":[]}}"#, outgoing: true))
+    model.apply(msg(79, #"{"@type":"messageText","text":{"@type":"formattedText","text":"можно","entities":[]}}"#, outgoing: true))
     model.openChatIsForum = true
     model.topics = [
         Topic(id: 1, name: "Общее", unread: 3),

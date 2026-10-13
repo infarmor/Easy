@@ -203,7 +203,12 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
         // is closed — nothing here ever clears the shared store otherwise.
         configuration.websiteDataStore = .nonPersistent()
         configuration.preferences.isElementFullscreenEnabled = true
+        // A page that calls window.open gets nothing here; createWebViewWith still routes http(s) to Safari.
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
         configuration.mediaTypesRequiringUserActionForPlayback = []
+        // App Sandbox already walls the process off the rest of the Mac. On top of that: no shared cookie
+        // jar, no camera/mic (see decideMediaCapturePermissionsFor), no automatic downloads to disk, no
+        // file:// pages, and file <input> only through the user's open panel (user-selected entitlement).
         let script = """
         window.TelegramWebviewProxy = {
           postEvent: function (eventType, eventData) {
@@ -636,10 +641,20 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
                 if ["http", "https"].contains(scheme) { NSWorkspace.shared.open(url) }
                 return decisionHandler(.cancel)
             }
+            // file:// would read whatever the sandbox allows of the container; mini apps stay on the network.
             guard ["http", "https", "about", "blob", "data"].contains(scheme) else {
                 return decisionHandler(.cancel)
             }
             decisionHandler(.allow)
+        }
+    }
+
+    /// A response WebKit cannot draw (an attachment, an octet-stream) must not land in Downloads on its own.
+    /// The chat's own download path is how files reach disk; a mini app does not get a second one.
+    nonisolated func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
+                             decisionHandler: @escaping @MainActor (WKNavigationResponsePolicy) -> Void) {
+        MainActor.assumeIsolated {
+            decisionHandler(navigationResponse.canShowMIMEType ? .allow : .cancel)
         }
     }
 
@@ -652,6 +667,20 @@ final class WebAppBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
             }
         }
         return nil
+    }
+
+    /// `<input type="file">` goes through the system open panel, which under App Sandbox only grants the
+    /// files the user picks (`com.apple.security.files.user-selected.read-write`). Nothing is pre-granted.
+    nonisolated func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters,
+                             initiatedByFrame frame: WKFrameInfo) async -> [URL]? {
+        await MainActor.run {
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = true
+            panel.canChooseDirectories = parameters.allowsDirectories
+            panel.allowsMultipleSelection = parameters.allowsMultipleSelection
+            panel.message = session.botName
+            return panel.runModal() == .OK ? panel.urls : nil
+        }
     }
 
     nonisolated func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String,

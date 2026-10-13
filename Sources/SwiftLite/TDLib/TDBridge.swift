@@ -22,18 +22,22 @@ struct TDError: Error, CustomStringConvertible {
 }
 
 /// One TDLib instance on top of the shared `td_receive` loop. Requests are matched to responses through
-/// `@extra`; every other message is delivered to `onUpdate` on the main queue, in the order TDLib sent it.
-/// An instance ends with `authorizationStateClosed`; a new session needs a new bridge.
+/// `@extra`; every other message is prepared off the main thread, then delivered to `onUpdate` on the main
+/// queue, in the order TDLib sent it. An instance ends with `authorizationStateClosed`; a new session needs
+/// a new bridge.
 final class TDBridge: @unchecked Sendable {
     private let clientId = TDReceiver.shared.createClient()
     private let sync = NSLock()
     private var pending: [Int64: CheckedContinuation<TDNode, Error>] = [:]
     private var nextExtra: Int64 = 1
-    private var onUpdate: (@MainActor (TDNode) -> Void)?
+    private var onUpdate: (@MainActor (PreparedUpdate) -> Void)?
     private var isClosed = false
-    /// Updates waiting for the main thread; they go over in batches instead of one hop each.
+    /// Updates waiting to be prepared and handed to the main thread; they go over in batches instead of one
+    /// hop each.
     private var pendingUpdates: [TDNode] = []
     private var isFlushScheduled = false
+    /// Serial: keeps TDLib order while `TD.message` / `TD.chat` run off the main actor.
+    private let prepareQueue = DispatchQueue(label: "ru.anemia.swiftlite.tdlib.prepare", qos: .userInitiated)
 
     /// Synchronous requests that need no client, such as the log settings.
     static func execute(_ request: TDNode) {
@@ -52,7 +56,7 @@ final class TDBridge: @unchecked Sendable {
         return node?.tdType == "error" ? nil : node
     }
 
-    func start(onUpdate: @escaping @MainActor (TDNode) -> Void) {
+    func start(onUpdate: @escaping @MainActor (PreparedUpdate) -> Void) {
         sync.lock()
         self.onUpdate = onUpdate
         sync.unlock()
@@ -122,9 +126,10 @@ final class TDBridge: @unchecked Sendable {
             finish()
         }
 
-        // Startup brings thousands of updates; one main-thread block per burst keeps the interface responsive
-        // and lets SwiftUI redraw once for the whole burst. Order is kept: a batch is drained front to back, and
-        // a request's reply is resumed after the batch that was already queued ahead of it.
+        // Startup brings thousands of updates. Mapping them into Message/Chat values is the expensive part and
+        // runs on `prepareQueue`; the main actor only merges the prepared batch, so SwiftUI redraws once per
+        // burst and the UI thread is not stuck in TDNode walks. Order is kept: the prepare queue is serial,
+        // and main receives each batch in the same order it was scheduled.
         sync.lock()
         pendingUpdates.append(update)
         let handler = onUpdate
@@ -134,7 +139,7 @@ final class TDBridge: @unchecked Sendable {
         if needsFlush, handler != nil { isFlushScheduled = true }
         sync.unlock()
         guard needsFlush, let handler else { return }
-        DispatchQueue.main.async { [self] in
+        prepareQueue.async { [self] in
             sync.lock()
             // Swapped out, not copied: with `batch` still holding the storage, emptying the array in place
             // allocated a second buffer of the same size under the lock.
@@ -142,8 +147,11 @@ final class TDBridge: @unchecked Sendable {
             swap(&batch, &pendingUpdates)
             isFlushScheduled = false
             sync.unlock()
-            MainActor.assumeIsolated {
-                for update in batch { handler(update) }
+            let prepared = batch.map(UpdatePrep.prepare)
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    for update in prepared { handler(update) }
+                }
             }
         }
     }

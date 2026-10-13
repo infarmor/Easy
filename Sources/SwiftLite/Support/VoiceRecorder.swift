@@ -20,6 +20,10 @@ final class VoiceRecorder {
 
     @ObservationIgnored private var recorder: AVAudioRecorder?
     @ObservationIgnored private var meter: Timer?
+
+    deinit {
+        meter?.invalidate()
+    }
     @ObservationIgnored private var levels: [Float] = []
     @ObservationIgnored private var startedAt: Date?
     /// Kept past the moment the recorder lets go, so a take stopped by the limit can still be sent.

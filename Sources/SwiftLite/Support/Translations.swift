@@ -552,6 +552,8 @@ enum Translations {
         "Вставка {0}.{1}": "Pasted {0}.{1}",
         "Завершить сеанс": "End session",
         "Занято на диске": "Disk space used",
+        "Агрессивный режим экономии памяти": "Aggressive memory saving",
+        "Ужимает кэш картинок и стикеров в RAM, раньше сбрасывает его в фоне, держит меньше недавних сообщений в памяти и просит TDLib удалять скачанные файлы старше суток. Переписка на диске не трогается.": "Shrinks the in-RAM picture and sticker caches, drops them sooner in the background, keeps fewer recent messages in memory, and asks TDLib to delete downloaded files older than a day. Your on-disk chat history is left alone.",
         "Затемнение фона": "Background dimming",
         "Защита аккаунта": "Account protection",
         "Из другого чата": "From another chat",

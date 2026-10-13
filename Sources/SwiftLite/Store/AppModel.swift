@@ -214,6 +214,10 @@ final class AppModel {
     /// Keys of the passcode, in memory only while the app has been unlocked with it since launch.
     @ObservationIgnored var lockKeys: AppLock.Keys?
     @ObservationIgnored var lockTimer: Timer?
+
+    deinit {
+        lockTimer?.invalidate()
+    }
     /// A device that signed in to the account and has not been confirmed as yours: "iPhone 17 · Moscow, Russia".
     /// Kept until it is answered, so a login noticed while the app was locked or in the background is asked
     /// about when you are back.
