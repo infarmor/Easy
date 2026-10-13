@@ -10,7 +10,8 @@ struct StickerView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.displayScale) private var displayScale
     @Environment(\.controlActiveState) private var activeState
-    @AppStorage(Preferences.animateStickers) private var animates = true
+    @AppStorage(Preferences.animateStickers) private var animatesStickers = true
+    private var animates: Bool { animatesStickers && model.memoryProfile != .economical }
 
     let sticker: Sticker
 

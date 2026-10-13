@@ -7,19 +7,41 @@ import Lottie
 @MainActor
 enum MediaCache {
     /// Bounded so a long session with many photos and stickers does not keep all of them in memory;
-    /// the cost is the decoded bitmap size, the limit roughly 96 MB. What falls out is decoded again from
-    /// the file on disk when its row comes back, a few milliseconds each.
+    /// the cost is the decoded bitmap size, the limit roughly 96 MB (32 MB in aggressive memory mode).
+    /// What falls out is decoded again from the file on disk when its row comes back, a few milliseconds each.
     private static let images: NSCache<NSString, NSImage> = {
         let cache = NSCache<NSString, NSImage>()
-        cache.totalCostLimit = 96 * 1024 * 1024
-        cache.countLimit = 600
+        applyLimits(to: cache, animations: nil)
         return cache
     }()
     private static let animations: NSCache<NSString, LottieAnimation> = {
         let cache = NSCache<NSString, LottieAnimation>()
-        cache.countLimit = 40
+        applyLimits(to: nil, animations: cache)
         return cache
     }()
+
+    /// Seconds before a backgrounded app drops its decoded bitmaps; shorter when memory is scarce.
+    static var backgroundPurgeDelay: TimeInterval {
+        let profile = AppModel.memoryProfile
+        switch profile { case .standard: return 300; case .balanced: return 200; case .economical: return 45 }
+    }
+
+    /// Re-read Preferences and resize the caches. Called when the user flips the memory toggle.
+    static func applyMemoryPreference() {
+        applyLimits(to: images, animations: animations)
+        if AppModel.memoryProfile == .economical { purge() }
+    }
+
+    private static func applyLimits(to images: NSCache<NSString, NSImage>?, animations: NSCache<NSString, LottieAnimation>?) {
+        let profile = AppModel.memoryProfile
+        if let images {
+            images.totalCostLimit = (profile == .economical ? 32 : (profile == .balanced ? 64 : 96)) * 1024 * 1024
+            images.countLimit = profile == .economical ? 200 : (profile == .balanced ? 400 : 600)
+        }
+        if let animations {
+            animations.countLimit = profile == .economical ? 8 : (profile == .balanced ? 20 : 40)
+        }
+    }
 
     /// Lets go of every decoded picture and animation: called when the app has been in the background for a
     /// while, where none of them is on screen.

@@ -460,6 +460,7 @@ private struct SecuritySettings: View {
 
 private struct StorageSettings: View {
     @Environment(AppModel.self) private var model
+    @AppStorage(Preferences.memoryProfile) private var memoryProfile = 1
     @State private var usage: StorageUsage?
     @State private var isClearing = false
 
@@ -470,6 +471,18 @@ private struct StorageSettings: View {
                     "\(Self.bytes($0.files)), \(TD.count($0.fileCount, L("файл"), L("файла"), L("файлов")))"
                 } ?? "—")
                 LabeledContent(L("База сообщений"), value: usage.map { Self.bytes($0.database) } ?? "—")
+            }
+            Section {
+                Picker(L("Профиль памяти"), selection: $memoryProfile) {
+                    Text(L("Стандартный")).tag(0)
+                    Text(L("Сбалансированный")).tag(1)
+                    Text(L("Экономный")).tag(2)
+                }
+                .onChange(of: memoryProfile) { _, _ in
+                    Task { await model.applyEngineOptions() }
+                }
+            } footer: {
+                Text(L("Влияет на размер кэша сообщений в RAM и частоту очистки временных файлов TDLib с диска. Переписка на диске не трогается."))
             }
             Section {
                 Button(isClearing ? L("Очистка…") : L("Очистить кэш")) {
@@ -483,6 +496,14 @@ private struct StorageSettings: View {
                 .disabled(isClearing || usage == nil)
             } footer: {
                 Text(L("Удаляются скачанные фото, стикеры и вложения. Переписка остаётся, файлы скачаются снова, когда понадобятся."))
+            }
+            Section {
+                Button(L("Очистить данные Mini Apps"), role: .destructive) {
+                    Task {
+                        model.clearMiniAppsData()
+                    }
+                }
+                .help(L("Полностью сбрасывает локальные данные всех установленных мини-приложений"))
             }
         }
         .formStyle(.grouped)

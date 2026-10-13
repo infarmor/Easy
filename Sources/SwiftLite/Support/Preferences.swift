@@ -62,6 +62,9 @@ enum Preferences {
     static let showMessageCode = "showMessageCode"
     static let showIdentifiers = "showIdentifiers"
     static let tdlibLogLevel = "tdlibLogLevel"
+    /// Memory profile: 0 (Standard), 1 (Balanced), 2 (Economical).
+    static let memoryProfile = "memoryProfile"
+
 
     static func register() {
         UserDefaults.standard.register(defaults: [
@@ -93,6 +96,7 @@ enum Preferences {
             showMessageCode: false,
             showIdentifiers: false,
             tdlibLogLevel: 1,
+            memoryProfile: 1,
         ])
     }
 

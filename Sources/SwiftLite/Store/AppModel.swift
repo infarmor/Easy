@@ -827,7 +827,7 @@ final class AppModel {
         self.bridge = bridge
         bridge.start { [weak self, weak bridge] update in
             guard let self, let bridge, self.bridge === bridge else { return }
-            self.apply(update)
+            self.applyPrepared(update)
         }
         Task { await configure(credentials) }
     }
@@ -928,11 +928,41 @@ final class AppModel {
     }
 
     /// Less background work for TDLib: its own cache cleanup keeps downloaded files bounded, and statistics
-    /// nobody here reads are not written to disk.
+    /// nobody here reads are not written to disk. Aggressive memory mode also asks it to drop animated emoji
+    /// and to prune downloaded files that are already a day old.
     private func applyEngineOptions() async {
         for name in ["use_storage_optimizer", "disable_top_chats", "disable_persistent_network_statistics"] {
             _ = try? await request(["@type": "setOption", "name": name, "value": ["@type": "optionValueBoolean", "value": true]])
         }
+        let profile = memoryProfile
+        _ = try? await request([
+            "@type": "setOption",
+            "name": "disable_animated_emoji",
+            "value": ["@type": "optionValueBoolean", "value": profile == .economical],
+        ])
+        if profile != .standard {
+            await pruneDownloadedFiles(maxAgeDays: profile.maxAgeDays)
+        }
+    }
+
+    /// TDLib's `optimizeStorage` with a short TTL: files older than `maxAgeDays` that are not open go away.
+    func pruneDownloadedFiles(maxAgeDays: Int) async {
+        await perform([
+            "@type": "optimizeStorage",
+            "size": -1,
+            "ttl": maxAgeDays * 86_400,
+            "count": -1,
+            "immunity_delay": 0,
+            "file_types": [Any](),
+            "chat_ids": [Any](),
+            "exclude_chat_ids": [Any](),
+            "return_deleted_file_statistics": false,
+            "chat_limit": 0,
+        ])
+    }
+
+    func clearMiniAppsData() {
+        WebAppStorage.clearAll()
     }
 
     private func loadTDLibVersion() async {
@@ -1121,7 +1151,13 @@ final class AppModel {
 
     // MARK: - updates
 
+    /// Harness entry: prepares on the calling thread (already main in the stands), then merges.
     private func apply(_ update: TDNode) {
+        applyPrepared(UpdatePrep.prepare(update))
+    }
+
+    private func applyPrepared(_ prepared: PreparedUpdate) {
+        let update = prepared.raw
         switch update.tdType {
         case "updateAuthorizationState":
             applyAuthorization(update.tdNode("authorization_state") ?? [:])
@@ -1129,13 +1165,17 @@ final class AppModel {
         case "updateUser":
             guard let user = update.tdNode("user") else { return }
             let userId = user.tdInt64("id")
-            let name = TD.displayName(ofUser: user)
+            let name = prepared.userName ?? TD.displayName(ofUser: user)
             remember(name, for: "u\(userId)")
-            remember(TD.photo(user.tdNode("profile_photo")), for: "u\(userId)")
+            remember(prepared.userPhoto ?? TD.photo(user.tdNode("profile_photo")), for: "u\(userId)")
             if userId == myUserId, !name.isEmpty, accountName != name { accountName = name }
-            remember(TD.nameBadge(status: user.tdNode("emoji_status"), isPremium: user.tdBool("is_premium")), for: "u\(userId)")
-            let presence = TD.presence(user.tdNode("status"))
-            let isBot = user.tdNode("type")?.tdType == "userTypeBot"
+            remember(
+                prepared.userBadge
+                    ?? TD.nameBadge(status: user.tdNode("emoji_status"), isPremium: user.tdBool("is_premium")),
+                for: "u\(userId)"
+            )
+            let presence = prepared.presence ?? TD.presence(user.tdNode("status"))
+            let isBot = prepared.isBot ?? (user.tdNode("type")?.tdType == "userTypeBot")
             userPresence[userId] = presence
             if isBot { bots.insert(userId) } else { bots.remove(userId) }
             // A private chat has the same id as its user; their secret chats do not.
@@ -1148,7 +1188,7 @@ final class AppModel {
 
         case "updateUserStatus":
             let userId = update.tdInt64("user_id")
-            let presence = TD.presence(update.tdNode("status"))
+            let presence = prepared.presence ?? TD.presence(update.tdNode("status"))
             userPresence[userId] = presence
             for chatId in [userId] + Array(secretChatsOfUser[userId] ?? []) {
                 updateChat(chatId) { $0.presence = presence }
@@ -1173,7 +1213,10 @@ final class AppModel {
             presentLoginAlert()
 
         case "updateChatEmojiStatus":
-            remember(TD.nameBadge(status: update.tdNode("emoji_status"), isPremium: false), for: "c\(update.tdInt64("chat_id"))")
+            remember(
+                prepared.userBadge ?? TD.nameBadge(status: update.tdNode("emoji_status"), isPremium: false),
+                for: "c\(update.tdInt64("chat_id"))"
+            )
 
         case "updateSecretChat":
             guard let secret = update.tdNode("secret_chat"), let state = SecretChatState(secret.tdNode("state")) else { return }
@@ -1183,8 +1226,8 @@ final class AppModel {
 
         case "updateNewChat":
             guard let node = update.tdNode("chat") else { return }
-            var chat = TD.chat(node)
-            if let last = node.tdNode("last_message").map(TD.message) {
+            var chat = prepared.chat ?? TD.chat(node)
+            if let last = prepared.message ?? node.tdNode("last_message").map(TD.message) {
                 chat.snippetSender = snippetSender(of: last, in: chat)
             }
             if chat.userId != 0 {
@@ -1212,7 +1255,7 @@ final class AppModel {
 
         case "updateChatPhoto":
             let chatId = update.tdInt64("chat_id")
-            let photo = TD.photo(update.tdNode("photo"))
+            let photo = prepared.userPhoto ?? TD.photo(update.tdNode("photo"))
             updateChat(chatId) { $0.photo = photo }
             remember(photo, for: "c\(chatId)")
 
@@ -1266,7 +1309,7 @@ final class AppModel {
             updateChat(update.tdInt64("chat_id")) { TD.applyPosition(position, to: &$0) }
 
         case "updateChatLastMessage":
-            let last = update.tdNode("last_message").map(TD.message)
+            let last = prepared.message ?? update.tdNode("last_message").map(TD.message)
             let positions = update.tdNodes("positions")
             updateChat(update.tdInt64("chat_id")) { chat in
                 if let last {
@@ -1287,7 +1330,7 @@ final class AppModel {
 
         case "updateChatDraftMessage":
             let chatId = update.tdInt64("chat_id")
-            let text = TD.draftText(of: update.tdNode("draft_message"))
+            let text = prepared.draftText ?? TD.draftText(of: update.tdNode("draft_message"))
             let positions = update.tdNodes("positions")
             updateChat(chatId) { chat in
                 chat.draftText = text
@@ -1329,7 +1372,7 @@ final class AppModel {
 
         case "updateNewMessage":
             guard let node = update.tdNode("message") else { return }
-            let message = TD.message(node)
+            let message = prepared.message ?? TD.message(node)
             // A scheduled message is not in the history yet and must not ring.
             if message.isScheduled {
                 if message.chatId == openChatId, let chatId = openChatId { Task { await loadScheduledMessages(of: chatId) } }
@@ -1350,7 +1393,7 @@ final class AppModel {
         case "updateMessageSendSucceeded", "updateMessageSendFailed":
             // The local copy is replaced by the server one (or a failed one) under a new id.
             guard let node = update.tdNode("message") else { return }
-            var message = TD.message(node)
+            var message = prepared.message ?? TD.message(node)
             cache(message)
             guard message.chatId == openChatId, !isViewingHistory else { return }
             let oldId = update.tdInt64("old_message_id")
@@ -1364,21 +1407,8 @@ final class AppModel {
             let index = chatId == openChatId ? messageIndex[messageId] : nil
             guard var message = index.map({ messages[$0] }) ?? recentMessages[chatId]?[messageId] else { return }
             let previousText = MessageArchive.text(of: message)
-            let content = update.tdNode("new_content") ?? [:]
-            message.body = TD.body(of: content)
-            message.attachment = TD.attachment(of: content)
-            message.sticker = TD.sticker(of: content)
-            message.media = TD.media(of: content)
-            message.caption = content.tdText("caption")
-            message.entities = TD.entities(of: content)
-            message.linkPreview = TD.linkPreview(content.tdNode("link_preview"))
-            // The cards are content too: a replaced file, a live location that moved, a dice that landed.
-            // Left as they were, the bubble kept drawing the old card under the new text.
-            message.document = TD.document(of: content)
-            message.location = TD.location(of: content)
-            message.contact = TD.contact(of: content)
-            message.dice = TD.dice(of: content)
-            message.poll = TD.poll(content.tdNode("poll"))
+            let patch = prepared.content ?? MessageContentPatch.from(content: update.tdNode("new_content") ?? [:])
+            patch.apply(to: &message)
             // Polls, link previews and finished uploads change content too; only a new text is an edit.
             if Preferences.isOn(Preferences.saveEditHistory), archives(chatId), message.isSent, !message.isDeleted,
                MessageArchive.text(of: message) != previousText {
@@ -1394,7 +1424,7 @@ final class AppModel {
             guard update.tdInt64("chat_id") == openChatId, let index = messageIndex[messageId] else { return }
             var message = messages[index]
             message.isEdited = message.isEdited || update.tdInt("edit_date") > 0
-            message.markup = TD.replyMarkup(update.tdNode("reply_markup"))
+            message.markup = prepared.markup ?? TD.replyMarkup(update.tdNode("reply_markup"))
             replaceMessage(at: index, with: message)
 
         case "updateChatReplyMarkup":
@@ -1417,15 +1447,22 @@ final class AppModel {
             }
 
         case "updateFile":
-            guard let file = update.tdNode("file") else { return }
-            let fileId = file.tdInt("id")
+            let fileId: Int
+            let transfer: FileTransfer
+            if let ready = prepared.transfer {
+                fileId = ready.fileId
+                transfer = ready.value
+            } else {
+                guard let file = update.tdNode("file") else { return }
+                fileId = file.tdInt("id")
+                transfer = TD.transfer(file)
+            }
             guard trackedFiles.contains(fileId) else { return }
-            let transfer = TD.transfer(file)
             if transfer.isDownloaded, !transfer.path.isEmpty { localPaths[fileId] = transfer.path }
             if transfers[fileId] != transfer { transfers[fileId] = transfer }
 
         case "updatePoll":
-            guard let poll = TD.poll(update.tdNode("poll")) else { return }
+            guard let poll = prepared.poll ?? TD.poll(update.tdNode("poll")) else { return }
             // Row by row: a vote in a busy poll arrives every second, and copying the whole history to compare
             // it with itself rebuilt the transcript each time.
             for index in messages.indices where messages[index].poll?.id == poll.id {
@@ -1435,10 +1472,10 @@ final class AppModel {
             }
 
         case "updateChatFolders":
-            chatFolders = update.tdNodes("chat_folders").map {
+            // TDLib always sends the colour; a payload without it means "no colour", not blue — see UpdatePrep.
+            chatFolders = prepared.folders ?? update.tdNodes("chat_folders").map {
                 ChatFolder(id: $0.tdInt("id"), title: $0.tdNode("name")?.tdText("text") ?? "",
                            icon: $0.tdNode("icon")?.tdString("name") ?? "",
-                           // TDLib always sends the colour; a payload without it means "no colour", not blue.
                            colorId: $0["color_id"] == nil ? -1 : $0.tdInt("color_id"))
             }
             if let folder = selectedFolder, !chatFolders.contains(where: { $0.id == folder }) { selectedFolder = nil }
@@ -1459,7 +1496,7 @@ final class AppModel {
             let messageId = update.tdInt64("message_id")
             guard update.tdInt64("chat_id") == openChatId, let index = messageIndex[messageId] else { return }
             var message = messages[index]
-            TD.applyInteraction(update.tdNode("interaction_info"), to: &message)
+            TD.applyInteraction(prepared.interaction ?? update.tdNode("interaction_info"), to: &message)
             replaceMessage(at: index, with: message)
 
         case "updateDeleteMessages":
@@ -1591,9 +1628,11 @@ final class AppModel {
         // Changed where it lies: taking the chat's dictionary out and putting it back made a second owner of
         // it, so every message cached copied all 150 of its neighbours first.
         recentMessages[message.chatId, default: [:]][message.id] = message
-        // Sixty per chat: enough to still have the text of a message deleted minutes after it came, without
-        // hundreds of busy channels each holding a hundred and fifty for the whole session.
-        if let count = recentMessages[message.chatId]?.count, count > 60,
+        // Sixty per chat normally: enough to still have the text of a message deleted minutes after it came,
+        // without hundreds of busy channels each holding a hundred and fifty for the whole session. Aggressive
+        // memory mode keeps twenty.
+        let cap = memoryProfile.recentMessagesLimit
+        if let count = recentMessages[message.chatId]?.count, count > cap,
            let oldest = recentMessages[message.chatId]?.keys.min() {
             recentMessages[message.chatId]?[oldest] = nil
         }
@@ -1710,10 +1749,15 @@ final class AppModel {
         knownChats[chatId]?.kind != .secret || Preferences.isOn(Preferences.archiveSecretChats)
     }
 
+    @ObservationIgnored private var appliedAggressiveMemory: Bool?
+
     private func preferencesChanged() {
         updateOnlineStatus()
         applyBadge()
         applyLogSettings()
+        let profile = memoryProfile
+        MediaCache.applyMemoryPreference()
+        Task { await applyEngineOptions() }
     }
 
     /// TDLib sends `updateNewChat` before any other update about a chat, so unknown ids are ignored.

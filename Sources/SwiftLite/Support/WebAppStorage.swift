@@ -56,4 +56,12 @@ enum WebAppStorage {
     static func clear(_ session: WebAppSession) {
         try? FileManager.default.removeItem(at: file(for: session))
     }
+
+    static func clearAll() {
+        let folder = ConfigStore.webAppStorageDirectory
+        guard let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) else { return }
+        for file in files where file.pathExtension == "json" {
+            try? FileManager.default.removeItem(at: file)
+        }
+    }
 }
