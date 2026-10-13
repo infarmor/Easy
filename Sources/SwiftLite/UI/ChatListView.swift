@@ -306,7 +306,7 @@ struct ChatListView: View {
         }
         if model.canSetAutoDelete(chat) {
             Menu(L("Автоудаление"), systemImage: "timer") {
-                ForEach(AppModel.autoDeleteChoices(for: chat), id: \.seconds) { choice in
+                ForEach(AppModel.autoDeleteChoices(for: chat)) { choice in
                     Toggle(choice.title, isOn: Binding(
                         get: { chat.autoDeleteTime == choice.seconds },
                         set: { _ in Task { await model.setAutoDelete(chat, seconds: choice.seconds) } }))

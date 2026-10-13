@@ -122,12 +122,21 @@ extension AppModel {
 
     /// Choices for the auto-delete timer. Outside secret chats Telegram takes whole days only, up to a year;
     /// a secret chat's self-destruct timer counts from when the message is read, so seconds make sense there.
-    static func autoDeleteChoices(for chat: Chat) -> [(seconds: Int, title: String)] {
+    struct AutoDeleteChoice: Identifiable {
+        let seconds: Int
+        let title: String
+        var id: Int { seconds }
+    }
+
+    static func autoDeleteChoices(for chat: Chat) -> [AutoDeleteChoice] {
+        let choices: [(Int, String)]
         if chat.kind == .secret {
-            return [(0, L("Выключено")), (5, L("5 секунд")), (30, L("30 секунд")), (60, L("1 минута")),
-                    (3600, L("1 час")), (86_400, L("1 день")), (7 * 86_400, L("1 неделя"))]
+            choices = [(0, L("Выключено")), (5, L("5 секунд")), (30, L("30 секунд")), (60, L("1 минута")),
+                       (3600, L("1 час")), (86_400, L("1 день")), (7 * 86_400, L("1 неделя"))]
+        } else {
+            choices = [(0, L("Выключено")), (86_400, L("1 день")), (7 * 86_400, L("1 неделя")), (31 * 86_400, L("1 месяц"))]
         }
-        return [(0, L("Выключено")), (86_400, L("1 день")), (7 * 86_400, L("1 неделя")), (31 * 86_400, L("1 месяц"))]
+        return choices.map { AutoDeleteChoice(seconds: $0.0, title: $0.1) }
     }
 
     /// Whether this chat can have the timer at all: not Saved Messages and not the Telegram service chat.

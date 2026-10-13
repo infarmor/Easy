@@ -1,7 +1,7 @@
 import Foundation
 
 /// A chat folder as the editor changes it: TDLib's `chatFolder`, field for field.
-struct FolderDraft: Equatable {
+struct FolderDraft {
     var name = ""
     /// One of Telegram's icon names ("Custom", "Work", "Cat"…).
     var icon = "Custom"
@@ -116,7 +116,8 @@ extension AppModel {
 
     func loadFolder(_ id: Int) async -> FolderDraft? {
         do {
-            return FolderDraft(node: try await request(["@type": "getChatFolder", "chat_folder_id": id]))
+            let node = try await request(["@type": "getChatFolder", "chat_folder_id": id])
+            return FolderDraft(node: node)
         } catch {
             fail(error)
             return nil
