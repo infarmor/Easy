@@ -229,6 +229,8 @@ final class AppModel {
     /// The sheets for a new group, channel or contact, and for the files this account has downloaded.
     var showsCreateChat = false
     var showsDownloads = false
+    /// The sheet that creates, edits, orders and deletes chat folders.
+    var showsFolders = false
     /// The gallery of photos and videos: of one chat, or of all of them.
     var mediaGallery: MediaScope?
     /// Whose stories the viewer is showing.
@@ -295,6 +297,8 @@ final class AppModel {
     @ObservationIgnored var exportTask: Task<Void, Never>?
     /// Folders of the chat list; the chosen one filters the sidebar (nil: all chats).
     private(set) var chatFolders: [ChatFolder] = []
+    /// Where "Все чаты" stands among the folders; reordering has to send it back as it is (only Premium may move it).
+    @ObservationIgnored var mainListPosition = 0
     var selectedFolder: Int? {
         didSet {
             guard selectedFolder != oldValue else { return }
@@ -1451,6 +1455,7 @@ final class AppModel {
                            // TDLib always sends the colour; a payload without it means "no colour", not blue.
                            colorId: $0["color_id"] == nil ? -1 : $0.tdInt("color_id"))
             }
+            mainListPosition = update.tdInt("main_chat_list_position")
             if let folder = selectedFolder, !chatFolders.contains(where: { $0.id == folder }) { selectedFolder = nil }
 
         case "updateMessageIsPinned":

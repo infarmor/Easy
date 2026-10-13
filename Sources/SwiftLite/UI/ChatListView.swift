@@ -304,6 +304,15 @@ struct ChatListView: View {
         Button(chat.isArchived ? L("Вернуть из архива") : L("Архивировать"), systemImage: chat.isArchived ? "tray.and.arrow.up" : "archivebox") {
             Task { await model.toggleChatArchived(chat) }
         }
+        if !model.chatFolders.isEmpty {
+            Menu(L("Папки"), systemImage: "folder") {
+                ForEach(model.chatFolders) { folder in
+                    Toggle(folder.title.isEmpty ? L("Без названия") : folder.title, isOn: Binding(
+                        get: { chat.folderOrders[folder.id] != nil },
+                        set: { _ in Task { await model.toggle(chat, inFolder: folder.id) } }))
+                }
+            }
+        }
         Divider()
         if chat.kind != .channel {
             Button(L("Быстрый ответ…"), systemImage: "arrowshape.turn.up.left") {
@@ -798,6 +807,7 @@ private struct SidebarHeader: View {
                     Toggle(placeTitle(L("Архив"), model.archiveUnread), isOn: Binding(
                         get: { model.showsArchive },
                         set: { model.showsArchive = $0 }))
+                    Button(L("Изменить папки…"), systemImage: "folder.badge.gearshape") { model.showsFolders = true }
                     Divider()
                     Toggle(L("Только с черновиками"), isOn: $showsDraftsOnly)
                     Button(L("Избранное"), systemImage: "bookmark") { Task { await model.openSavedMessages() } }

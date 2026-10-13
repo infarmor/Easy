@@ -52,6 +52,10 @@ struct WorkspaceView: View {
             DownloadsSheet()
                 .environment(model)
         }
+        .sheet(isPresented: $model.showsFolders) {
+            FoldersSheet()
+                .environment(model)
+        }
         .sheet(item: $model.mediaGallery) { scope in
             MediaGallerySheet(scope: scope)
                 .environment(model)
