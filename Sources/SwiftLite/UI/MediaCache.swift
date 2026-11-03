@@ -7,7 +7,7 @@ import Lottie
 @MainActor
 enum MediaCache {
     /// Bounded so a long session with many photos and stickers does not keep all of them in memory;
-    /// the cost is the decoded bitmap size, the limit roughly 96 MB (32 MB in aggressive memory mode).
+    /// the cost is the decoded bitmap size, the limit 96 MB (64 MB Balanced, 32 MB Economical).
     /// What falls out is decoded again from the file on disk when its row comes back, a few milliseconds each.
     private static let images: NSCache<NSString, NSImage> = {
         let cache = NSCache<NSString, NSImage>()
@@ -26,7 +26,7 @@ enum MediaCache {
         switch profile { case .standard: return 300; case .balanced: return 200; case .economical: return 45 }
     }
 
-    /// Re-read Preferences and resize the caches. Called when the user flips the memory toggle.
+    /// Re-reads the memory profile and resizes the caches. Called when the profile is changed in the settings.
     static func applyMemoryPreference() {
         applyLimits(to: images, animations: animations)
         if AppModel.memoryProfile == .economical { purge() }

@@ -478,9 +478,8 @@ private struct StorageSettings: View {
                     Text(L("Сбалансированный")).tag(1)
                     Text(L("Экономный")).tag(2)
                 }
-                .onChange(of: memoryProfile) { _, _ in
-                    Task { await model.applyEngineOptions() }
-                }
+                // One cache for every account; each account's model sets up its own TDLib on the same change.
+                .onChange(of: memoryProfile) { _, _ in MediaCache.applyMemoryPreference() }
             } footer: {
                 Text(L("Влияет на размер кэша сообщений в RAM и частоту очистки временных файлов TDLib с диска. Переписка на диске не трогается."))
             }

@@ -151,8 +151,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor private var purge: DispatchWorkItem?
 
     /// After a stretch in the background the decoded pictures are let go: none of them is being scrolled
-    /// to there, and what a visible window shows is held by its own views. Aggressive memory mode shortens
-    /// the wait from five minutes to under a minute.
+    /// to there, and what a visible window shows is held by its own views. The wait is five minutes, shorter
+    /// with a leaner memory profile (`MediaCache.backgroundPurgeDelay`).
     @MainActor
     func applicationDidResignActive(_ notification: Notification) {
         purge?.cancel()
