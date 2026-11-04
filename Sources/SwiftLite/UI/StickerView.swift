@@ -11,7 +11,10 @@ struct StickerView: View {
     @Environment(\.displayScale) private var displayScale
     @Environment(\.controlActiveState) private var activeState
     @AppStorage(Preferences.animateStickers) private var animatesStickers = true
-    private var animates: Bool { animatesStickers && model.memoryProfile != .economical }
+    /// Read through AppStorage, not `model.memoryProfile`, so that switching to Economical redraws stickers
+    /// already on screen and stops them, the same as turning animation off does.
+    @AppStorage(Preferences.memoryProfile) private var memoryProfile = MemoryProfile.balanced.rawValue
+    private var animates: Bool { animatesStickers && MemoryProfile(rawValue: memoryProfile) != .economical }
 
     let sticker: Sticker
 
