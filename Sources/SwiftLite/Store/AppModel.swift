@@ -932,13 +932,14 @@ final class AppModel {
     }
 
     /// Less background work for TDLib: its own cache cleanup keeps downloaded files bounded, and statistics
-    /// nobody here reads are not written to disk. Aggressive memory mode also asks it to drop animated emoji
-    /// and to prune downloaded files that are already a day old.
+    /// nobody here reads are not written to disk. The Balanced and Economical memory profiles also prune
+    /// downloaded files older than a week or a day, and Economical turns off animated emoji.
     private func applyEngineOptions() async {
         for name in ["use_storage_optimizer", "disable_top_chats", "disable_persistent_network_statistics"] {
             _ = try? await request(["@type": "setOption", "name": name, "value": ["@type": "optionValueBoolean", "value": true]])
         }
         let profile = memoryProfile
+        appliedMemoryProfile = profile
         _ = try? await request([
             "@type": "setOption",
             "name": "disable_animated_emoji",
@@ -1632,9 +1633,9 @@ final class AppModel {
         // Changed where it lies: taking the chat's dictionary out and putting it back made a second owner of
         // it, so every message cached copied all 150 of its neighbours first.
         recentMessages[message.chatId, default: [:]][message.id] = message
-        // Sixty per chat normally: enough to still have the text of a message deleted minutes after it came,
-        // without hundreds of busy channels each holding a hundred and fifty for the whole session. Aggressive
-        // memory mode keeps twenty.
+        // Sixty per chat in the Standard memory profile: enough to still have the text of a message deleted
+        // minutes after it came, without hundreds of busy channels each holding a hundred and fifty for the
+        // whole session. Balanced keeps forty, Economical twenty.
         let cap = memoryProfile.recentMessagesLimit
         if let count = recentMessages[message.chatId]?.count, count > cap,
            let oldest = recentMessages[message.chatId]?.keys.min() {
@@ -1753,14 +1754,21 @@ final class AppModel {
         knownChats[chatId]?.kind != .secret || Preferences.isOn(Preferences.archiveSecretChats)
     }
 
-    @ObservationIgnored private var appliedAggressiveMemory: Bool?
+    /// The memory profile in Preferences; the static one is for code without a model, such as MediaCache.
+    static var memoryProfile: MemoryProfile { MemoryProfile.current }
+    var memoryProfile: MemoryProfile { MemoryProfile.current }
+
+    /// The profile TDLib was last set up for, so other preference changes do not prune storage again.
+    /// The picture caches are resized by Settings, which is in the UI layer like MediaCache.
+    @ObservationIgnored private var appliedMemoryProfile: MemoryProfile?
 
     private func preferencesChanged() {
         updateOnlineStatus()
         applyBadge()
         applyLogSettings()
         let profile = memoryProfile
-        MediaCache.applyMemoryPreference()
+        guard profile != appliedMemoryProfile else { return }
+        appliedMemoryProfile = profile
         Task { await applyEngineOptions() }
     }
 

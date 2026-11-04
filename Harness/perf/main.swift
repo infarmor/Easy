@@ -12,6 +12,20 @@ func measure(_ label: String, repeat count: Int = 1, _ body: () -> Void) {
     let total = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
     print(String(format: "%-58@ %9.2f ms total, %8.3f ms each", label as NSString, total, total / Double(count)))
 }
+/// Physical footprint in MB: the number Activity Monitor shows and the one docs/MEMORY.md measures.
+func footprint() -> Double {
+    var info = task_vm_info_data_t()
+    var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+    let result = withUnsafeMutablePointer(to: &info) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+            task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+        }
+    }
+    return result == KERN_SUCCESS ? Double(info.phys_footprint) / 1_048_576 : -1
+}
+func memory(_ label: String) {
+    print(String(format: "memory: %-50@ %7.1f MB", label as NSString, footprint()))
+}
 func position(_ order: Int) -> String {
     #"{"@type":"chatPosition","list":{"@type":"chatListMain"},"order":"\#(9221294784512000000 + order)","is_pinned":false,"source":null}"#
 }
@@ -20,6 +34,7 @@ func messageNode(_ id: Int, chat: Int, text: String = "сообщение с т�
 }
 
 MainActor.assumeIsolated {
+    memory("before the model")
     let model = AppModel()
     model.phase = .working
 
@@ -31,6 +46,7 @@ MainActor.assumeIsolated {
         pump()
     }
     print("   list:", model.chats.count, "chats")
+    memory("3000 chats loaded")
 
     measure("empty run loop turn (baseline of the measurements below)", repeat: 200) { pump(0) }
     let lastMessages = (0..<2000).map { index in
@@ -55,6 +71,7 @@ MainActor.assumeIsolated {
         for node in history { model.apply(json(#"{"@type":"updateNewMessage","message":\#(node)}"#)) }
     }
     print("   transcript:", model.transcript.flatMap(\.rows).count, "rows")
+    memory("open chat with its history")
     // The busy-group case: every new message patches its row, refreshes the header of the open chat and moves
     // that chat in the sidebar — with the whole account loaded behind it.
     var incoming = 0
@@ -100,5 +117,6 @@ MainActor.assumeIsolated {
     measure("decode 5000 JSON updates (receive thread)") {
         for text in raw { _ = try? JSONSerialization.jsonObject(with: Data(text.utf8)) }
     }
+    memory("end of the run")
 }
 exit(0)

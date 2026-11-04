@@ -29,13 +29,13 @@ connected and how long the app has been open. What keeps Easy low:
 
 - Native views and TDLib, no web runtime.
 - TDLib updates are mapped to models off the main thread; the UI only merges the prepared batch.
-- Pictures are decoded at the size they are drawn, cached within a fixed budget, and let go after five minutes
-  in the background (sooner with Settings → Storage → Aggressive memory saving).
+- Pictures are decoded at the size they are drawn, cached within a fixed budget, and let go after a few minutes
+  in the background (the memory profile in Settings → Storage sets how many and how long).
 - The chat list builds its context menu when it is asked for, not one per row.
-- Only what a chat needs to restore a deleted message is kept in memory: sixty messages per chat (twenty in
-  aggressive memory mode).
+- Only what a chat needs to restore a deleted message is kept in memory: forty messages per chat with the
+  default Balanced profile, sixty with Standard, twenty with Economical.
 
-How to re-check memory stability after a long session: [docs/MEMORY.md](docs/MEMORY.md).
+How to re-check memory stability after a long session, and what each profile changes: [docs/MEMORY.md](docs/MEMORY.md).
 
 ## What it does
 
