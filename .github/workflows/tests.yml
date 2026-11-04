@@ -6,6 +6,14 @@ on:
   pull_request:
 
 jobs:
+  # Checks on the sources alone, with no Mac or TDLib: they fail in seconds instead of after the build.
+  sources:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every translation is still used
+        run: python3 tools/unused-translations.py
+
   logic:
     # The interface uses macOS 26 APIs behind availability checks, so the SDK has to know them.
     runs-on: macos-26
