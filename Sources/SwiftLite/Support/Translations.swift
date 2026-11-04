@@ -1163,5 +1163,12 @@ enum Translations {
         "Пока режим включён, вы не в сети, не видно «печатает…», сообщения и кружки остаются непрочитанными для собеседников. «Отметить прочитанным» по-прежнему работает. Переключается и кнопкой с глазом над списком чатов.": "While the mode is on, you are offline, \"typing…\" isn't shown, and messages and video messages stay unread for others. \"Mark as read\" still works. It can also be toggled with the eye button above the chat list.",
         "Код-пароль закрывает Easy и шифрует базу Telegram и архив удалённых сообщений на этом Mac. Он нигде не хранится: забытый код-пароль восстановить нельзя — придётся войти в аккаунт заново, а секретные чаты на этом Mac пропадут.": "The passcode locks Easy and encrypts the Telegram database and the archive of deleted messages on this Mac. It isn't stored anywhere: a forgotten passcode can't be recovered — you will have to sign in again, and secret chats on this Mac will be lost.",
         "Ссылки: punycode и смешанные алфавиты, IP вместо домена, сокращатели, «имя@» в адресе, http. Файлы: .app, .pkg, .command, .exe, двойные расширения и скрытые символы направления текста. В меню сообщения — индикаторы (IOC) с обезвреживанием и SHA-256 вложений.": "Links: punycode and mixed alphabets, an IP instead of a domain, shorteners, \"name@\" in the address, http. Files: .app, .pkg, .command, .exe, double extensions and hidden text-direction characters. In a message's menu — indicators (IOC) with defanging and SHA-256 of attachments.",
+        "Профиль памяти": "Memory profile",
+        "Стандартный": "Standard",
+        "Сбалансированный": "Balanced",
+        "Экономный": "Economical",
+        "Влияет на размер кэша сообщений в RAM и частоту очистки временных файлов TDLib с диска. Переписка на диске не трогается.": "Sets how many messages and pictures are kept in RAM and how often TDLib's downloaded files are cleaned from disk. Chat history on disk is not touched.",
+        "Очистить данные Mini Apps": "Clear Mini App data",
+        "Полностью сбрасывает локальные данные всех установленных мини-приложений": "Fully resets the local data of every installed Mini App",
     ]
 }
