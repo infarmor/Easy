@@ -55,3 +55,9 @@ jobs:
       # nor Telegram's servers.
       - name: Logic stand
         run: Harness/run.sh logic
+
+      # Timings and memory footprint of a busy account (3000 chats, a long open chat), with no network.
+      # Not pass/fail on the numbers: it fails only if the stand does not build or crashes. Compare the
+      # "memory:" lines between runs.
+      - name: Perf stand
+        run: Harness/run.sh perf

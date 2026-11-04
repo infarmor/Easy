@@ -62,3 +62,8 @@ Chat history stored on disk is never touched by any profile.
 `Harness/run.sh perf` times the busy code paths (3000 chats arriving, bursts of new messages, a long open
 chat) without a Telegram account. It is not pass/fail: run it before and after a change and compare the numbers.
 `PERF_MESSAGES=5000` makes the open chat longer, and `PERF_LONG=1` repeats the unread-counter test 4000 times.
+
+It also prints `memory:` lines with the stand's physical footprint before the model exists, after 3000 chats,
+with a long chat open, and at the end. CI runs this stand on every pull request, so a change that makes the model
+heavier shows up there as a bigger number. The stand has no pictures, stickers or TDLib database, so its numbers are
+far below the app's; compare them with each other, not with Activity Monitor.
